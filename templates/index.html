@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reflection Node Interface</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div id="toolbar">
+    <button id="addAgentBtn" class="agent-button">Add agent</button>
+    <button id="addGoalBtn" class="goal-button">Add goal</button>
+    <button id="addBlockerBtn" class="blocker-button">Add blocker</button>
+    <button id="playBtn" class="primary">▶</button>
+    <div class="hint">Drag cards. Agent → Goal → Blocker → Responsible agent. Hover card edges to show + connectors, then drag to another card to link them.</div>
+  </div>
+
+  <div id="canvas">
+    <svg id="links"></svg>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
