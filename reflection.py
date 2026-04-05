@@ -54,6 +54,127 @@ class ReflectionTree:
             return role.strip()
         return fallback
 
+    def build_from_incoherent_intensity_issue(self, issue, speaker=None):
+        """
+        Builds reflection tree for intensity mismatches.
+
+        Expected issue keys:
+        - kind: high_blocker_blame | high_context | low_context
+        - goal
+        - blocker
+        - arousal
+        - lower_threshold
+        - goal_upper_threshold
+        - effective_upper_threshold
+        """
+        kind = issue.get("kind", "high_context")
+        goal = issue.get("goal")
+        blocker = issue.get("blocker")
+        arousal = issue.get("arousal", 0.0)
+        lower_threshold = issue.get("lower_threshold", 0.2)
+        goal_upper_threshold = issue.get("goal_upper_threshold", 0.8)
+        effective_upper_threshold = issue.get("effective_upper_threshold", goal_upper_threshold)
+
+        goal_text = getattr(goal, "text", "this goal")
+        blocker_text = getattr(blocker, "text", "(no blocker)") if blocker is not None else "(no blocker)"
+
+        if kind == "high_blocker_blame":
+            responsible_agent = getattr(blocker, "responsible_agent", None) if blocker is not None else None
+            responsible_label = self._agent_label(responsible_agent, fallback="this person")
+
+            observation = ReflectionNode(
+                id="observation",
+                text="Your voice might be too elevated.",
+                options=[{"label": "Continue", "next": "feedback_question"}],
+                node_type="message",
+            )
+
+            feedback_question = ReflectionNode(
+                id="feedback_question",
+                text=(
+                    f'Are you angry with "{responsible_label}" for "{blocker_text}" and do you want/need to provide '
+                    f'feedback so "{responsible_label}" improves?'
+                ),
+                options=[
+                    {"label": "Yes", "value": "a", "next": "proportionality_question"},
+                    {"label": "No", "value": "no", "next": "proportionality_question"},
+                ],
+                node_type="question",
+            )
+
+            proportionality_question = ReflectionNode(
+                id="proportionality_question",
+                text=(
+                    f"Is your voice intensity {arousal:.2f} proportional to the context? "
+                    f"Upper threshold={effective_upper_threshold:.2f} (goal upper={goal_upper_threshold:.2f}) "
+                    f"for goal \"{goal_text}\" and blocker \"{blocker_text}\"."
+                ),
+                options=[],
+                node_type="question",
+            )
+
+            self.tree_id = "intensity_high_blocker_blame"
+            self.start_node = "observation"
+            self.nodes = {
+                "observation": observation,
+                "feedback_question": feedback_question,
+                "proportionality_question": proportionality_question,
+            }
+            return self
+
+        if kind == "high_context":
+            observation = ReflectionNode(
+                id="observation",
+                text="Your voice might be too elevated.",
+                options=[{"label": "Continue", "next": "context_question"}],
+                node_type="message",
+            )
+
+            context_question = ReflectionNode(
+                id="context_question",
+                text=(
+                    f"Is your voice intensity {arousal:.2f} appropriate for this context? "
+                    f"Upper threshold={effective_upper_threshold:.2f} (goal upper={goal_upper_threshold:.2f}) "
+                    f"for goal \"{goal_text}\" and blocker \"{blocker_text}\"."
+                ),
+                options=[],
+                node_type="question",
+            )
+
+            self.tree_id = "intensity_high_context"
+            self.start_node = "observation"
+            self.nodes = {
+                "observation": observation,
+                "context_question": context_question,
+            }
+            return self
+
+        # low_context
+        observation = ReflectionNode(
+            id="observation",
+            text="Your voice might be too low energy.",
+            options=[{"label": "Continue", "next": "context_question"}],
+            node_type="message",
+        )
+
+        context_question = ReflectionNode(
+            id="context_question",
+            text=(
+                f"Is your voice intensity {arousal:.2f} appropriate for this context? "
+                f"Lower threshold={lower_threshold:.2f} for goal \"{goal_text}\" and blocker \"{blocker_text}\"."
+            ),
+            options=[],
+            node_type="question",
+        )
+
+        self.tree_id = "intensity_low_context"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "context_question": context_question,
+        }
+        return self
+
     def build_from_incoherent_goal(self, goal, speaker=None):
         """
         Builds a reflection tree for:

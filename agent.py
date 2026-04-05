@@ -61,25 +61,72 @@ class Agent:
         return is_coherent, incoherent_goals
 
     def is_intensity_coherent(self):
+        issues = self.detect_wrong_voice_intensity()
+        incoherent_goals = [issue["goal"] for issue in issues]
+        incoherent_blockers = [issue["blocker"] for issue in issues if issue["blocker"] is not None]
+        is_coherent = len(issues) == 0
+        return is_coherent, incoherent_goals, incoherent_blockers
+
+    def detect_wrong_voice_intensity(self):
+        """
+        Detects voice intensity mismatches per goal.
+
+        Upper bound rule:
+        use min(most_critical_blocker.arousal_threshold, goal.upper_arousal_threshold)
+        when blocker exists, otherwise goal.upper_arousal_threshold.
+
+        Returns a list of issue dicts with kind in:
+        - low_context
+        - high_blocker_blame
+        - high_context
+        """
         arousal = self.emotion.arousal
-        incoherent_goals = []
-        incoherent_blockers = []
+        issues = []
 
         for goal in self.goals:
-            # underreaction
-            if arousal < goal.lower_arousal_threshold:
-                incoherent_goals.append(goal)
+            lower_threshold = getattr(goal, "lower_arousal_threshold", 0.2)
+            goal_upper_threshold = getattr(goal, "upper_arousal_threshold", 0.8)
+
+            blocker = goal.get_most_critical_blocker() if hasattr(goal, "get_most_critical_blocker") else None
+            blocker_threshold = getattr(blocker, "arousal_threshold", None) if blocker is not None else None
+
+            effective_upper_threshold = (
+                min(goal_upper_threshold, blocker_threshold)
+                if blocker_threshold is not None
+                else goal_upper_threshold
+            )
+
+            if arousal < lower_threshold:
+                issues.append({
+                    "kind": "low_context",
+                    "goal": goal,
+                    "blocker": blocker,
+                    "arousal": arousal,
+                    "lower_threshold": lower_threshold,
+                    "goal_upper_threshold": goal_upper_threshold,
+                    "effective_upper_threshold": effective_upper_threshold,
+                    "blocker_threshold": blocker_threshold,
+                })
                 continue
 
-            # overreaction
-            most_critical_blocker = goal.get_most_critical_blocker()
-            if most_critical_blocker is not None:
-                if arousal > most_critical_blocker.arousal_threshold:
-                    incoherent_goals.append(goal)
-                    incoherent_blockers.append(most_critical_blocker)
+            if arousal > effective_upper_threshold:
+                blocker_responsible_agent = getattr(blocker, "responsible_agent", None) if blocker is not None else None
+                is_other_blame = blocker is not None and blocker_responsible_agent is not None and blocker_responsible_agent is not self
 
-        is_coherent = len(incoherent_goals) == 0
-        return is_coherent, incoherent_goals, incoherent_blockers
+                kind = "high_blocker_blame" if is_other_blame and blocker_threshold is not None and blocker_threshold <= goal_upper_threshold else "high_context"
+
+                issues.append({
+                    "kind": kind,
+                    "goal": goal,
+                    "blocker": blocker,
+                    "arousal": arousal,
+                    "lower_threshold": lower_threshold,
+                    "goal_upper_threshold": goal_upper_threshold,
+                    "effective_upper_threshold": effective_upper_threshold,
+                    "blocker_threshold": blocker_threshold,
+                })
+
+        return issues
 
     def __repr__(self):
         return f"{self.role.capitalize()} | {self.emotion} | Goals: {self.goals}"

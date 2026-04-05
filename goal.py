@@ -10,15 +10,17 @@ class Goal:
         self.status = status if status in GOAL_STATUSES else GOAL_STATUS_ON_GOING
         self.blockers = blockers if blockers else []
 
-        self.lower_arousal_threshold = 0.5
+        self.lower_arousal_threshold = 0.2
+        self.upper_arousal_threshold = 0.8
         self.calculate_arousal_threshold()
 
     def calculate_arousal_threshold(self):
         """
-        For now: always sets lower threshold to 0.5
+        For now: sets fixed lower/upper thresholds
         Later: can depend on goal importance, urgency, etc.
         """
-        self.lower_arousal_threshold = 0.5
+        self.lower_arousal_threshold = 0.2
+        self.upper_arousal_threshold = 0.8
 
     def update_status(self, status):
         if status in GOAL_STATUSES:
@@ -40,5 +42,6 @@ class Goal:
             f"Goal(text='{self.text}', "
             f"status={self.status}, "
             f"lower_arousal_threshold={self.lower_arousal_threshold}, "
+            f"upper_arousal_threshold={self.upper_arousal_threshold}, "
             f"blockers={self.blockers})"
         )

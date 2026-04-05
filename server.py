@@ -224,6 +224,12 @@ def play_graph():
         "is_tone_coherent": None,
         "incoherent_goals": [],
     }
+    intensity_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "is_intensity_coherent": None,
+        "issues": [],
+    }
     reflection_tree = None
 
     if speaker_agent is not None:
@@ -242,6 +248,29 @@ def play_graph():
             goal_for_reflection = incoherent_goals[0]
             reflection_tree = ReflectionTree().build_from_incoherent_goal(
                 goal_for_reflection,
+                speaker=speaker_agent,
+            ).to_dict()
+
+        intensity_issues = speaker_agent.detect_wrong_voice_intensity()
+        intensity_check["is_intensity_coherent"] = len(intensity_issues) == 0
+        intensity_check["issues"] = [
+            {
+                "kind": issue["kind"],
+                "goal": getattr(issue.get("goal"), "text", ""),
+                "blocker": getattr(issue.get("blocker"), "text", "") if issue.get("blocker") is not None else None,
+                "arousal": issue.get("arousal"),
+                "lower_threshold": issue.get("lower_threshold"),
+                "goal_upper_threshold": issue.get("goal_upper_threshold"),
+                "effective_upper_threshold": issue.get("effective_upper_threshold"),
+                "blocker_threshold": issue.get("blocker_threshold"),
+            }
+            for issue in intensity_issues
+        ]
+
+        # If tone is coherent but intensity is incoherent, surface an intensity reflection tree.
+        if reflection_tree is None and intensity_issues:
+            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
+                intensity_issues[0],
                 speaker=speaker_agent,
             ).to_dict()
 
@@ -265,6 +294,7 @@ def play_graph():
         "actionables": {k: repr(v) for k, v in built["actionables"].items()},
         "questions": {k: repr(v) for k, v in built["questions"].items()},
         "tone_check": tone_check,
+        "intensity_check": intensity_check,
         "reflection_tree": reflection_tree,
     })
 
