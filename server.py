@@ -9,8 +9,18 @@ from goal import Goal
 from blocker import Blocker
 from actionable import Actionable
 from question import Question
-from constants import GOAL_STATUS_ON_GOING, GOAL_STATUS_SUCCESS
+from constants import GOAL_STATUS_ON_GOING
 from reflection import ReflectionTree
+from business_rules import (
+    find_speaker,
+    detect_tone_incoherence,
+    detect_intensity_incoherence,
+    detect_unclear_feedback,
+    detect_unclear_concern,
+    summarize_rule_issue,
+    summarize_tone_issue,
+    summarize_intensity_issue,
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -209,20 +219,26 @@ def play_graph():
 
     built = build_objects_from_graph(payload)
 
-    # Find speaker and evaluate tone coherence against attached goals.
-    speaker_id = None
-    speaker_agent = None
-    for agent_id, agent in built["agents"].items():
-        if getattr(agent, "role", "") == "speaker":
-            speaker_id = agent_id
-            speaker_agent = agent
-            break
+    # Find speaker and evaluate tone/intensity coherence via business rules.
+    speaker_id, speaker_agent = find_speaker(built["agents"])
 
     tone_check = {
         "speaker_agent_id": speaker_id,
         "speaker_found": speaker_agent is not None,
         "is_tone_coherent": None,
         "incoherent_goals": [],
+    }
+    unclear_feedback_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "has_unclear_feedback": None,
+        "issue": None,
+    }
+    unclear_concerns_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "has_unclear_concerns": None,
+        "issue": None,
     }
     intensity_check = {
         "speaker_agent_id": speaker_id,
@@ -233,84 +249,45 @@ def play_graph():
     reflection_tree = None
 
     if speaker_agent is not None:
-        blockers = list(built["blockers"].values())
+        unclear_feedback_issue = detect_unclear_feedback(speaker_agent)
+        unclear_concern_issue = detect_unclear_concern(speaker_agent)
+        tone_issue = detect_tone_incoherence(speaker_agent)
+        intensity_issue = detect_intensity_incoherence(speaker_agent)
 
-        def blocker_has_actionable(blocker):
-            single = getattr(blocker, "actionable", None)
-            plural = getattr(blocker, "actionables", None)
-            has_single = single is not None
-            has_plural = isinstance(plural, list) and len(plural) > 0
-            return has_single or has_plural
+        unclear_feedback_check["has_unclear_feedback"] = unclear_feedback_issue is not None
+        unclear_feedback_check["issue"] = summarize_rule_issue(unclear_feedback_issue)
 
-        all_blockers_have_actionable = bool(blockers) and all(
-            blocker_has_actionable(blocker)
-            for blocker in blockers
-        )
+        unclear_concerns_check["has_unclear_concerns"] = unclear_concern_issue is not None
+        unclear_concerns_check["issue"] = summarize_rule_issue(unclear_concern_issue)
 
-        is_coherent, incoherent_goals = speaker_agent.is_tone_coherent()
-        tone_check["is_tone_coherent"] = is_coherent
-        tone_check["incoherent_goals"] = [
-            {
-                "text": goal.text,
-                "status": goal.status,
-            }
-            for goal in incoherent_goals
-        ]
+        tone_check["is_tone_coherent"], tone_check["incoherent_goals"] = summarize_tone_issue(tone_issue)
 
-        if not is_coherent and incoherent_goals:
-            # Build reflection for the first incoherent goal (success/negative-tone or fail/positive-tone).
-            goal_for_reflection = incoherent_goals[0]
+        intensity_check["is_intensity_coherent"], intensity_check["issues"] = summarize_intensity_issue(intensity_issue)
+
+        if reflection_tree is None and tone_issue is not None:
             reflection_tree = ReflectionTree().build_from_incoherent_goal(
-                goal_for_reflection,
+                tone_issue["goal"],
                 speaker=speaker_agent,
             ).to_dict()
 
-        intensity_issues = speaker_agent.detect_wrong_voice_intensity()
-        intensity_check["is_intensity_coherent"] = len(intensity_issues) == 0
-        intensity_check["issues"] = [
-            {
-                "kind": issue["kind"],
-                "goal": getattr(issue.get("goal"), "text", ""),
-                "blocker": getattr(issue.get("blocker"), "text", "") if issue.get("blocker") is not None else None,
-                "arousal": issue.get("arousal"),
-                "lower_threshold": issue.get("lower_threshold"),
-                "goal_upper_threshold": issue.get("goal_upper_threshold"),
-                "effective_upper_threshold": issue.get("effective_upper_threshold"),
-                "blocker_threshold": issue.get("blocker_threshold"),
-            }
-            for issue in intensity_issues
-        ]
+        if reflection_tree is None and unclear_feedback_issue is not None:
+            reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(
+                unclear_feedback_issue,
+                speaker=speaker_agent,
+            ).to_dict()
 
-        # If tone is coherent but intensity is incoherent, surface reflection from intensity.
-        if reflection_tree is None and intensity_issues:
-            first_issue = intensity_issues[0]
-            issue_kind = first_issue.get("kind")
-            emotion = getattr(speaker_agent, "emotion", None)
-            looks_angry = bool(
-                emotion is not None
-                and (
-                    getattr(emotion, "name", "") == "angry"
-                    or (
-                        getattr(emotion, "valence", 0.0) < 0
-                        and getattr(emotion, "arousal", 0.0) >= 0.6
-                    )
-                )
-            )
+        if reflection_tree is None and unclear_concern_issue is not None:
+            reflection_tree = ReflectionTree().build_from_unclear_concerns_issue(
+                unclear_concern_issue,
+                speaker=speaker_agent,
+                blockers_without_actionables=unclear_concern_issue.get("blockers_without_actionables"),
+            ).to_dict()
 
-            if (
-                looks_angry
-                and issue_kind in {"high_blocker_blame", "high_context"}
-                and not all_blockers_have_actionable
-            ):
-                reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(
-                    first_issue,
-                    speaker=speaker_agent,
-                ).to_dict()
-            else:
-                reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
-                    first_issue,
-                    speaker=speaker_agent,
-                ).to_dict()
+        if reflection_tree is None and intensity_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
+                intensity_issue["issue"],
+                speaker=speaker_agent,
+            ).to_dict()
 
     print("\n=== GRAPH CREATED ===")
     for k, v in built["agents"].items():
@@ -331,6 +308,8 @@ def play_graph():
         "blockers": {k: repr(v) for k, v in built["blockers"].items()},
         "actionables": {k: repr(v) for k, v in built["actionables"].items()},
         "questions": {k: repr(v) for k, v in built["questions"].items()},
+        "unclear_feedback_check": unclear_feedback_check,
+        "unclear_concerns_check": unclear_concerns_check,
         "tone_check": tone_check,
         "intensity_check": intensity_check,
         "reflection_tree": reflection_tree,

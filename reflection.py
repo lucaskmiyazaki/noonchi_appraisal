@@ -197,6 +197,119 @@ class ReflectionTree:
         }
         return self
 
+    def build_from_unclear_concerns_issue(self, issue, speaker=None, blockers_without_actionables=None):
+        """
+        Builds reflection tree for unclear concerns when speaker sounds concerned.
+
+        Branches:
+        - concerns unclear
+        - concerns clear but no actionables
+        """
+        goal = issue.get("goal")
+        goal_text = getattr(goal, "text", "this goal")
+        tone_text = self._voice_tone_text(speaker)
+
+        blockers_without_actionables = blockers_without_actionables or []
+        blocker_labels = [getattr(b, "text", "") for b in blockers_without_actionables if getattr(b, "text", "")]
+        blockers_text = ", ".join(blocker_labels) if blocker_labels else "some risks"
+
+        confident_tone_example = f"I am confident that we are going to {goal_text}."
+
+        if blocker_labels:
+            observation = ReflectionNode(
+                id="observation",
+                text=(
+                    f"Your voice tone suggests you are concerned about {blockers_text} "
+                    f"as it may hinder {goal_text}."
+                ),
+                options=[{"label": "Continue", "next": "importance_question"}],
+                node_type="message",
+            )
+
+            importance_question = ReflectionNode(
+                id="importance_question",
+                text="Is it important to point out these risks to people at the meeting?",
+                options=[
+                    {"label": "Yes", "value": "a", "next": "tone_reframe"},
+                    {"label": "No", "value": "b", "next": "tone_reframe"},
+                ],
+                node_type="question",
+            )
+
+            tone_reframe = ReflectionNode(
+                id="tone_reframe",
+                text=(
+                    f"You might want to change your voice tone. This is your tone: {tone_text}. "
+                    f"This is a more confident tone: {confident_tone_example}"
+                ),
+                options=[{"label": "Continue", "next": "actionables_question"}],
+                node_type="message",
+            )
+
+            actionables_question = ReflectionNode(
+                id="actionables_question",
+                text="What are the actionable steps that should be taken to mitigate these concerns? And who should act?",
+                options=[],
+                node_type="question",
+            )
+
+            self.tree_id = "unclear_concerns_clear_risks_no_actionables"
+            self.start_node = "observation"
+            self.nodes = {
+                "observation": observation,
+                "importance_question": importance_question,
+                "tone_reframe": tone_reframe,
+                "actionables_question": actionables_question,
+            }
+            return self
+
+        observation = ReflectionNode(
+            id="observation",
+            text=(
+                "Your voice tone suggests there are points of risk that should be addressed. "
+                "However, these points are not clear."
+            ),
+            options=[{"label": "Continue", "next": "risks_question"}],
+            node_type="message",
+        )
+
+        risks_question = ReflectionNode(
+            id="risks_question",
+            text="What are the points of risks that should be mitigated?",
+            options=[
+                {"label": "No concerns", "value": "a", "next": "tone_reframe"},
+                {"label": "Some concerns", "value": "b", "next": "tone_reframe"},
+            ],
+            node_type="question",
+        )
+
+        tone_reframe = ReflectionNode(
+            id="tone_reframe",
+            text=(
+                "You might want to change your voice tone. "
+                f"This is an example of a more confident tone: {confident_tone_example}"
+            ),
+            options=[{"label": "Continue", "next": "actionables_question"}],
+            node_type="message",
+        )
+
+        actionables_question = ReflectionNode(
+            id="actionables_question",
+            text="What are the actionable steps that should be taken to mitigate these concerns? And who should act?",
+            options=[],
+            node_type="question",
+        )
+
+        self.tree_id = "unclear_concerns_unclear_risks"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "risks_question": risks_question,
+            "tone_reframe": tone_reframe,
+            "actionables_question": actionables_question,
+        }
+        return self
+
     def build_from_incoherent_intensity_issue(self, issue, speaker=None):
         """
         Builds reflection tree for intensity mismatches.
