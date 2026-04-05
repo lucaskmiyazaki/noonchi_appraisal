@@ -49,6 +49,17 @@ body {
   border-color: transparent;
 }
 
+.tab-button.reflection {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #c4b5fd;
+}
+
+.tab-button.reflection.active {
+  background: #6d28d9;
+  color: #fff;
+}
+
 .new-tab-btn {
   background: transparent;
   color: #6b7280;
@@ -137,6 +148,41 @@ body {
   background: #dc2626;
 }
 
+.reflection .node-header {
+  background: #6d28d9;
+}
+
+.reflection .small-tag {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.reflection-text {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.45;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+
+.reflection-options-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6d28d9;
+  margin-bottom: 6px;
+}
+
+.reflection-options {
+  margin: 0;
+  padding-left: 18px;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.reflection-options li {
+  margin-bottom: 4px;
+}
+
 .field {
   margin-bottom: 12px;
 }
@@ -198,6 +244,11 @@ button {
   border: none;
   border-radius: 10px;
   cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .primary {
