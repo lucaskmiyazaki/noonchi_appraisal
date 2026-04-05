@@ -238,16 +238,12 @@ def play_graph():
         ]
 
         if not is_coherent and incoherent_goals:
-            # Current reflection builder supports successful-goal mismatch.
-            successful_incoherent = [
-                g for g in incoherent_goals if g.status == GOAL_STATUS_SUCCESS
-            ]
-            goal_for_reflection = successful_incoherent[0] if successful_incoherent else None
-
-            if goal_for_reflection is not None:
-                reflection_tree = ReflectionTree().build_from_incoherent_goal(
-                    goal_for_reflection
-                ).to_dict()
+            # Build reflection for the first incoherent goal (success/negative-tone or fail/positive-tone).
+            goal_for_reflection = incoherent_goals[0]
+            reflection_tree = ReflectionTree().build_from_incoherent_goal(
+                goal_for_reflection,
+                speaker=speaker_agent,
+            ).to_dict()
 
     print("\n=== GRAPH CREATED ===")
     for k, v in built["agents"].items():
