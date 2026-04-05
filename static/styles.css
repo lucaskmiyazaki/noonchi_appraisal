@@ -157,6 +157,21 @@ button {
   color: white;
 }
 
+.followup-button {
+  background: #eab308;
+  color: #111827;
+}
+
+.followup .node-header {
+  background: #eab308;
+  color: #111827;
+}
+
+.followup .small-tag {
+  color: rgba(17, 24, 39, 0.9);
+  background: rgba(255, 255, 255, 0.45);
+}
+
 .goal-button {
   background: #059669;
   color: #fff;

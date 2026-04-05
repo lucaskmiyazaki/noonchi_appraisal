@@ -3,6 +3,7 @@ const svg = document.getElementById('links');
 const addAgentBtn = document.getElementById('addAgentBtn');
 const addGoalBtn = document.getElementById('addGoalBtn');
 const addBlockerBtn = document.getElementById('addBlockerBtn');
+const addFollowupBtn = document.getElementById('addFollowupBtn');
 const playBtn = document.getElementById('playBtn');
 
 let nodeCounter = 0;
@@ -108,26 +109,48 @@ function createNodeBase({ id, type, title, x, y, badge }) {
     deleteNode(id);
   });
 
-  const roleTag = node.querySelector('.small-tag');
-  if (type === 'agent') {
-    const roles = ['speaker', 'listener', 'passive'];
+  const tag = node.querySelector('.small-tag');
 
-    const advanceRole = (e) => {
+  if (type === 'agent') {
+    const values = ['speaker', 'listener', 'passive'];
+
+    const advance = (e) => {
       e.stopPropagation();
-      const current = roleTag.textContent.trim();
-      const currentIndex = roles.indexOf(current);
-      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % roles.length;
-      roleTag.textContent = roles[nextIndex];
+      const current = tag.textContent.trim();
+      const currentIndex = values.indexOf(current);
+      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % values.length;
+      tag.textContent = values[nextIndex];
     };
 
-    roleTag.addEventListener('click', advanceRole);
-    roleTag.addEventListener('keydown', (e) => {
+    tag.addEventListener('click', advance);
+    tag.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        advanceRole(e);
+        advance(e);
       }
     });
-    roleTag.style.cursor = 'pointer';
+    tag.style.cursor = 'pointer';
+  }
+
+  if (type === 'followup') {
+    const values = ['actionable', 'question'];
+
+    const advance = (e) => {
+      e.stopPropagation();
+      const current = tag.textContent.trim();
+      const currentIndex = values.indexOf(current);
+      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % values.length;
+      tag.textContent = values[nextIndex];
+    };
+
+    tag.addEventListener('click', advance);
+    tag.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        advance(e);
+      }
+    });
+    tag.style.cursor = 'pointer';
   }
 
   node.querySelectorAll('.port').forEach((port) => {
@@ -341,6 +364,7 @@ function startConnection(event, fromId, fromSide) {
 
 function updateDraftLine(clientX, clientY) {
   if (!connectionDraft) return;
+
   connectionDraft.mouseX = clientX;
   connectionDraft.mouseY = clientY;
 
@@ -448,16 +472,26 @@ function createGoalNode({ x = 220, y = 180, linkedFromId = null } = {}) {
   const buttonRow = document.createElement('div');
   buttonRow.className = 'button-row';
 
-  const btn = document.createElement('button');
-  btn.className = 'primary';
-  btn.textContent = 'Add blocker';
-  btn.onclick = () => {
+  const blockerBtn = document.createElement('button');
+  blockerBtn.className = 'primary';
+  blockerBtn.textContent = 'Add blocker';
+  blockerBtn.onclick = () => {
     const left = parseFloat(node.style.left) || x;
     const top = parseFloat(node.style.top) || y;
     createBlockerNode({ x: left + 320, y: top + 20, linkedFromId: id });
   };
 
-  buttonRow.appendChild(btn);
+  const followupBtn = document.createElement('button');
+  followupBtn.className = 'followup-button';
+  followupBtn.textContent = 'Add action/question';
+  followupBtn.onclick = () => {
+    const left = parseFloat(node.style.left) || x;
+    const top = parseFloat(node.style.top) || y;
+    createFollowupNode({ x: left + 320, y: top + 100, linkedFromId: id });
+  };
+
+  buttonRow.appendChild(blockerBtn);
+  buttonRow.appendChild(followupBtn);
   body.appendChild(buttonRow);
 
   if (linkedFromId) addEdge(linkedFromId, id);
@@ -474,19 +508,85 @@ function createBlockerNode({ x = 360, y = 240, linkedFromId = null } = {}) {
   const buttonRow = document.createElement('div');
   buttonRow.className = 'button-row';
 
-  const btn = document.createElement('button');
-  btn.className = 'primary';
-  btn.textContent = 'Add responsible agent';
-  btn.onclick = () => {
+  const agentBtn = document.createElement('button');
+  agentBtn.className = 'primary';
+  agentBtn.textContent = 'Add responsible agent';
+  agentBtn.onclick = () => {
     const left = parseFloat(node.style.left) || x;
     const top = parseFloat(node.style.top) || y;
     createAgentNode({ x: left + 320, y: top + 20, role: 'listener', linkedFromId: id });
   };
 
-  buttonRow.appendChild(btn);
+  const followupBtn = document.createElement('button');
+  followupBtn.className = 'followup-button';
+  followupBtn.textContent = 'Add action/question';
+  followupBtn.onclick = () => {
+    const left = parseFloat(node.style.left) || x;
+    const top = parseFloat(node.style.top) || y;
+    createFollowupNode({ x: left + 320, y: top + 100, linkedFromId: id });
+  };
+
+  buttonRow.appendChild(agentBtn);
+  buttonRow.appendChild(followupBtn);
   body.appendChild(buttonRow);
 
   if (linkedFromId) addEdge(linkedFromId, id);
+  return node;
+}
+
+function createFollowupNode({
+  x = 500,
+  y = 320,
+  linkedFromId = null,
+  mode = 'actionable'
+} = {}) {
+  const id = nextId('followup');
+
+  const node = createNodeBase({
+    id,
+    type: 'followup',
+    title: 'Action / Question',
+    x,
+    y,
+    badge: mode,
+  });
+
+  const body = node.querySelector('.node-body');
+
+  // TEXT
+  body.appendChild(
+    createField(
+      'Text',
+      '<input type="text" placeholder="Type action or question">'
+    )
+  );
+
+  // BUTTONS
+  const buttonRow = document.createElement('div');
+  buttonRow.className = 'button-row';
+
+  // 🔵 ADD RESPONSIBLE AGENT (same pattern as blocker)
+  const agentBtn = document.createElement('button');
+  agentBtn.className = 'primary';
+  agentBtn.textContent = 'Add responsible agent';
+
+  agentBtn.onclick = () => {
+    const left = parseFloat(node.style.left) || x;
+    const top = parseFloat(node.style.top) || y;
+
+    createAgentNode({
+      x: left + 320,
+      y: top + 20,
+      role: 'listener',
+      linkedFromId: id, 
+    });
+  };
+
+  buttonRow.appendChild(agentBtn);
+  body.appendChild(buttonRow);
+
+  if (linkedFromId) addEdge(linkedFromId, id);
+
   return node;
 }
 
@@ -522,6 +622,16 @@ function getBlockerData(node) {
   };
 }
 
+function getFollowupData(node) {
+  const textInput = node.querySelector('input[type="text"]');
+  const mode = node.querySelector('.small-tag')?.textContent.trim() || 'actionable';
+
+  return {
+    text: textInput?.value || '',
+    mode,
+  };
+}
+
 function serializeGraph() {
   const serializedNodes = [];
 
@@ -532,6 +642,7 @@ function serializeGraph() {
     if (type === 'agent') data = getAgentData(node);
     if (type === 'goal') data = getGoalData(node);
     if (type === 'blocker') data = getBlockerData(node);
+    if (type === 'followup') data = getFollowupData(node);
 
     serializedNodes.push({ id, type, data });
   });
@@ -568,6 +679,14 @@ addBlockerBtn.onclick = () => {
   createBlockerNode({
     x: 360 + Math.random() * 120,
     y: 240 + Math.random() * 80,
+  });
+};
+
+addFollowupBtn.onclick = () => {
+  createFollowupNode({
+    x: 500 + Math.random() * 120,
+    y: 320 + Math.random() * 80,
+    mode: 'actionable',
   });
 };
 

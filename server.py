@@ -7,6 +7,8 @@ from emotion import Emotion
 from agent import Agent
 from goal import Goal
 from blocker import Blocker
+from actionable import Actionable
+from question import Question
 from constants import GOAL_STATUS_ON_GOING
 
 app = Flask(__name__)
@@ -44,6 +46,8 @@ def build_objects_from_graph(payload):
     agents = {}
     goals = {}
     blockers = {}
+    actionables = {}
+    questions = {}
 
     # CREATE OBJECTS
     for node in nodes:
@@ -63,6 +67,7 @@ def build_objects_from_graph(payload):
             agent = Agent(emotion=emotion)
             agent.role = role
             agent.name = data.get("name", "")
+            agent.is_speaker = role == "speaker"
 
             agents[node_id] = agent
 
@@ -77,19 +82,38 @@ def build_objects_from_graph(payload):
                 text=data.get("text", "")
             )
 
+        elif node_type == "followup":
+            mode = data.get("mode", "actionable")
+            text = data.get("text", "")
+
+            if mode == "question":
+                questions[node_id] = Question(text=text)
+            else:
+                actionables[node_id] = Actionable(text=text)
+
     # LINK AGENT -> GOAL
     for agent_id, agent in agents.items():
         for child_id in outgoing.get(agent_id, []):
             if child_id in goals:
                 agent.add_goal(goals[child_id])
 
-    # LINK GOAL -> BLOCKER
+    # LINK GOAL -> BLOCKER / FOLLOWUP
     for goal_id, goal in goals.items():
         for child_id in outgoing.get(goal_id, []):
             if child_id in blockers:
                 goal.add_blocker(blockers[child_id])
 
-    # LINK BLOCKER -> AGENT
+            if child_id in actionables:
+                if not hasattr(goal, "actionables"):
+                    goal.actionables = []
+                goal.actionables.append(actionables[child_id])
+
+            if child_id in questions:
+                if not hasattr(goal, "questions"):
+                    goal.questions = []
+                goal.questions.append(questions[child_id])
+
+    # LINK BLOCKER -> AGENT / FOLLOWUP
     for blocker_id, blocker in blockers.items():
         responsible_agents = []
 
@@ -97,22 +121,77 @@ def build_objects_from_graph(payload):
             if child_id in agents:
                 responsible_agents.append(agents[child_id])
 
+            if child_id in actionables:
+                if not hasattr(blocker, "actionables"):
+                    blocker.actionables = []
+                blocker.actionables.append(actionables[child_id])
+
+            if child_id in questions:
+                if not hasattr(blocker, "questions"):
+                    blocker.questions = []
+                blocker.questions.append(questions[child_id])
+
         blocker.responsible_agents = responsible_agents
         blocker.responsible_agent = responsible_agents[0] if responsible_agents else None
+
+    # LINK DIRECTIONAL SEMANTICS FOR FOLLOWUPS
+
+    # agent -> actionable  => owner
+    # actionable -> agent  => target
+    for actionable_id, actionable in actionables.items():
+        owners = []
+        targets = []
+
+        for parent_id in incoming.get(actionable_id, []):
+            if parent_id in agents:
+                owners.append(agents[parent_id])
+
+        for child_id in outgoing.get(actionable_id, []):
+            if child_id in agents:
+                targets.append(agents[child_id])
+
+        actionable.owners = owners
+        actionable.owner = owners[0] if owners else None
+        actionable.targets = targets
+        actionable.target = targets[0] if targets else None
+
+    # agent -> question  => speaker
+    # question -> agent  => target
+    for question_id, question in questions.items():
+        speakers = []
+        targets = []
+
+        for parent_id in incoming.get(question_id, []):
+            if parent_id in agents:
+                speakers.append(agents[parent_id])
+
+        for child_id in outgoing.get(question_id, []):
+            if child_id in agents:
+                targets.append(agents[child_id])
+
+        question.speakers = speakers
+        question.speaker = speakers[0] if speakers else None
+        question.targets = targets
+        question.target = targets[0] if targets else None
 
     # ROOT AGENTS
     root_agents = []
     for agent_id, agent in agents.items():
         parents = incoming.get(agent_id, [])
-        has_blocker_parent = any(pid in blockers for pid in parents)
 
-        if not has_blocker_parent:
+        has_blocker_parent = any(pid in blockers for pid in parents)
+        has_actionable_parent = any(pid in actionables for pid in parents)
+        has_question_parent = any(pid in questions for pid in parents)
+
+        if not has_blocker_parent and not has_actionable_parent and not has_question_parent:
             root_agents.append(agent)
 
     return {
         "agents": agents,
         "goals": goals,
         "blockers": blockers,
+        "actionables": actionables,
+        "questions": questions,
         "root_agents": root_agents,
     }
 
@@ -136,12 +215,18 @@ def play_graph():
         print(k, v)
     for k, v in built["blockers"].items():
         print(k, v)
+    for k, v in built["actionables"].items():
+        print(k, v)
+    for k, v in built["questions"].items():
+        print(k, v)
 
     return jsonify({
         "message": "ok",
         "agents": {k: repr(v) for k, v in built["agents"].items()},
         "goals": {k: repr(v) for k, v in built["goals"].items()},
         "blockers": {k: repr(v) for k, v in built["blockers"].items()},
+        "actionables": {k: repr(v) for k, v in built["actionables"].items()},
+        "questions": {k: repr(v) for k, v in built["questions"].items()},
     })
 
 
