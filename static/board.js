@@ -3,11 +3,11 @@ import { deleteNode } from './node-base.js';
 import { addEdge } from './edges.js';
 import { serializeGraph } from './serialize.js';
 import { setCounterFloor } from './utils.js';
-import { createNodeBase } from './node-base.js';
 import { createAgentNode } from './nodes/agent.js';
 import { createGoalNode } from './nodes/goal.js';
 import { createBlockerNode } from './nodes/blocker.js';
 import { createFollowupNode } from './nodes/followup.js';
+import { createReflectionNode } from './nodes/reflection.js';
 
 export const boards = [];
 export let activeBoardId = null;
@@ -19,6 +19,7 @@ const factories = {
   goal: createGoalNode,
   blocker: createBlockerNode,
   followup: createFollowupNode,
+  reflection: createReflectionNode,
 };
 
 function getBoardById(id) {
@@ -92,6 +93,7 @@ function buildReflectionGraph(tree) {
         toId: nextId,
         fromSide: 'bottom',
         toSide: 'top',
+        label: option.label || '',
       });
     });
   });
@@ -100,46 +102,6 @@ function buildReflectionGraph(tree) {
     nodes: reflectionNodes,
     edges: reflectionEdges,
   };
-}
-
-function createReflectionNode(saved) {
-  const node = createNodeBase({
-    id: saved.id,
-    type: 'reflection',
-    title: saved.title || 'Reflection',
-    x: saved.x || 0,
-    y: saved.y || 0,
-    badge: saved.badge || 'reflection',
-  });
-
-  node.querySelectorAll('.port').forEach((port) => port.remove());
-  const deleteButton = node.querySelector('.delete-btn');
-  if (deleteButton) deleteButton.remove();
-
-  const body = node.querySelector('.node-body');
-  body.innerHTML = '';
-
-  const textEl = document.createElement('div');
-  textEl.className = 'reflection-text';
-  textEl.textContent = saved.data?.text || '';
-  body.appendChild(textEl);
-
-  const options = saved.data?.options || [];
-  if (options.length) {
-    const optionsTitle = document.createElement('div');
-    optionsTitle.className = 'reflection-options-title';
-    optionsTitle.textContent = 'Options';
-    body.appendChild(optionsTitle);
-
-    const optionsList = document.createElement('ul');
-    optionsList.className = 'reflection-options';
-    options.forEach((option) => {
-      const item = document.createElement('li');
-      item.textContent = option.label || '(no label)';
-      optionsList.appendChild(item);
-    });
-    body.appendChild(optionsList);
-  }
 }
 
 function applyData(node, type, data, badge) {
@@ -172,6 +134,11 @@ function applyData(node, type, data, badge) {
   if (type === 'followup') {
     const input = node.querySelector('input[type="text"]');
     if (input) input.value = data.text || '';
+  }
+
+  if (type === 'reflection') {
+    const textEl = node.querySelector('.reflection-text');
+    if (textEl) textEl.textContent = data.text || '';
   }
 }
 
@@ -209,28 +176,28 @@ export function createReflectionBoard(tree) {
 export function saveCurrentBoard() {
   if (!activeBoardId) return;
   const board = getBoardById(activeBoardId);
-  if (board && board.kind === 'graph') board.graph = serializeGraph();
+  if (board) board.graph = serializeGraph();
 }
 
 export function loadGraph(graph) {
   clearBoard();
 
   graph.nodes.forEach((saved) => {
-    if (saved.type === 'reflection') {
-      createReflectionNode(saved);
-      return;
-    }
-
     const factory = factories[saved.type];
     if (!factory) return;
 
-    // Ensure the counter won't generate an ID that collides with restored IDs
+    // Only bump counter for numeric ID formats (prefix-N); reflection IDs are strings
     const num = parseInt(String(saved.id).split('-').pop(), 10);
     if (!isNaN(num)) setCounterFloor(num);
 
     const args = { x: saved.x || 0, y: saved.y || 0, _id: saved.id };
     if (saved.type === 'agent') args.role = saved.badge || 'speaker';
     if (saved.type === 'followup') args.mode = saved.badge || 'actionable';
+    if (saved.type === 'reflection') {
+      args.title = saved.title;
+      args.badge = saved.badge;
+      args.data = saved.data || {};
+    }
     factory(args);
 
     const node = nodes.get(saved.id);
@@ -238,7 +205,7 @@ export function loadGraph(graph) {
   });
 
   graph.edges.forEach((edge) => {
-    addEdge(edge.fromId, edge.toId, edge.fromSide, edge.toSide);
+    addEdge(edge.fromId, edge.toId, edge.fromSide, edge.toSide, edge.label || '');
   });
 }
 

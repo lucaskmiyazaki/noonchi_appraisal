@@ -161,26 +161,23 @@ body {
   font-size: 14px;
   color: #374151;
   line-height: 1.45;
-  margin-bottom: 10px;
   white-space: pre-wrap;
 }
 
-.reflection-options-title {
-  font-size: 12px;
-  font-weight: 700;
+.edge-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 1px solid #c4b5fd;
   color: #6d28d9;
-  margin-bottom: 6px;
-}
-
-.reflection-options {
-  margin: 0;
-  padding-left: 18px;
-  color: #4b5563;
-  font-size: 13px;
-}
-
-.reflection-options li {
-  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(109, 40, 217, 0.15);
 }
 
 .field {

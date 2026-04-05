@@ -65,7 +65,7 @@ export function edgeExists(fromId, toId) {
   return edges.some((edge) => edge.fromId === fromId && edge.toId === toId);
 }
 
-export function addEdge(fromId, toId, fromSide = 'right', toSide = 'left') {
+export function addEdge(fromId, toId, fromSide = 'right', toSide = 'left', label = '') {
   if (!fromId || !toId || fromId === toId || edgeExists(fromId, toId)) return;
 
   ensureArrowMarker();
@@ -88,6 +88,8 @@ export function addEdge(fromId, toId, fromSide = 'right', toSide = 'left') {
     toSide,
     line,
     deleteButton,
+    label,
+    labelEl: null,
     isHovered: false,
     deleteHovered: false,
   };
@@ -95,6 +97,14 @@ export function addEdge(fromId, toId, fromSide = 'right', toSide = 'left') {
   edges.push(edge);
   updateEdge(edge);
   hideEdgeDeleteButton(edge);
+
+  if (label) {
+    const labelEl = document.createElement('div');
+    labelEl.className = 'edge-label';
+    labelEl.textContent = label;
+    canvas.appendChild(labelEl);
+    edge.labelEl = labelEl;
+  }
 
   line.addEventListener('mouseenter', () => {
     edge.isHovered = true;
@@ -135,6 +145,10 @@ export function deleteEdge(edgeToDelete) {
   if (edgeToDelete.deleteButton && edgeToDelete.deleteButton.parentNode === canvas) {
     canvas.removeChild(edgeToDelete.deleteButton);
   }
+
+  if (edgeToDelete.labelEl && edgeToDelete.labelEl.parentNode === canvas) {
+    canvas.removeChild(edgeToDelete.labelEl);
+  }
 }
 
 export function updateEdge(edge) {
@@ -154,6 +168,11 @@ export function updateEdge(edge) {
   const midY = (p1.y + p2.y) / 2;
   edge.deleteButton.style.left = `${midX - 11}px`;
   edge.deleteButton.style.top = `${midY - 11}px`;
+
+  if (edge.labelEl) {
+    edge.labelEl.style.left = `${midX}px`;
+    edge.labelEl.style.top = `${midY}px`;
+  }
 }
 
 export function updateAllEdges() {
