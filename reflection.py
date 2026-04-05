@@ -199,12 +199,47 @@ class ReflectionTree:
             node_type="message",
         )
 
+        if blocker is None or responsible_agent is None:
+            responsibility_question = ReflectionNode(
+                id="responsibility_question",
+                text=(
+                    "Do you think you should have expressed a negative feeling "
+                    "instead of showing signs of joy?"
+                ),
+                options=[
+                    {"label": "Yes", "value": "c", "next": "negative_feeling_tone_examples"},
+                    {"label": "No", "value": "no", "next": "negative_feeling_tone_examples"},
+                ],
+                node_type="question",
+            )
+
+            negative_feeling_tone_examples = ReflectionNode(
+                id="negative_feeling_tone_examples",
+                text=(
+                    f"This is your voice tone: {tone_text}. "
+                    "These are some examples of negative-feeling voice tone using the same phrase on AI voice tone."
+                ),
+                options=[],
+                node_type="message",
+            )
+
+            self.tree_id = "negative_outcome_positive_tone_speaker_missing_responsibility"
+            self.start_node = "observation"
+            self.nodes = {
+                "observation": observation,
+                "sarcasm_question": sarcasm_question,
+                "tone_interpretation": tone_interpretation,
+                "responsibility_question": responsibility_question,
+                "negative_feeling_tone_examples": negative_feeling_tone_examples,
+            }
+            return self
+
         if speaker_is_responsible:
             responsibility_question = ReflectionNode(
                 id="responsibility_question",
                 text=(
                     f'During the meeting, it was mentioned that "{blocker_text}". '
-                    "Do you think you should have expressed regret in this situation?"
+                    "Do you think you should have expressed regret in this situation to show accountability of your mistake?"
                 ),
                 options=[
                     {"label": "Yes", "value": "c", "next": "regret_tone_examples"},
