@@ -13,7 +13,10 @@ export function serializeGraph() {
     if (type === 'blocker') data = getBlockerData(node);
     if (type === 'followup') data = getFollowupData(node);
 
-    serializedNodes.push({ id, type, data });
+    const badge = node.querySelector('.small-tag')?.textContent.trim() || type;
+    const x = parseFloat(node.style.left) || 0;
+    const y = parseFloat(node.style.top) || 0;
+    serializedNodes.push({ id, type, badge, x, y, data });
   });
 
   const serializedEdges = edges.map((edge) => ({

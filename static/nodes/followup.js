@@ -3,8 +3,8 @@ import { createNodeBase } from '../node-base.js';
 import { addEdge } from '../edges.js';
 import { createAgentNode } from './agent.js';
 
-export function createFollowupNode({ x = 500, y = 320, linkedFromId = null, mode = 'actionable' } = {}) {
-  const id = nextId('followup');
+export function createFollowupNode({ x = 500, y = 320, linkedFromId = null, mode = 'actionable', _id = null } = {}) {
+  const id = _id || nextId('followup');
   const node = createNodeBase({ id, type: 'followup', title: 'Action / Question', x, y, badge: mode });
   const body = node.querySelector('.node-body');
 

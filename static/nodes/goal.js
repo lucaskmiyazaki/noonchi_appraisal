@@ -4,8 +4,8 @@ import { addEdge } from '../edges.js';
 import { createBlockerNode } from './blocker.js';
 import { createFollowupNode } from './followup.js';
 
-export function createGoalNode({ x = 220, y = 180, linkedFromId = null } = {}) {
-  const id = nextId('goal');
+export function createGoalNode({ x = 220, y = 180, linkedFromId = null, _id = null } = {}) {
+  const id = _id || nextId('goal');
   const node = createNodeBase({ id, type: 'goal', title: 'Goal', x, y, badge: 'goal' });
   const body = node.querySelector('.node-body');
 

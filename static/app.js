@@ -2,6 +2,9 @@ import { addAgentBtn, addGoalBtn, addBlockerBtn, addFollowupBtn, playBtn } from 
 import { createAgentNode, createGoalNode, createBlockerNode, createFollowupNode } from './nodes.js';
 import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
+import { initTabs } from './tabs.js';
+
+initTabs();
 
 addAgentBtn.onclick = () => {
   createAgentNode({
@@ -54,5 +57,3 @@ playBtn.onclick = async () => {
 };
 
 window.addEventListener('resize', updateAllEdges);
-
-createAgentNode({ x: 80, y: 120, role: 'speaker' });

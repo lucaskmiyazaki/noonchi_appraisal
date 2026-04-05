@@ -3,8 +3,8 @@ import { createNodeBase } from '../node-base.js';
 import { addEdge } from '../edges.js';
 import { createGoalNode } from './goal.js';
 
-export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromId = null } = {}) {
-  const id = nextId('agent');
+export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromId = null, _id = null } = {}) {
+  const id = _id || nextId('agent');
   const node = createNodeBase({ id, type: 'agent', title: 'Agent', x, y, badge: role });
   const body = node.querySelector('.node-body');
 

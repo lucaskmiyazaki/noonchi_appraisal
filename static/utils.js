@@ -5,6 +5,10 @@ export function nextId(prefix) {
   return `${prefix}-${nodeCounter}`;
 }
 
+export function setCounterFloor(n) {
+  if (n > nodeCounter) nodeCounter = n;
+}
+
 export function createField(label, inputHtml) {
   const wrapper = document.createElement('div');
   wrapper.className = 'field';
