@@ -233,6 +233,20 @@ def play_graph():
     reflection_tree = None
 
     if speaker_agent is not None:
+        blockers = list(built["blockers"].values())
+
+        def blocker_has_actionable(blocker):
+            single = getattr(blocker, "actionable", None)
+            plural = getattr(blocker, "actionables", None)
+            has_single = single is not None
+            has_plural = isinstance(plural, list) and len(plural) > 0
+            return has_single or has_plural
+
+        all_blockers_have_actionable = bool(blockers) and all(
+            blocker_has_actionable(blocker)
+            for blocker in blockers
+        )
+
         is_coherent, incoherent_goals = speaker_agent.is_tone_coherent()
         tone_check["is_tone_coherent"] = is_coherent
         tone_check["incoherent_goals"] = [
@@ -267,12 +281,36 @@ def play_graph():
             for issue in intensity_issues
         ]
 
-        # If tone is coherent but intensity is incoherent, surface an intensity reflection tree.
+        # If tone is coherent but intensity is incoherent, surface reflection from intensity.
         if reflection_tree is None and intensity_issues:
-            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
-                intensity_issues[0],
-                speaker=speaker_agent,
-            ).to_dict()
+            first_issue = intensity_issues[0]
+            issue_kind = first_issue.get("kind")
+            emotion = getattr(speaker_agent, "emotion", None)
+            looks_angry = bool(
+                emotion is not None
+                and (
+                    getattr(emotion, "name", "") == "angry"
+                    or (
+                        getattr(emotion, "valence", 0.0) < 0
+                        and getattr(emotion, "arousal", 0.0) >= 0.6
+                    )
+                )
+            )
+
+            if (
+                looks_angry
+                and issue_kind in {"high_blocker_blame", "high_context"}
+                and not all_blockers_have_actionable
+            ):
+                reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(
+                    first_issue,
+                    speaker=speaker_agent,
+                ).to_dict()
+            else:
+                reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
+                    first_issue,
+                    speaker=speaker_agent,
+                ).to_dict()
 
     print("\n=== GRAPH CREATED ===")
     for k, v in built["agents"].items():

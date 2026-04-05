@@ -54,6 +54,149 @@ class ReflectionTree:
             return role.strip()
         return fallback
 
+    def build_from_unclear_feedback_issue(self, issue, speaker=None):
+        """
+        Builds reflection tree for unclear feedback when speaker sounds angry.
+
+        Branches:
+        - responsible agent unclear
+        - responsible agent known but improvement points are unclear
+        """
+        goal = issue.get("goal")
+        blocker = issue.get("blocker")
+        goal_text = getattr(goal, "text", "this goal")
+        blocker_text = getattr(blocker, "text", "this blocker") if blocker is not None else "this blocker"
+
+        responsible_agent = getattr(blocker, "responsible_agent", None) if blocker is not None else None
+        responsible_label = self._agent_label(responsible_agent, fallback="someone in the room")
+        tone_text = self._voice_tone_text(speaker)
+        positive_reframe = f"We had to {goal_text}, but {blocker_text} and that is fine (positive tone)."
+
+        if responsible_agent is None:
+            observation = ReflectionNode(
+                id="observation",
+                text=(
+                    "Your voice tone suggests that someone needs to improve. "
+                    "However, it might not be clear who your feedback was directed to."
+                ),
+                options=[{"label": "Continue", "next": "target_question"}],
+                node_type="message",
+            )
+
+            target_question = ReflectionNode(
+                id="target_question",
+                text="Who do you think needs improvement?",
+                options=[
+                    {"label": "Nobody in the room", "value": "a", "next": "frustration_context_question"},
+                    {"label": "Someone in the room", "value": "b", "next": "context_question"},
+                ],
+                node_type="question",
+            )
+
+            frustration_context_question = ReflectionNode(
+                id="frustration_context_question",
+                text="Do you think the context is appropriate to demonstrate frustration?",
+                options=[
+                    {"label": "Yes", "value": "yes", "next": "clarity_tips"},
+                    {"label": "No", "value": "no", "next": "tone_reframe"},
+                ],
+                node_type="question",
+            )
+
+            clarity_tips = ReflectionNode(
+                id="clarity_tips",
+                text=(
+                    "You might want to be more clear about what you are mad about."
+                    "Tips: name the exact issue, describe impact, state who is responsible (if anyone), and what are the actionable steps to avoid future mistakes."
+                ),
+                options=[],
+                node_type="message",
+            )
+
+            tone_reframe = ReflectionNode(
+                id="tone_reframe",
+                text=(
+                    "You might want to change voice tone. "
+                    f"This is your tone: {tone_text}. "
+                    f"This is a more positive tone: \"{positive_reframe}\""
+                ),
+                options=[],
+                node_type="message",
+            )
+
+            context_question = ReflectionNode(
+                id="context_question",
+                text="Is the context right to provide feedback?",
+                options=[
+                    {"label": "Yes", "value": "c", "next": "clarity_tips"},
+                    {"label": "No", "value": "a", "next": "tone_reframe"},
+                ],
+                node_type="question",
+            )
+
+            self.tree_id = "unclear_feedback_unknown_target"
+            self.start_node = "observation"
+            self.nodes = {
+                "observation": observation,
+                "target_question": target_question,
+                "frustration_context_question": frustration_context_question,
+                "clarity_tips": clarity_tips,
+                "tone_reframe": tone_reframe,
+                "context_question": context_question,
+            }
+            return self
+
+        observation = ReflectionNode(
+            id="observation",
+            text=(
+                f"Your voice tone suggests that {responsible_label} needs to improve. "
+                "However, it might not be clear what the points of improvement are."
+            ),
+            options=[{"label": "Continue", "next": "context_question"}],
+            node_type="message",
+        )
+
+        context_question = ReflectionNode(
+            id="context_question",
+            text=(
+                f"Do you think {responsible_label} needs to improve? "
+                "Is the context right to provide feedback?"
+            ),
+            options=[
+                {"label": "Yes", "value": "a", "next": "actionable_guidance"},
+                {"label": "No", "value": "b", "next": "tone_reframe"},
+            ],
+            node_type="question",
+        )
+
+        actionable_guidance = ReflectionNode(
+            id="actionable_guidance",
+            text=f"Provide clear actionable steps and conditions for addressing {blocker_text}.",
+            options=[{"label": "Continue", "next": "tone_reframe"}],
+            node_type="message",
+        )
+
+        tone_reframe = ReflectionNode(
+            id="tone_reframe",
+            text=(
+                "If you don't want to express change, you might want to use a different tone. "
+                f"This is your tone: {tone_text}. "
+                f"This is more positive tone: \"{positive_reframe}\""
+            ),
+            options=[],
+            node_type="message",
+        )
+
+        self.tree_id = "unclear_feedback_known_target"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "context_question": context_question,
+            "actionable_guidance": actionable_guidance,
+            "tone_reframe": tone_reframe,
+        }
+        return self
+
     def build_from_incoherent_intensity_issue(self, issue, speaker=None):
         """
         Builds reflection tree for intensity mismatches.
