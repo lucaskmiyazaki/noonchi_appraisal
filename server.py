@@ -9,7 +9,8 @@ from goal import Goal
 from blocker import Blocker
 from actionable import Actionable
 from question import Question
-from constants import GOAL_STATUS_ON_GOING
+from constants import GOAL_STATUS_ON_GOING, GOAL_STATUS_SUCCESS
+from reflection import ReflectionTree
 
 app = Flask(__name__)
 CORS(app)
@@ -208,6 +209,46 @@ def play_graph():
 
     built = build_objects_from_graph(payload)
 
+    # Find speaker and evaluate tone coherence against attached goals.
+    speaker_id = None
+    speaker_agent = None
+    for agent_id, agent in built["agents"].items():
+        if getattr(agent, "role", "") == "speaker":
+            speaker_id = agent_id
+            speaker_agent = agent
+            break
+
+    tone_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "is_tone_coherent": None,
+        "incoherent_goals": [],
+    }
+    reflection_tree = None
+
+    if speaker_agent is not None:
+        is_coherent, incoherent_goals = speaker_agent.is_tone_coherent()
+        tone_check["is_tone_coherent"] = is_coherent
+        tone_check["incoherent_goals"] = [
+            {
+                "text": goal.text,
+                "status": goal.status,
+            }
+            for goal in incoherent_goals
+        ]
+
+        if not is_coherent and incoherent_goals:
+            # Current reflection builder supports successful-goal mismatch.
+            successful_incoherent = [
+                g for g in incoherent_goals if g.status == GOAL_STATUS_SUCCESS
+            ]
+            goal_for_reflection = successful_incoherent[0] if successful_incoherent else None
+
+            if goal_for_reflection is not None:
+                reflection_tree = ReflectionTree().build_from_incoherent_goal(
+                    goal_for_reflection
+                ).to_dict()
+
     print("\n=== GRAPH CREATED ===")
     for k, v in built["agents"].items():
         print(k, v)
@@ -227,6 +268,8 @@ def play_graph():
         "blockers": {k: repr(v) for k, v in built["blockers"].items()},
         "actionables": {k: repr(v) for k, v in built["actionables"].items()},
         "questions": {k: repr(v) for k, v in built["questions"].items()},
+        "tone_check": tone_check,
+        "reflection_tree": reflection_tree,
     })
 
 
