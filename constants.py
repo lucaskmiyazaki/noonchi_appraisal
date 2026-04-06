@@ -1,16 +1,16 @@
 # emotion_constants.py
 
-DEFAULT_PAD = (0.5, 0.5, 0.5)
+DEFAULT_PAD = (0, 0, 0)
 
 NAME_TO_PAD = {
-    "excited":      (0.7, 0.8, 0.7),
-    "surprised":    (0.6, 0.8, 0.4),
-    "enjoyment":    (0.7, 0.5, 0.7),
-    "relaxed":      (0.6, 0.3, 0.4),
-    "angry":        (-0.7, 0.8, 0.7),
-    "anxious":      (-0.7, 0.8, 0.3),
-    "disappointed": (-0.6, 0.3, 0.7),
-    "sad":          (-0.6, 0.3, 0.3),
+    "excited":      (1, 1, 1),
+    "surprised":    (1, 1, 0),
+    "enjoyment":    (1, 0, 1),
+    "relaxed":      (1, 0, 0),
+    "angry":        (-1, 1, 1),
+    "anxious":      (-1, 1, 0),
+    "disappointed": (-1, 0, 1),
+    "sad":          (-1, 0, 0),
 }
 
 GOAL_STATUS_ON_GOING = "on_going"

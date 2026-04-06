@@ -16,12 +16,12 @@ export function createField(label, inputHtml) {
   return wrapper;
 }
 
-export function createSliderRow(letter, value = 0) {
+export function createSliderRow(letter, { min = -1, max = 1, value = 0 } = {}) {
   const row = document.createElement('div');
   row.className = 'slider-row';
   row.innerHTML = `
     <span>${letter}</span>
-    <input type="range" min="-1" max="1" step="0.01" value="${value}">
+    <input type="range" min="${min}" max="${max}" step="0.01" value="${value}">
     <output>${Number(value).toFixed(2)}</output>
   `;
 

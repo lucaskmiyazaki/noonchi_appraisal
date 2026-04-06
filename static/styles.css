@@ -223,6 +223,56 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.emotion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.emotion-chip {
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  text-transform: capitalize;
+}
+
+.emotion-chip.positive {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.emotion-chip.positive:hover {
+  background: #dbeafe;
+}
+
+.emotion-chip.positive.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.emotion-chip.negative {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.emotion-chip.negative:hover {
+  background: #fee2e2;
+}
+
+.emotion-chip.negative.active {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
 input[type="range"] {
   width: 100%;
 }
