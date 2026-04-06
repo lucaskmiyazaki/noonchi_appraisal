@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+from urllib import error as url_error
+from urllib import request as url_request
+
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
@@ -24,6 +28,25 @@ from business_rules import (
 
 app = Flask(__name__)
 CORS(app)
+
+
+def post_tip_to_bangle(message):
+    if not message:
+        return
+
+    payload = json.dumps({"tip": message}).encode("utf-8")
+    req = url_request.Request(
+        "http://127.0.0.1:5007/tips",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with url_request.urlopen(req, timeout=2.0) as response:
+            response.read()
+    except (url_error.URLError, TimeoutError) as exc:
+        print(f"Failed to send tip to bangle.js: {exc}")
 
 
 @app.get("/")
@@ -300,6 +323,14 @@ def play_graph():
         print(k, v)
     for k, v in built["questions"].items():
         print(k, v)
+
+    if reflection_tree:
+        start_node_id = reflection_tree.get("start_node")
+        first_node = reflection_tree.get("nodes", {}).get(start_node_id, {}) if start_node_id else {}
+        first_message = first_node.get("text")
+
+        if first_message:
+            post_tip_to_bangle(first_message)
 
     return jsonify({
         "message": "ok",
