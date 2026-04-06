@@ -308,4 +308,13 @@ sidebarClearBtn?.addEventListener("click", () => {
   clearTranscriptSidebar();
 });
 
+export function getSelectedTimeRange() {
+  const selected = finalSegments.filter((s) => s.selected);
+  if (!selected.length) return null;
+  return {
+    startMs: Math.min(...selected.map((s) => s.startMs)),
+    endMs: Math.max(...selected.map((s) => s.endMs)),
+  };
+}
+
 renderTranscript();

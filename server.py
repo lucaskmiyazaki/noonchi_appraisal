@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from urllib import error as url_error
 from urllib import request as url_request
 
@@ -147,13 +148,23 @@ def play_graph():
     for k, v in built["questions"].items():
         print(k, v)
 
+    timestamp = datetime.now(timezone.utc).isoformat()
+
     if reflection_tree:
+        reflection_tree["timestamp"] = timestamp
+        reflection_tree["startMs"] = payload.get("startMs")
+        reflection_tree["endMs"] = payload.get("endMs")
+
         start_node_id = reflection_tree.get("start_node")
         first_node = reflection_tree.get("nodes", {}).get(start_node_id, {}) if start_node_id else {}
         first_message = first_node.get("text")
 
         if first_message:
             post_tip_to_bangle(first_message)
+
+        safe_ts = timestamp.replace(":", "-").replace("+", "Z")
+        filename = f"reflection_{safe_ts}.json"
+        (DATA_DIR / filename).write_text(json.dumps(reflection_tree, indent=2))
 
     return jsonify({
         "message": "ok",

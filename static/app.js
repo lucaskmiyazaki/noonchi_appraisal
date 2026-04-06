@@ -4,6 +4,7 @@ import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
 import { getActiveBoard } from './board.js';
 import { initTabs, createReflectionTab } from './tabs.js';
+import { getSelectedTimeRange } from './sidebar.js';
 
 initTabs();
 
@@ -61,7 +62,9 @@ addFollowupBtn.onclick = () => {
 playBtn.onclick = async () => {
   if (!isGraphBoardActive()) return;
   const graph = serializeGraph();
-  console.log('sending graph', graph);
+  const timeRange = getSelectedTimeRange();
+  const payload = timeRange ? { ...graph, ...timeRange } : graph;
+  console.log('sending graph', payload);
 
   try {
     const response = await fetch('/play_graph', {
@@ -69,7 +72,7 @@ playBtn.onclick = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(graph),
+      body: JSON.stringify(payload),
     });
 
     const result = await response.json();
