@@ -7,6 +7,9 @@ from urllib import request as url_request
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
+from pathlib import Path
+from werkzeug.utils import secure_filename
+
 from reflection import ReflectionTree
 from business_rules import (
     find_speaker,
@@ -22,6 +25,9 @@ from business_rules import (
 app = Flask(__name__)
 CORS(app)
 
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
 
 def post_tip_to_bangle(message):
     if not message:
@@ -163,6 +169,27 @@ def play_graph():
         "reflection_tree": reflection_tree,
     })
 
+@app.post("/save_recording")
+def save_recording():
+    audio = request.files.get("audio")
+    session_name = (request.form.get("session_name") or "recording").strip()
+
+    if not audio:
+        return jsonify({"error": "missing audio file"}), 400
+
+    safe_session_name = secure_filename(session_name) or "recording"
+    ext = Path(audio.filename or "").suffix or ".webm"
+
+    filename = secure_filename(f"{safe_session_name}{ext}")
+    output_path = DATA_DIR / filename
+
+    audio.save(output_path)
+
+    return jsonify({
+        "message": "recording saved",
+        "filename": filename,
+        "path": str(output_path),
+    })
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

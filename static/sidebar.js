@@ -12,6 +12,7 @@ let mediaRecorder = null;
 let mediaStream = null;
 
 let isRecording = false;
+let isUploading = false;
 let sessionStartTime = 0;
 let lastFinalEndMs = 0;
 
@@ -57,6 +58,11 @@ function pickMimeType() {
   return "";
 }
 
+function buildSessionName() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `recording_${timestamp}`;
+}
+
 function renderTranscript() {
   transcriptList.innerHTML = "";
 
@@ -99,6 +105,49 @@ function renderTranscript() {
   transcriptList.scrollTop = transcriptList.scrollHeight;
 }
 
+async function uploadWholeRecording() {
+  if (!audioChunks.length) {
+    setTranscriptStatus("Stopped.\nNo audio chunks to upload.");
+    return;
+  }
+
+  const ext = mimeType.includes("ogg") ? "ogg" : "webm";
+  const fullBlob = new Blob(audioChunks, { type: mimeType });
+
+  const form = new FormData();
+  form.append("audio", fullBlob, `full_recording.${ext}`);
+  form.append("session_name", buildSessionName());
+
+  isUploading = true;
+  setTranscriptStatus(
+    `Uploading recording...\n${finalSegments.length} transcript boxes.\n${audioChunks.length} audio chunks recorded.`
+  );
+
+  try {
+    const res = await fetch("http://127.0.0.1:5001/save_recording", {
+      method: "POST",
+      body: form,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Upload failed");
+    }
+
+    setTranscriptStatus(
+      `Stopped and uploaded.\n${finalSegments.length} transcript boxes.\n${audioChunks.length} audio chunks recorded.\nSaved: ${data.filename || "ok"}`
+    );
+  } catch (err) {
+    console.error("Upload error:", err);
+    setTranscriptStatus(
+      `Stopped, but upload failed.\n${finalSegments.length} transcript boxes.\n${audioChunks.length} audio chunks recorded.`
+    );
+  } finally {
+    isUploading = false;
+  }
+}
+
 async function startTranscriptRecording() {
   if (!SpeechRecognition) {
     setTranscriptStatus("SpeechRecognition not supported in this browser.");
@@ -138,6 +187,7 @@ async function startTranscriptRecording() {
     isRecording = true;
     sidebarPlayBtn.disabled = true;
     sidebarStopBtn.disabled = false;
+    sidebarClearBtn.disabled = true;
     setTranscriptStatus("Listening...");
   };
 
@@ -180,9 +230,10 @@ async function startTranscriptRecording() {
       } catch (err) {
         console.error(err);
       }
-    } else {
+    } else if (!isUploading) {
       sidebarPlayBtn.disabled = false;
       sidebarStopBtn.disabled = true;
+      sidebarClearBtn.disabled = false;
       setTranscriptStatus(
         `Stopped.\n${finalSegments.length} transcript boxes.\n${audioChunks.length} audio chunks recorded.`
       );
@@ -218,21 +269,21 @@ async function stopTranscriptRecording() {
 
   sidebarPlayBtn.disabled = false;
   sidebarStopBtn.disabled = true;
-
-  setTranscriptStatus(
-    `Stopped.\n${finalSegments.length} transcript boxes.\n${audioChunks.length} audio chunks recorded.`
-  );
+  sidebarClearBtn.disabled = false;
 
   renderTranscript();
+  await uploadWholeRecording();
 }
 
 function clearTranscriptSidebar() {
+  if (isRecording || isUploading) return;
+
   finalSegments = [];
   interimText = "";
   audioChunks = [];
   lastFinalEndMs = 0;
   renderTranscript();
-  setTranscriptStatus(isRecording ? "Listening..." : "Idle");
+  setTranscriptStatus("Idle");
 }
 
 sidebarPlayBtn?.addEventListener("click", async () => {
