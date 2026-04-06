@@ -358,3 +358,116 @@ button:disabled {
     0 0 0 3px rgba(17, 24, 39, 0.25),
     0 12px 30px rgba(0, 0, 0, 0.14);
 }
+
+/* ===== Transcript sidebar ===== */
+
+#canvas {
+  width: calc(100vw - 360px);
+}
+
+#transcript-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 360px;
+  height: 100vh;
+  background: #fafafa;
+  border-left: 1px solid #d1d5db;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+}
+
+.transcript-sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.96);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.transcript-sidebar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.transcript-sidebar-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.transcript-control-btn {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
+.transcript-status {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b7280;
+  white-space: pre-line;
+}
+
+.transcript-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.transcript-empty {
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  color: #6b7280;
+  padding: 14px;
+  font-size: 14px;
+}
+
+.transcript-segment {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.transcript-segment:hover {
+  border-color: #9ca3af;
+}
+
+.transcript-segment.selected {
+  border-color: #059669;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.08);
+}
+
+.transcript-segment.interim {
+  opacity: 0.78;
+  font-style: italic;
+}
+
+.transcript-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.transcript-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #111827;
+  white-space: pre-wrap;
+}
