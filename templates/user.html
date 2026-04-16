@@ -213,14 +213,11 @@
     }
   </style>
 </head>
-<body>
+{% set resolved_user = current_user or '' %}
+<body data-current-user="{{ resolved_user }}">
   <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px;">
     <h1>User Reflection Sessions</h1>
-    <div>
-      <label for="userInput">User/Speaker Agent:</label>
-      <input id="userInput" type="text" placeholder="Enter user name..." style="padding: 6px 10px; border-radius: 6px; border: 1px solid #d1d5db; margin-right: 8px;">
-      <button id="loadSessionsBtn">Load Sessions</button>
-    </div>
+    <div style="margin-bottom: 16px; color: #6b7280; font-size: 14px;">Viewing sessions for <strong>{{ resolved_user }}</strong></div>
     <div class="session-list" id="sessionList"></div>
     <div id="waveformContainer" style="margin:24px 0;"></div>
     <div class="reflection-list" id="reflectionList"></div>
@@ -241,9 +238,8 @@
 
     const sessionList = document.getElementById('sessionList');
     const reflectionList = document.getElementById('reflectionList');
-    const userInput = document.getElementById('userInput');
-    const loadSessionsBtn = document.getElementById('loadSessionsBtn');
     const waveformContainer = document.getElementById('waveformContainer');
+    const currentUser = document.body.dataset.currentUser || '';
     const reflectionModal = document.getElementById('reflectionModal');
     const reflectionModalTitle = document.getElementById('reflectionModalTitle');
     const reflectionModalSubtitle = document.getElementById('reflectionModalSubtitle');
@@ -339,10 +335,14 @@
     });
 
     async function loadSessions() {
-      const user = userInput.value.trim();
       sessionList.innerHTML = '';
       reflectionList.innerHTML = '';
-      if (!user) return;
+      waveformContainer.innerHTML = '';
+      const user = (currentUser || '').trim();
+      if (!user) {
+        sessionList.innerHTML = '<div>No user selected.</div>';
+        return;
+      }
       const res = await fetch(`/reflection/${encodeURIComponent(user)}`);
       const data = await res.json();
       if (!data.session_names.length) {
@@ -630,7 +630,7 @@
       await resolveDuration();
     }
 
-    loadSessionsBtn.onclick = loadSessions;
+    loadSessions();
   </script>
 </body>
 </html>

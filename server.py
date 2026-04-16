@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from urllib import error as url_error
 from urllib import request as url_request
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect
 from flask_cors import CORS
 
 from pathlib import Path
@@ -51,14 +51,26 @@ def post_tip_to_bangle(message):
         print(f"Failed to send tip to bangle.js: {exc}")
 
 
-@app.get("/")
-def index():
-    return render_template("index.html")
+@app.get("/wizard")
+def wizard():
+    return render_template("wizard.html")
 
-# User interface for listing sessions and reflections
+@app.get("/")
+def root():
+    return redirect("/login")
+
+@app.get("/login")
+def login():
+    return render_template("login.html")
+
+# Legacy entry point for the old user page.
 @app.get("/user")
 def user_interface():
-    return render_template("user.html")
+    return redirect("/login")
+
+@app.get("/<user_name>")
+def user_sessions(user_name):
+    return render_template("user.html", current_user=user_name)
 
 @app.post("/play_graph")
 def play_graph():
