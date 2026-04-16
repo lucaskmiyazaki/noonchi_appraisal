@@ -23,6 +23,8 @@ from business_rules import (
     summarize_intensity_issue,
 )
 
+from flask import send_from_directory, abort
+
 app = Flask(__name__)
 CORS(app)
 
@@ -271,6 +273,24 @@ def list_reflection_files_for_user_session(user, session):
         "session": session,
         "reflections": results
     })
+
+@app.get("/recording/<session_name>")
+def serve_recording(session_name):
+    # Try to find a file in DATA_DIR with the session_name as prefix
+    for file in DATA_DIR.iterdir():
+        if file.name.startswith(session_name) and file.suffix in {'.webm', '.ogg'}:
+            return send_from_directory(DATA_DIR, file.name)
+    abort(404, description="Recording not found")
+
+# Endpoint to return reflection tree JSON by file name
+@app.get("/reflection_tree/<filename>")
+def get_reflection_tree(filename):
+    file_path = DATA_DIR / filename
+    if not file_path.exists() or not file_path.suffix == '.json':
+        abort(404, description="Reflection tree not found")
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = f.read()
+    return data, 200, {'Content-Type': 'application/json'}
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
