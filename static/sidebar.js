@@ -6,6 +6,7 @@ const sidebarStopBtn = document.getElementById("sidebarStopBtn");
 const sidebarClearBtn = document.getElementById("sidebarClearBtn");
 const transcriptStatus = document.getElementById("transcriptStatus");
 const transcriptList = document.getElementById("transcriptList");
+const sessionNameInput = document.getElementById("sessionNameInput");
 
 let recognition = null;
 let mediaRecorder = null;
@@ -20,6 +21,7 @@ let finalSegments = [];
 let interimText = "";
 let audioChunks = [];
 let mimeType = "";
+let sessionName = "";
 
 function setTranscriptStatus(text) {
   transcriptStatus.textContent = text;
@@ -116,7 +118,7 @@ async function uploadWholeRecording() {
 
   const form = new FormData();
   form.append("audio", fullBlob, `full_recording.${ext}`);
-  form.append("session_name", buildSessionName());
+  form.append("session_name", sessionName);
 
   isUploading = true;
   setTranscriptStatus(
@@ -153,6 +155,8 @@ async function startTranscriptRecording() {
     setTranscriptStatus("SpeechRecognition not supported in this browser.");
     return;
   }
+
+  sessionName = sessionNameInput.value.trim() || buildSessionName();
 
   mimeType = pickMimeType();
   if (!mimeType) {
@@ -314,7 +318,14 @@ export function getSelectedTimeRange() {
   return {
     startMs: Math.min(...selected.map((s) => s.startMs)),
     endMs: Math.max(...selected.map((s) => s.endMs)),
+    sessionName: sessionName,
   };
 }
+
+export function getSessionName() {
+  return sessionName;
+}
+
+sessionNameInput.value = buildSessionName();
 
 renderTranscript();

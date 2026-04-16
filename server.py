@@ -53,6 +53,10 @@ def post_tip_to_bangle(message):
 def index():
     return render_template("index.html")
 
+# User interface for listing sessions and reflections
+@app.get("/user")
+def user_interface():
+    return render_template("user.html")
 
 @app.post("/play_graph")
 def play_graph():
@@ -154,6 +158,7 @@ def play_graph():
         reflection_tree["timestamp"] = timestamp
         reflection_tree["startMs"] = payload.get("startMs")
         reflection_tree["endMs"] = payload.get("endMs")
+        reflection_tree["session_name"] = payload.get("sessionName")
 
         start_node_id = reflection_tree.get("start_node")
         first_node = reflection_tree.get("nodes", {}).get(start_node_id, {}) if start_node_id else {}
@@ -164,7 +169,31 @@ def play_graph():
 
         safe_ts = timestamp.replace(":", "-").replace("+", "Z")
         filename = f"reflection_{safe_ts}.json"
-        (DATA_DIR / filename).write_text(json.dumps(reflection_tree, indent=2))
+        reflection_path = DATA_DIR / filename
+        reflection_path.write_text(json.dumps(reflection_tree, indent=2))
+
+        # --- DB CSV LOGIC ---
+        import csv
+        db_path = DATA_DIR / "db.csv"
+        db_exists = db_path.exists()
+        speaker_agent_name = None
+        if speaker_agent is not None:
+            # Try to get a readable name, fallback to id
+            speaker_agent_name = getattr(speaker_agent, 'name', None) or getattr(speaker_agent, 'role', None) or speaker_id
+        else:
+            speaker_agent_name = speaker_id
+        row = [
+            speaker_agent_name,
+            reflection_tree.get("session_name", ""),
+            str(reflection_path.name),
+            reflection_tree.get("startMs", ""),
+            reflection_tree.get("endMs", ""),
+        ]
+        with open(db_path, "a", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            if not db_exists:
+                writer.writerow(["speaker_agent", "session_name", "reflection_tree_file", "startms", "endms"])
+            writer.writerow(row)
 
     return jsonify({
         "message": "ok",
@@ -200,6 +229,47 @@ def save_recording():
         "message": "recording saved",
         "filename": filename,
         "path": str(output_path),
+    })
+
+
+# Place the /reflection/<user> endpoint here, after all other route functions
+@app.get("/reflection/<user>")
+def list_reflections_for_user(user):
+    import csv
+    db_path = DATA_DIR / "db.csv"
+    session_names = set()
+    if db_path.exists():
+        with open(db_path, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                # Case-insensitive match for user
+                session = row.get("session_name", "")
+                if row.get("speaker_agent", "").lower() == user.lower() and session:
+                    session_names.add(session)
+    return jsonify({"user": user, "session_names": sorted(session_names)})
+
+
+# Place the /reflection/<user>/<session> endpoint here, after all other route functions
+@app.get("/reflection/<user>/<session>")
+def list_reflection_files_for_user_session(user, session):
+    import csv
+    db_path = DATA_DIR / "db.csv"
+    results = []
+    if db_path.exists():
+        with open(db_path, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                # Case-insensitive match for user and exact match for session
+                if row.get("speaker_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
+                    results.append({
+                        "reflection_tree_file": row.get("reflection_tree_file", ""),
+                        "startms": row.get("startms", ""),
+                        "endms": row.get("endms", "")
+                    })
+    return jsonify({
+        "user": user,
+        "session": session,
+        "reflections": results
     })
 
 if __name__ == "__main__":
