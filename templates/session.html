@@ -40,15 +40,20 @@
     .reflection-modal-header { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
     .reflection-modal-title { font-size: 18px; font-weight: 700; margin: 0; }
     .reflection-modal-subtitle { margin: 4px 0 0; font-size: 12px; color: #6b7280; }
-    .reflection-modal-close { border: 0; border-radius: 10px; background: #f3f4f6; padding: 8px 10px; cursor: pointer; }
+    .reflection-modal-actions { display: flex; gap: 8px; }
+    .reflection-modal-close, .reflection-modal-voice { border: 0; border-radius: 10px; background: #f3f4f6; padding: 8px 10px; cursor: pointer; }
     .reflection-node-type { display: inline-block; margin-bottom: 12px; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 600; text-transform: capitalize; }
     .reflection-node-text { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #111827; white-space: pre-wrap; }
+    .reflection-node-word { transition: background-color 0.08s ease, color 0.08s ease; border-radius: 4px; }
+    .reflection-node-word.is-read { color: #4b5563; }
+    .reflection-node-word.is-current { background: #fef3c7; color: #111827; }
     .reflection-options { display: flex; flex-direction: column; gap: 10px; }
     .reflection-option { width: 100%; text-align: left; padding: 12px 14px; border: 1px solid #dbe3ff; border-radius: 12px; background: #f8faff; cursor: pointer; }
     .reflection-option:hover { background: #eef2ff; }
     .reflection-option-label { display: block; font-size: 14px; font-weight: 600; color: #111827; }
     .reflection-option-next { display: block; margin-top: 4px; font-size: 12px; color: #6b7280; }
     .reflection-terminal { padding: 12px 14px; border-radius: 12px; background: #f9fafb; color: #4b5563; font-size: 13px; }
+    .reflection-voice-note { margin: -8px 0 16px; font-size: 12px; color: #6b7280; }
   </style>
 </head>
 {% set resolved_user = current_user or '' %}
@@ -68,7 +73,10 @@
           <h2 id="reflectionModalTitle" class="reflection-modal-title">Reflection Tree</h2>
           <p id="reflectionModalSubtitle" class="reflection-modal-subtitle"></p>
         </div>
-        <button id="reflectionModalClose" class="reflection-modal-close" type="button">Close</button>
+        <div class="reflection-modal-actions">
+          <button id="reflectionModalVoice" class="reflection-modal-voice" type="button">Replay voice</button>
+          <button id="reflectionModalClose" class="reflection-modal-close" type="button">Close</button>
+        </div>
       </div>
       <div id="reflectionModalBody"></div>
     </div>
@@ -82,8 +90,11 @@
     const reflectionModalTitle = document.getElementById('reflectionModalTitle');
     const reflectionModalSubtitle = document.getElementById('reflectionModalSubtitle');
     const reflectionModalBody = document.getElementById('reflectionModalBody');
+    const reflectionModalVoice = document.getElementById('reflectionModalVoice');
     const reflectionModalClose = document.getElementById('reflectionModalClose');
     let activeReflectionState = null;
+    let activeUtterance = null;
+    const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
     function escapeHtml(value) {
       return String(value)
@@ -95,9 +106,67 @@
     }
 
     function closeReflectionModal() {
+      if (speechSupported) {
+        window.speechSynthesis.cancel();
+      }
       reflectionModal.hidden = true;
       reflectionModalBody.innerHTML = '';
       activeReflectionState = null;
+      activeUtterance = null;
+    }
+
+    function renderReadAlongText(text) {
+      const tokens = String(text || '').match(/\S+|\s+/g) || [];
+      let charIndex = 0;
+
+      return tokens.map(token => {
+        const start = charIndex;
+        charIndex += token.length;
+        if (/^\s+$/.test(token)) {
+          return escapeHtml(token);
+        }
+        return `<span class="reflection-node-word" data-start="${start}" data-end="${charIndex}">${escapeHtml(token)}</span>`;
+      }).join('');
+    }
+
+    function updateReadAlong(charIndex, markComplete = false) {
+      const words = reflectionModalBody.querySelectorAll('.reflection-node-word');
+      words.forEach(word => {
+        const start = Number(word.dataset.start);
+        const end = Number(word.dataset.end);
+        const isRead = markComplete || end <= charIndex;
+        const isCurrent = !markComplete && charIndex >= start && charIndex < end;
+        word.classList.toggle('is-read', isRead);
+        word.classList.toggle('is-current', isCurrent);
+      });
+    }
+
+    function speakNodeText(text) {
+      if (!speechSupported || !text) {
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      updateReadAlong(0, false);
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.96;
+      utterance.pitch = 1;
+      utterance.onboundary = event => {
+        if (event.name === 'word' || typeof event.charIndex === 'number') {
+          updateReadAlong(event.charIndex, false);
+        }
+      };
+      utterance.onend = () => {
+        updateReadAlong(text.length, true);
+        activeUtterance = null;
+      };
+      utterance.onerror = () => {
+        activeUtterance = null;
+      };
+
+      activeUtterance = utterance;
+      window.speechSynthesis.speak(utterance);
     }
 
     function renderReflectionModalNode() {
@@ -114,11 +183,13 @@
       }
 
       const options = Array.isArray(node.options) ? node.options : [];
+      const nodeText = String(node.text || '');
       reflectionModalTitle.textContent = reflection.tree_id || 'Reflection Tree';
       reflectionModalSubtitle.textContent = reflection.reflection_tree_file || '';
       reflectionModalBody.innerHTML = `
         <div class="reflection-node-type">${escapeHtml(node.type || node.node_type || 'node')}</div>
-        <p class="reflection-node-text">${escapeHtml(node.text || '')}</p>
+        <p class="reflection-node-text">${renderReadAlongText(nodeText)}</p>
+        <div class="reflection-voice-note">${speechSupported ? 'Voice playback starts automatically and highlights the text as it reads.' : 'Voice playback is not supported in this browser.'}</div>
         <div class="reflection-options">
           ${options.length ? options.map((option, index) => {
             const label = option.label || option.value || `Option ${index + 1}`;
@@ -138,6 +209,9 @@
           renderReflectionModalNode();
         });
       });
+
+      updateReadAlong(0, false);
+      speakNodeText(nodeText);
     }
 
     function openReflectionModal(reflection) {
@@ -152,6 +226,13 @@
     }
 
     reflectionModalClose.addEventListener('click', closeReflectionModal);
+    reflectionModalVoice.addEventListener('click', () => {
+      if (!activeReflectionState) {
+        return;
+      }
+      const node = activeReflectionState.tree?.nodes?.[activeReflectionState.currentNodeId];
+      speakNodeText(String(node?.text || ''));
+    });
     reflectionModal.addEventListener('click', event => {
       if (event.target === reflectionModal) {
         closeReflectionModal();
