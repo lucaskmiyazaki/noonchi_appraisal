@@ -25,11 +25,54 @@
       overflow: hidden;
       pointer-events: none;
     }
+    .audio-tooltip {
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(17, 24, 39, 0.92);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.2;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.12s ease;
+    }
+    .audio-tooltip.is-visible {
+      opacity: 1;
+    }
     .audio-region {
       position: absolute;
       top: 0;
       height: 100%;
-      background: rgba(99, 102, 241, 0.22);
+      border-radius: 999px;
+    }
+    .audio-region-unknown { background: rgba(107, 114, 128, 0.32); }
+    .audio-region-unclear-feedback { background: rgba(239, 68, 68, 0.38); }
+    .audio-region-unclear-concerns { background: rgba(245, 158, 11, 0.4); }
+    .audio-region-intensity { background: rgba(59, 130, 246, 0.4); }
+    .audio-region-goal-tone { background: rgba(34, 197, 94, 0.38); }
+    .audio-region:hover { filter: brightness(0.95); }
+    .audio-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #4b5563;
+    }
+    .audio-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .audio-legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
     }
     .audio-slider {
       position: relative;
@@ -117,6 +160,54 @@
       const reflectionData = await reflectionsResponse.json();
       const reflections = reflectionData.reflections || [];
 
+      const treeTypeMeta = {
+        unknown: { label: 'Unknown', className: 'audio-region-unknown', color: 'rgba(107, 114, 128, 0.32)' },
+        unclear_feedback: { label: 'Unclear Feedback', className: 'audio-region-unclear-feedback', color: 'rgba(239, 68, 68, 0.38)' },
+        unclear_concerns: { label: 'Unclear Concerns', className: 'audio-region-unclear-concerns', color: 'rgba(245, 158, 11, 0.4)' },
+        intensity: { label: 'Intensity Mismatch', className: 'audio-region-intensity', color: 'rgba(59, 130, 246, 0.4)' },
+        goal_tone: { label: 'Goal/Tone Incoherence', className: 'audio-region-goal-tone', color: 'rgba(34, 197, 94, 0.38)' },
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function getTreeTypeKey(treeId) {
+        if (!treeId) return 'unknown';
+        if (treeId.startsWith('unclear_feedback')) return 'unclear_feedback';
+        if (treeId.startsWith('unclear_concerns')) return 'unclear_concerns';
+        if (treeId.startsWith('intensity_')) return 'intensity';
+        if (treeId.includes('outcome') || treeId.includes('tone')) return 'goal_tone';
+        return 'unknown';
+      }
+
+      const reflectionsWithTypes = await Promise.all(reflections.map(async reflection => {
+        const nextReflection = { ...reflection, tree_id: null, treeTypeKey: 'unknown' };
+        if (!reflection.reflection_tree_file) {
+          return nextReflection;
+        }
+
+        try {
+          const treeResponse = await fetch(`/reflection_tree/${encodeURIComponent(reflection.reflection_tree_file)}`);
+          if (!treeResponse.ok) {
+            return nextReflection;
+          }
+
+          const treeData = await treeResponse.json();
+          nextReflection.tree_id = treeData.tree_id || null;
+          nextReflection.treeTypeKey = getTreeTypeKey(nextReflection.tree_id);
+        } catch (error) {
+          console.warn('Failed to load reflection tree', reflection.reflection_tree_file, error);
+        }
+
+        return nextReflection;
+      }));
+
       waveformContainer.innerHTML = `
         <div class="section-title">Audio</div>
         <div class="audio-controls">
@@ -125,14 +216,19 @@
           <div class="audio-bar-wrap">
             <div id="audioRegionLayer" class="audio-region-layer"></div>
             <input id="audioSlider" class="audio-slider" type="range" min="0" max="0" step="0.01" value="0" disabled />
+            <div id="audioTooltip" class="audio-tooltip"></div>
           </div>
         </div>
+        <div id="audioLegend" class="audio-legend"></div>
       `;
 
       const playBtn = document.getElementById('playBtn');
       const audioTime = document.getElementById('audioTime');
       const audioSlider = document.getElementById('audioSlider');
       const audioRegionLayer = document.getElementById('audioRegionLayer');
+      const audioLegend = document.getElementById('audioLegend');
+      const audioTooltip = document.getElementById('audioTooltip');
+      const audioBarWrap = audioSlider.parentElement;
       const audio = new Audio(audioUrl);
       audio.preload = 'metadata';
       let duration = 0;
@@ -149,7 +245,7 @@
           return;
         }
 
-        audioRegionLayer.innerHTML = reflections.map(reflection => {
+        audioRegionLayer.innerHTML = reflectionsWithTypes.map(reflection => {
           const start = Number(reflection.startms) / 1000;
           const end = Number(reflection.endms) / 1000;
           if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
@@ -158,9 +254,44 @@
 
           const left = Math.max(0, Math.min(100, (start / duration) * 100));
           const width = Math.max(0.5, Math.min(100 - left, ((end - start) / duration) * 100));
-          const title = `${reflection.reflection_tree_file} (${formatTime(start)} - ${formatTime(end)})`;
-          return `<div class="audio-region" style="left:${left}%;width:${width}%;" title="${title}"></div>`;
+          const treeType = treeTypeMeta[reflection.treeTypeKey] || treeTypeMeta.unknown;
+          const treeLabel = reflection.tree_id || treeType.label;
+          const title = `${treeLabel} (${formatTime(start)} - ${formatTime(end)})`;
+          return `<div class="audio-region ${treeType.className}" style="left:${left}%;width:${width}%;" title="${escapeHtml(title)}"></div>`;
         }).join('');
+      }
+
+      function renderLegend() {
+        const usedTypes = [...new Set(reflectionsWithTypes.map(reflection => reflection.treeTypeKey))]
+          .map(typeKey => treeTypeMeta[typeKey] || treeTypeMeta.unknown);
+
+        if (!usedTypes.length) {
+          audioLegend.innerHTML = '';
+          return;
+        }
+
+        audioLegend.innerHTML = usedTypes.map(type => (
+          `<span class="audio-legend-item"><span class="audio-legend-swatch" style="background:${type.color};"></span>${escapeHtml(type.label)}</span>`
+        )).join('');
+      }
+
+      function hideTooltip() {
+        audioTooltip.textContent = '';
+        audioTooltip.classList.remove('is-visible');
+      }
+
+      function showTooltip(x, text) {
+        audioTooltip.textContent = text;
+        audioTooltip.style.left = `${x}px`;
+        audioTooltip.classList.add('is-visible');
+      }
+
+      function findReflectionAtTime(timeInSeconds) {
+        return reflectionsWithTypes.find(reflection => {
+          const start = Number(reflection.startms) / 1000;
+          const end = Number(reflection.endms) / 1000;
+          return Number.isFinite(start) && Number.isFinite(end) && timeInSeconds >= start && timeInSeconds <= end;
+        }) || null;
       }
 
       function setDuration(nextDuration) {
@@ -199,7 +330,7 @@
           console.warn('Falling back to reflection timestamps for duration', error);
         }
 
-        const fallbackDuration = reflections.reduce((maxEnd, reflection) => {
+        const fallbackDuration = reflectionsWithTypes.reduce((maxEnd, reflection) => {
           const end = Number(reflection.endms) / 1000;
           return Number.isFinite(end) ? Math.max(maxEnd, end) : maxEnd;
         }, 0);
@@ -252,10 +383,38 @@
         updateUI();
       });
 
-      if (!reflections.length) {
+      audioBarWrap.addEventListener('mousemove', event => {
+        if (!Number.isFinite(duration) || duration <= 0) {
+          hideTooltip();
+          return;
+        }
+
+        const rect = audioBarWrap.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const hoveredTime = (x / rect.width) * duration;
+        const hoveredReflection = findReflectionAtTime(hoveredTime);
+
+        if (!hoveredReflection) {
+          hideTooltip();
+          return;
+        }
+
+        const treeType = treeTypeMeta[hoveredReflection.treeTypeKey] || treeTypeMeta.unknown;
+        const treeLabel = hoveredReflection.tree_id || treeType.label;
+        showTooltip(x, treeLabel);
+      });
+
+      audioBarWrap.addEventListener('mouseleave', hideTooltip);
+
+      renderLegend();
+
+      if (!reflectionsWithTypes.length) {
         reflectionList.innerHTML = '<div>No reflections for this session.</div>';
       } else {
-        reflectionList.innerHTML = '<div class="section-title">Reflections</div>' + reflections.map(r => `<div class="reflection-item">${r.reflection_tree_file} <span style="color:#888;font-size:12px;">[${r.startms} - ${r.endms}]</span></div>`).join('');
+        reflectionList.innerHTML = '<div class="section-title">Reflections</div>' + reflectionsWithTypes.map(r => {
+          const treeLabel = r.tree_id || 'unknown';
+          return `<div class="reflection-item">${escapeHtml(r.reflection_tree_file)} <span style="color:#888;font-size:12px;">[${escapeHtml(r.startms)} - ${escapeHtml(r.endms)}]</span> <span style="color:#6b7280;font-size:12px;">${escapeHtml(treeLabel)}</span></div>`;
+        }).join('');
       }
 
       updateUI();
