@@ -279,7 +279,8 @@ def serve_recording(session_name):
     # Try to find a file in DATA_DIR with the session_name as prefix
     for file in DATA_DIR.iterdir():
         if file.name.startswith(session_name) and file.suffix in {'.webm', '.ogg'}:
-            return send_from_directory(DATA_DIR, file.name)
+            mimetype = "audio/webm" if file.suffix == ".webm" else "audio/ogg"
+            return send_from_directory(DATA_DIR, file.name, mimetype=mimetype, conditional=True)
     abort(404, description="Recording not found")
 
 # Endpoint to return reflection tree JSON by file name

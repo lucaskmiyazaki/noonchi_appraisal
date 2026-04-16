@@ -5,12 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Reflection Sessions</title>
   <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/wavesurfer-loader.js"></script>
   <style>
     .session-list, .reflection-list { margin: 24px 0; }
     .session-item, .reflection-item { cursor: pointer; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; background: #f3f4f6; transition: background 0.2s; }
     .session-item:hover, .reflection-item:hover { background: #e5e7eb; }
     .section-title { font-size: 20px; font-weight: 600; margin-top: 24px; }
+    .audio-controls { display: flex; align-items: center; gap: 12px; }
+    .audio-time { font-size: 13px; color: #888; min-width: 90px; display: inline-block; }
+    .audio-bar-wrap { position: relative; flex: 1; height: 28px; display: flex; align-items: center; }
+    .audio-region-layer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 10px;
+      transform: translateY(-50%);
+      border-radius: 999px;
+      background: #f3f4f6;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .audio-region {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: rgba(99, 102, 241, 0.22);
+    }
+    .audio-slider {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      margin: 0;
+      background: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .audio-slider:disabled { cursor: not-allowed; opacity: 0.75; }
+    .audio-slider::-webkit-slider-runnable-track {
+      height: 10px;
+      background: transparent;
+      border-radius: 999px;
+    }
+    .audio-slider::-moz-range-track {
+      height: 10px;
+      background: transparent;
+      border-radius: 999px;
+    }
+    .audio-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 24px;
+      margin-top: -7px;
+      border: 0;
+      border-radius: 999px;
+      background: #6366f1;
+      cursor: pointer;
+    }
+    .audio-slider::-moz-range-thumb {
+      width: 12px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: #6366f1;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -32,7 +91,6 @@
     const userInput = document.getElementById('userInput');
     const loadSessionsBtn = document.getElementById('loadSessionsBtn');
     const waveformContainer = document.getElementById('waveformContainer');
-    let wavesurfer = null;
 
     async function loadSessions() {
       const user = userInput.value.trim();
@@ -53,46 +111,155 @@
 
     async function loadReflections(user, session) {
       reflectionList.innerHTML = '';
-      // Show waveform and play button for audio
       waveformContainer.innerHTML = '';
-      if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
-      // Add waveform UI
+      const audioUrl = `/recording/${encodeURIComponent(session)}`;
+      const reflectionsResponse = await fetch(`/reflection/${encodeURIComponent(user)}/${encodeURIComponent(session)}`);
+      const reflectionData = await reflectionsResponse.json();
+      const reflections = reflectionData.reflections || [];
+
       waveformContainer.innerHTML = `
         <div class="section-title">Audio</div>
-        <div id="waveform" style="width:100%;height:80px;background:#f3f4f6;border-radius:8px;"></div>
-        <button id="playBtn" style="margin-top:10px;">Play/Pause</button>
+        <div class="audio-controls">
+          <button id="playBtn" disabled>Play</button>
+          <span id="audioTime" class="audio-time">0:00 / --:--</span>
+          <div class="audio-bar-wrap">
+            <div id="audioRegionLayer" class="audio-region-layer"></div>
+            <input id="audioSlider" class="audio-slider" type="range" min="0" max="0" step="0.01" value="0" disabled />
+          </div>
+        </div>
       `;
-      // Wait for wavesurfer to load
-      async function ensureWavesurfer() {
-        if (window.WaveSurfer) return;
-        await new Promise(r => {
-          const check = () => window.WaveSurfer ? r() : setTimeout(check, 50);
-          check();
-        });
+
+      const playBtn = document.getElementById('playBtn');
+      const audioTime = document.getElementById('audioTime');
+      const audioSlider = document.getElementById('audioSlider');
+      const audioRegionLayer = document.getElementById('audioRegionLayer');
+      const audio = new Audio(audioUrl);
+      audio.preload = 'metadata';
+      let duration = 0;
+
+      function formatTime(s) {
+        if (!Number.isFinite(s)) return '--:--';
+        s = Math.floor(s);
+        return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
       }
-      await ensureWavesurfer();
-      wavesurfer = WaveSurfer.create({
-        container: '#waveform',
-        waveColor: '#a5b4fc',
-        progressColor: '#6366f1',
-        height: 60,
-        barWidth: 2,
-        barGap: 2,
-        barRadius: 2,
-        responsive: true,
-      });
-      wavesurfer.load(`/recording/${encodeURIComponent(session)}`);
-      document.getElementById('playBtn').onclick = () => {
-        if (wavesurfer) wavesurfer.playPause();
+
+      function renderRegions() {
+        if (!Number.isFinite(duration) || duration <= 0) {
+          audioRegionLayer.innerHTML = '';
+          return;
+        }
+
+        audioRegionLayer.innerHTML = reflections.map(reflection => {
+          const start = Number(reflection.startms) / 1000;
+          const end = Number(reflection.endms) / 1000;
+          if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+            return '';
+          }
+
+          const left = Math.max(0, Math.min(100, (start / duration) * 100));
+          const width = Math.max(0.5, Math.min(100 - left, ((end - start) / duration) * 100));
+          const title = `${reflection.reflection_tree_file} (${formatTime(start)} - ${formatTime(end)})`;
+          return `<div class="audio-region" style="left:${left}%;width:${width}%;" title="${title}"></div>`;
+        }).join('');
+      }
+
+      function setDuration(nextDuration) {
+        if (!Number.isFinite(nextDuration) || nextDuration <= 0) {
+          return false;
+        }
+
+        duration = nextDuration;
+        audioSlider.max = String(duration);
+        audioSlider.disabled = false;
+        playBtn.disabled = false;
+        renderRegions();
+        updateUI();
+        return true;
+      }
+
+      function updateUI() {
+        audioTime.textContent = `${formatTime(audio.currentTime)} / ${formatTime(duration)}`;
+        audioSlider.value = Number.isFinite(audio.currentTime) ? String(audio.currentTime) : '0';
+      }
+
+      async function resolveDuration() {
+        if (setDuration(audio.duration)) {
+          return;
+        }
+
+        try {
+          const response = await fetch(audioUrl);
+          const audioBuffer = await response.arrayBuffer();
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const decoded = await audioContext.decodeAudioData(audioBuffer.slice(0));
+          setDuration(decoded.duration);
+          await audioContext.close();
+          return;
+        } catch (error) {
+          console.warn('Falling back to reflection timestamps for duration', error);
+        }
+
+        const fallbackDuration = reflections.reduce((maxEnd, reflection) => {
+          const end = Number(reflection.endms) / 1000;
+          return Number.isFinite(end) ? Math.max(maxEnd, end) : maxEnd;
+        }, 0);
+        setDuration(fallbackDuration);
+      }
+
+      playBtn.onclick = async () => {
+        if (!Number.isFinite(duration) || duration <= 0) {
+          return;
+        }
+
+        if (audio.paused) {
+          try {
+            await audio.play();
+          } catch (error) {
+            console.error('Failed to play audio', error);
+          }
+        } else {
+          audio.pause();
+        }
       };
 
-      const res = await fetch(`/reflection/${encodeURIComponent(user)}/${encodeURIComponent(session)}`);
-      const data = await res.json();
-      if (!data.reflections.length) {
+      audio.onplay = () => { playBtn.textContent = 'Pause'; };
+      audio.onpause = () => { playBtn.textContent = 'Play'; };
+      audio.ontimeupdate = updateUI;
+      audio.onended = () => {
+        playBtn.textContent = 'Play';
+        updateUI();
+      };
+      audio.onloadedmetadata = async () => {
+        if (!setDuration(audio.duration)) {
+          await resolveDuration();
+        }
+      };
+      audio.ondurationchange = () => {
+        setDuration(audio.duration);
+      };
+
+      audioSlider.addEventListener('input', () => {
+        if (!Number.isFinite(duration) || duration <= 0) {
+          return;
+        }
+
+        const nextTime = Number(audioSlider.value);
+        if (!Number.isFinite(nextTime)) {
+          return;
+        }
+
+        audio.currentTime = Math.min(duration, Math.max(0, nextTime));
+        updateUI();
+      });
+
+      if (!reflections.length) {
         reflectionList.innerHTML = '<div>No reflections for this session.</div>';
-        return;
+      } else {
+        reflectionList.innerHTML = '<div class="section-title">Reflections</div>' + reflections.map(r => `<div class="reflection-item">${r.reflection_tree_file} <span style="color:#888;font-size:12px;">[${r.startms} - ${r.endms}]</span></div>`).join('');
       }
-      reflectionList.innerHTML = '<div class="section-title">Reflections</div>' + data.reflections.map(r => `<div class="reflection-item">${r.reflection_tree_file} <span style="color:#888;font-size:12px;">[${r.startms} - ${r.endms}]</span></div>`).join('');
+
+      updateUI();
+      await resolveDuration();
     }
 
     loadSessionsBtn.onclick = loadSessions;
