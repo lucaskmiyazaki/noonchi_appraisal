@@ -113,6 +113,104 @@
       background: #6366f1;
       cursor: pointer;
     }
+    .reflection-modal[hidden] { display: none; }
+    .reflection-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.45);
+    }
+    .reflection-modal-dialog {
+      width: min(560px, 100%);
+      max-height: 80vh;
+      overflow: auto;
+      padding: 24px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+    }
+    .reflection-modal-header {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .reflection-modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .reflection-modal-subtitle {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .reflection-modal-close {
+      border: 0;
+      border-radius: 10px;
+      background: #f3f4f6;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+    .reflection-node-type {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .reflection-node-text {
+      margin: 0 0 20px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #111827;
+      white-space: pre-wrap;
+    }
+    .reflection-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .reflection-option {
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      border: 1px solid #dbe3ff;
+      border-radius: 12px;
+      background: #f8faff;
+      cursor: pointer;
+    }
+    .reflection-option:hover {
+      background: #eef2ff;
+    }
+    .reflection-option-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .reflection-option-next {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .reflection-terminal {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #f9fafb;
+      color: #4b5563;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -127,6 +225,18 @@
     <div id="waveformContainer" style="margin:24px 0;"></div>
     <div class="reflection-list" id="reflectionList"></div>
   </div>
+  <div id="reflectionModal" class="reflection-modal" hidden>
+    <div class="reflection-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reflectionModalTitle">
+      <div class="reflection-modal-header">
+        <div>
+          <h2 id="reflectionModalTitle" class="reflection-modal-title">Reflection Tree</h2>
+          <p id="reflectionModalSubtitle" class="reflection-modal-subtitle"></p>
+        </div>
+        <button id="reflectionModalClose" class="reflection-modal-close" type="button">Close</button>
+      </div>
+      <div id="reflectionModalBody"></div>
+    </div>
+  </div>
   <script>
 
     const sessionList = document.getElementById('sessionList');
@@ -134,6 +244,99 @@
     const userInput = document.getElementById('userInput');
     const loadSessionsBtn = document.getElementById('loadSessionsBtn');
     const waveformContainer = document.getElementById('waveformContainer');
+    const reflectionModal = document.getElementById('reflectionModal');
+    const reflectionModalTitle = document.getElementById('reflectionModalTitle');
+    const reflectionModalSubtitle = document.getElementById('reflectionModalSubtitle');
+    const reflectionModalBody = document.getElementById('reflectionModalBody');
+    const reflectionModalClose = document.getElementById('reflectionModalClose');
+    let activeReflectionState = null;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function closeReflectionModal() {
+      reflectionModal.hidden = true;
+      reflectionModalBody.innerHTML = '';
+      activeReflectionState = null;
+    }
+
+    function renderReflectionModalNode() {
+      if (!activeReflectionState) {
+        closeReflectionModal();
+        return;
+      }
+
+      const { reflection, tree, currentNodeId } = activeReflectionState;
+      const node = tree?.nodes?.[currentNodeId];
+      if (!node) {
+        reflectionModalBody.innerHTML = '<div class="reflection-terminal">This reflection node could not be loaded.</div>';
+        return;
+      }
+
+      const options = Array.isArray(node.options) ? node.options : [];
+      reflectionModalTitle.textContent = reflection.tree_id || 'Reflection Tree';
+      reflectionModalSubtitle.textContent = reflection.reflection_tree_file || '';
+
+      reflectionModalBody.innerHTML = `
+        <div class="reflection-node-type">${escapeHtml(node.type || node.node_type || 'node')}</div>
+        <p class="reflection-node-text">${escapeHtml(node.text || '')}</p>
+        <div class="reflection-options">
+          ${options.length ? options.map((option, index) => {
+            const label = option.label || option.value || `Option ${index + 1}`;
+            const next = option.next || '';
+            return `<button class="reflection-option" type="button" data-next="${escapeHtml(next)}">
+              <span class="reflection-option-label">${escapeHtml(label)}</span>
+              ${next ? `<span class="reflection-option-next">Next: ${escapeHtml(next)}</span>` : ''}
+            </button>`;
+          }).join('') : '<div class="reflection-terminal">No further options for this node.</div>'}
+        </div>
+      `;
+
+      reflectionModalBody.querySelectorAll('.reflection-option').forEach(button => {
+        button.addEventListener('click', () => {
+          const nextNodeId = button.dataset.next;
+          if (!nextNodeId || !tree?.nodes?.[nextNodeId]) {
+            return;
+          }
+          activeReflectionState.currentNodeId = nextNodeId;
+          renderReflectionModalNode();
+        });
+      });
+    }
+
+    function openReflectionModal(reflection) {
+      const tree = reflection.tree;
+      const startNodeId = tree?.start_node;
+      if (!tree || !startNodeId || !tree.nodes?.[startNodeId]) {
+        return;
+      }
+
+      activeReflectionState = {
+        reflection,
+        tree,
+        currentNodeId: startNodeId,
+      };
+      reflectionModal.hidden = false;
+      renderReflectionModalNode();
+    }
+
+    reflectionModalClose.addEventListener('click', closeReflectionModal);
+    reflectionModal.addEventListener('click', event => {
+      if (event.target === reflectionModal) {
+        closeReflectionModal();
+      }
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !reflectionModal.hidden) {
+        closeReflectionModal();
+      }
+    });
 
     async function loadSessions() {
       const user = userInput.value.trim();
@@ -168,15 +371,6 @@
         goal_tone: { label: 'Goal/Tone Incoherence', className: 'audio-region-goal-tone', color: 'rgba(34, 197, 94, 0.38)' },
       };
 
-      function escapeHtml(value) {
-        return String(value)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      }
-
       function getTreeTypeKey(treeId) {
         if (!treeId) return 'unknown';
         if (treeId.startsWith('unclear_feedback')) return 'unclear_feedback';
@@ -187,7 +381,7 @@
       }
 
       const reflectionsWithTypes = await Promise.all(reflections.map(async reflection => {
-        const nextReflection = { ...reflection, tree_id: null, treeTypeKey: 'unknown' };
+        const nextReflection = { ...reflection, tree_id: null, treeTypeKey: 'unknown', tree: null };
         if (!reflection.reflection_tree_file) {
           return nextReflection;
         }
@@ -199,6 +393,7 @@
           }
 
           const treeData = await treeResponse.json();
+          nextReflection.tree = treeData;
           nextReflection.tree_id = treeData.tree_id || null;
           nextReflection.treeTypeKey = getTreeTypeKey(nextReflection.tree_id);
         } catch (error) {
@@ -405,6 +600,20 @@
       });
 
       audioBarWrap.addEventListener('mouseleave', hideTooltip);
+      audioBarWrap.addEventListener('click', event => {
+        if (!Number.isFinite(duration) || duration <= 0) {
+          return;
+        }
+
+        const rect = audioBarWrap.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const clickedTime = (x / rect.width) * duration;
+        const clickedReflection = findReflectionAtTime(clickedTime);
+
+        if (clickedReflection?.tree) {
+          openReflectionModal(clickedReflection);
+        }
+      });
 
       renderLegend();
 
