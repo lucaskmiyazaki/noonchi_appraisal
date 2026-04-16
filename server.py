@@ -68,6 +68,14 @@ def login():
 def user_interface():
     return redirect("/login")
 
+@app.get("/<user_name>/<session_name>")
+def user_session_detail(user_name, session_name):
+    return render_template(
+        "session.html",
+        current_user=user_name,
+        current_session=session_name,
+    )
+
 @app.get("/<user_name>")
 def user_sessions(user_name):
     return render_template("user.html", current_user=user_name)
