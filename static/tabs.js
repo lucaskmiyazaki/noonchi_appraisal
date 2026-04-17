@@ -28,13 +28,13 @@ export function initTabs() {
   renderTabs();
 }
 
-export function createReflectionTab(tree) {
-  const board = createReflectionBoard(tree);
+export function createReflectionTab(tree, metadata = {}) {
+  const board = createReflectionBoard(tree, metadata);
   setActiveBoard(board.id);
   renderTabs();
 }
 
-export function syncReflectionTabs(trees) {
+export function syncReflectionTabs(reflections) {
   const activeBoard = getActiveBoard();
   const fallbackGraphBoard = boards.find((board) => board.kind === 'graph');
   const nextActiveGraphBoard = activeBoard?.kind === 'graph' ? activeBoard : fallbackGraphBoard;
@@ -42,8 +42,10 @@ export function syncReflectionTabs(trees) {
   const graphBoards = boards.filter((board) => board.kind !== 'reflection');
   boards.splice(0, boards.length, ...graphBoards);
 
-  trees.forEach((tree, index) => {
-    const board = createReflectionBoard(tree);
+  reflections.forEach((reflection, index) => {
+    if (!reflection?.tree) return;
+
+    const board = createReflectionBoard(reflection.tree, reflection);
     board.name = `Reflection ${index + 1}`;
   });
 

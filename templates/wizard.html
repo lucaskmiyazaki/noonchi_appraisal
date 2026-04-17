@@ -13,12 +13,28 @@
   </div>
 
   <div id="toolbar">
-    <button id="addAgentBtn" class="agent-button">Add agent</button>
-    <button id="addGoalBtn" class="goal-button">Add goal</button>
-    <button id="addBlockerBtn" class="blocker-button">Add blocker</button>
-    <button id="addFollowupBtn" class="followup-button">Add action/question</button>
-    <button id="playBtn" class="primary">▶</button>
-    <div class="hint">Drag cards. Agent → Goal → Blocker → Responsible agent. Hover card edges to show + connectors, then drag to another card to link them.</div>
+    <div id="toolbarActions" class="toolbar-actions">
+      <button id="addAgentBtn" class="agent-button">Add agent</button>
+      <button id="addGoalBtn" class="goal-button">Add goal</button>
+      <button id="addBlockerBtn" class="blocker-button">Add blocker</button>
+      <button id="addFollowupBtn" class="followup-button">Add action/question</button>
+      <button id="playBtn" class="primary">▶</button>
+      <div class="hint">Drag cards. Agent → Goal → Blocker → Responsible agent. Hover card edges to show + connectors, then drag to another card to link them.</div>
+    </div>
+    <div id="reflectionMeta" class="reflection-meta" hidden>
+      <div class="reflection-meta-item">
+        <span class="reflection-meta-label">Session</span>
+        <strong id="reflectionSessionName" class="reflection-meta-value">-</strong>
+      </div>
+      <div class="reflection-meta-item">
+        <span class="reflection-meta-label">Start</span>
+        <strong id="reflectionStartTime" class="reflection-meta-value">-</strong>
+      </div>
+      <div class="reflection-meta-item">
+        <span class="reflection-meta-label">End</span>
+        <strong id="reflectionEndTime" class="reflection-meta-value">-</strong>
+      </div>
+    </div>
   </div>
 
   <div id="canvas">

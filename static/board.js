@@ -159,7 +159,7 @@ export function createBoard(name = null) {
   return board;
 }
 
-export function createReflectionBoard(tree) {
+export function createReflectionBoard(tree, metadata = {}) {
   boardCounter += 1;
   reflectionCounter += 1;
   const id = `board-${boardCounter}`;
@@ -168,6 +168,11 @@ export function createReflectionBoard(tree) {
     name: `Reflection ${reflectionCounter}`,
     kind: 'reflection',
     graph: buildReflectionGraph(tree),
+    metadata: {
+      sessionName: metadata.sessionName || '',
+      startMs: Number.isFinite(Number(metadata.startMs)) ? Number(metadata.startMs) : null,
+      endMs: Number.isFinite(Number(metadata.endMs)) ? Number(metadata.endMs) : null,
+    },
   };
   boards.push(board);
   return board;

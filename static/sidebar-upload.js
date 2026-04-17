@@ -300,13 +300,18 @@ async function loadReflectionTabsForSession(sessionName) {
       return;
     }
 
-    const trees = Array.isArray(data.reflections)
+    const reflections = Array.isArray(data.reflections)
       ? data.reflections
-          .map((reflection) => reflection.tree)
-          .filter(Boolean)
+          .map((reflection) => ({
+            tree: reflection.tree,
+            sessionName: data.session || sessionName,
+            startMs: Number(reflection.startms),
+            endMs: Number(reflection.endms),
+          }))
+          .filter((reflection) => Boolean(reflection.tree))
       : [];
 
-    syncReflectionTabs(trees);
+    syncReflectionTabs(reflections);
   } catch (error) {
     console.error(error);
     syncReflectionTabs([]);

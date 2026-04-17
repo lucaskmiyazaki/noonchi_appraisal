@@ -80,11 +80,51 @@ body {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-actions[hidden] {
+  display: none;
+}
+
+.reflection-meta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.reflection-meta[hidden] {
+  display: none;
+}
+
+.reflection-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+}
+
+.reflection-meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.reflection-meta-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
 }
 
 #canvas {
@@ -356,6 +396,21 @@ button:disabled {
   font-size: 12px;
   line-height: 1.4;
   color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  #toolbar {
+    max-width: calc(100vw - 32px);
+  }
+
+  .toolbar-actions,
+  .reflection-meta {
+    flex-wrap: wrap;
+  }
+
+  .reflection-meta-item {
+    min-width: 96px;
+  }
 }
 
 .port {

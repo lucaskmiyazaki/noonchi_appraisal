@@ -6,6 +6,12 @@ import { getActiveBoard } from './board.js';
 import { initTabs, createReflectionTab } from './tabs.js';
 import { getSelectedTimeRange } from './sidebar-upload.js';
 
+const toolbarActions = document.getElementById('toolbarActions');
+const reflectionMeta = document.getElementById('reflectionMeta');
+const reflectionSessionName = document.getElementById('reflectionSessionName');
+const reflectionStartTime = document.getElementById('reflectionStartTime');
+const reflectionEndTime = document.getElementById('reflectionEndTime');
+
 initTabs();
 
 function isGraphBoardActive() {
@@ -13,13 +19,41 @@ function isGraphBoardActive() {
   return !board || board.kind === 'graph';
 }
 
+function formatReflectionTime(value) {
+  const totalMs = Number(value);
+  if (!Number.isFinite(totalMs) || totalMs < 0) return '-';
+
+  const totalSeconds = Math.floor(totalMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 function syncToolbarState() {
+  const board = getActiveBoard();
   const enabled = isGraphBoardActive();
   addAgentBtn.disabled = !enabled;
   addGoalBtn.disabled = !enabled;
   addBlockerBtn.disabled = !enabled;
   addFollowupBtn.disabled = !enabled;
   playBtn.disabled = !enabled;
+
+  const isReflectionBoard = board?.kind === 'reflection';
+  if (toolbarActions) toolbarActions.hidden = isReflectionBoard;
+  if (reflectionMeta) reflectionMeta.hidden = !isReflectionBoard;
+
+  if (isReflectionBoard) {
+    const metadata = board?.metadata || {};
+    if (reflectionSessionName) reflectionSessionName.textContent = metadata.sessionName || '-';
+    if (reflectionStartTime) reflectionStartTime.textContent = formatReflectionTime(metadata.startMs);
+    if (reflectionEndTime) reflectionEndTime.textContent = formatReflectionTime(metadata.endMs);
+  }
 }
 
 window.addEventListener('board:changed', syncToolbarState);
@@ -79,7 +113,7 @@ playBtn.onclick = async () => {
     console.log('server response', result);
 
     if (result?.reflection_tree) {
-      createReflectionTab(result.reflection_tree);
+      createReflectionTab(result.reflection_tree, timeRange || {});
     }
   } catch (error) {
     console.error('failed to send graph', error);
