@@ -316,6 +316,7 @@ async function loadReflectionTabsForSession(sessionName) {
             sessionName: data.session || sessionName,
             startMs: Number(reflection.startms),
             endMs: Number(reflection.endms),
+            reflectionFile: reflection.reflection_tree_file || '',
           }))
           .filter((reflection) => Boolean(reflection.tree))
       : [];

@@ -172,10 +172,35 @@ export function createReflectionBoard(tree, metadata = {}) {
       sessionName: metadata.sessionName || '',
       startMs: Number.isFinite(Number(metadata.startMs)) ? Number(metadata.startMs) : null,
       endMs: Number.isFinite(Number(metadata.endMs)) ? Number(metadata.endMs) : null,
+      reflectionFile: metadata.reflectionFile || '',
     },
   };
   boards.push(board);
   return board;
+}
+
+export function removeBoard(boardId) {
+  const boardIndex = boards.findIndex((board) => board.id === boardId);
+  if (boardIndex === -1) return false;
+
+  const wasActive = activeBoardId === boardId;
+  boards.splice(boardIndex, 1);
+
+  if (!boards.length) {
+    const board = createBoard();
+    activeBoardId = null;
+    setActiveBoard(board.id);
+    return true;
+  }
+
+  if (wasActive) {
+    const fallbackGraphBoard = boards.find((board) => board.kind === 'graph');
+    const fallbackBoard = fallbackGraphBoard || boards[Math.min(boardIndex, boards.length - 1)];
+    activeBoardId = null;
+    setActiveBoard(fallbackBoard.id);
+  }
+
+  return true;
 }
 
 export function saveCurrentBoard() {

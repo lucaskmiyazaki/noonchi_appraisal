@@ -126,7 +126,10 @@ playBtn.onclick = async () => {
     console.log('server response', result);
 
     if (result?.reflection_tree) {
-      createReflectionTab(result.reflection_tree, timeRange || {});
+      createReflectionTab(result.reflection_tree, {
+        ...(timeRange || {}),
+        reflectionFile: result.reflection_tree_file || '',
+      });
       clearSelectedTranscriptSegments();
     }
   } catch (error) {

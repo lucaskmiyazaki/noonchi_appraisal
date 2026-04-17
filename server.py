@@ -377,6 +377,8 @@ def play_graph():
 
     timestamp = datetime.now(timezone.utc).isoformat()
 
+    reflection_filename = None
+
     if reflection_tree:
         reflection_tree["timestamp"] = timestamp
         reflection_tree["startMs"] = payload.get("startMs")
@@ -391,8 +393,8 @@ def play_graph():
             post_tip_to_bangle(first_message)
 
         safe_ts = timestamp.replace(":", "-").replace("+", "Z")
-        filename = f"reflection_{safe_ts}.json"
-        reflection_path = DATA_DIR / filename
+        reflection_filename = f"reflection_{safe_ts}.json"
+        reflection_path = DATA_DIR / reflection_filename
         reflection_path.write_text(json.dumps(reflection_tree, indent=2))
 
         # --- DB CSV LOGIC ---
@@ -430,6 +432,50 @@ def play_graph():
         "tone_check": tone_check,
         "intensity_check": intensity_check,
         "reflection_tree": reflection_tree,
+        "reflection_tree_file": reflection_filename,
+    })
+
+
+@app.delete("/api/audio/reflection/<reflection_filename>")
+def delete_reflection(reflection_filename):
+    import csv
+
+    safe_filename = secure_filename(reflection_filename or "")
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid reflection filename."}), 400
+
+    db_path = DATA_DIR / "db.csv"
+    remaining_rows = []
+    deleted_row = None
+
+    if db_path.exists():
+        with open(db_path, newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            fieldnames = reader.fieldnames or ["speaker_agent", "session_name", "reflection_tree_file", "startms", "endms"]
+
+            for row in reader:
+                if row.get("reflection_tree_file", "") == safe_filename and deleted_row is None:
+                    deleted_row = row
+                    continue
+                remaining_rows.append(row)
+
+        with open(db_path, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(remaining_rows)
+
+    reflection_path = DATA_DIR / safe_filename
+    file_deleted = False
+    if reflection_path.exists() and reflection_path.is_file():
+        reflection_path.unlink()
+        file_deleted = True
+
+    if deleted_row is None and not file_deleted:
+        return jsonify({"error": "Reflection not found."}), 404
+
+    return jsonify({
+        "message": "reflection deleted",
+        "reflection_tree_file": safe_filename,
     })
 
 @app.post("/save_recording")

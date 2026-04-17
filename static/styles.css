@@ -31,6 +31,12 @@ body {
   overflow-x: auto;
 }
 
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .tab-button {
   padding: 7px 14px;
   border: 1px solid #e5e7eb;
@@ -58,6 +64,23 @@ body {
 .tab-button.reflection.active {
   background: #6d28d9;
   color: #fff;
+}
+
+.tab-close-button {
+  padding: 7px 9px;
+  border: 1px solid #c4b5fd;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #6d28d9;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tab-close-button.active {
+  background: #6d28d9;
+  color: #fff;
+  border-color: #6d28d9;
 }
 
 .new-tab-btn {
