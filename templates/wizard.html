@@ -35,18 +35,20 @@
       </div>
 
       <div class="transcript-sidebar-controls">
-        <button id="sidebarPlayBtn" class="transcript-control-btn">Play</button>
-        <button id="sidebarStopBtn" class="transcript-control-btn" disabled>Stop</button>
+        <input id="sidebarAudioInput" type="file" accept="audio/*" hidden>
+        <button id="sidebarUploadBtn" class="transcript-control-btn">Upload audio</button>
+        <button id="sidebarPlayBtn" class="transcript-control-btn" disabled>Play</button>
         <button id="sidebarClearBtn" class="transcript-control-btn">Clear</button>
       </div>
 
       <div id="transcriptStatus" class="transcript-status">Idle</div>
+      <div id="transcriptFileName" class="transcript-file-name"></div>
     </div>
 
     <div id="transcriptList" class="transcript-list"></div>
   </aside>
 
   <script type="module" src="{{ url_for('static', filename='app.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='sidebar.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='sidebar-upload.js') }}"></script>
 </body>
 </html>

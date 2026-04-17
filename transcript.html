@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Transcript Highlight</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    #error {
+      color: red;
+      margin-top: 10px;
+    }
+
+    #fileName {
+      margin-top: 16px;
+      font-weight: bold;
+    }
+
+    #transcript {
+      margin-top: 20px;
+      font-size: 20px;
+      line-height: 2;
+    }
+
+    .chunk {
+      padding: 2px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .chunk.active {
+      background-color: #ffe066;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Upload Audio and Highlight Transcript</h1>
+
+  <div class="controls">
+    <input type="file" id="audioFile" accept="audio/*" />
+    <button id="uploadBtn">Upload</button>
+    <button id="playPauseBtn" disabled>Play</button>
+  </div>
+
+  <div id="error"></div>
+  <div id="fileName"></div>
+
+  <audio id="audioPlayer" preload="metadata"></audio>
+  <div id="transcript"></div>
+
+  <script>
+    const audioFileInput = document.getElementById("audioFile");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const errorDiv = document.getElementById("error");
+    const fileNameDiv = document.getElementById("fileName");
+    const transcriptDiv = document.getElementById("transcript");
+    const audioPlayer = document.getElementById("audioPlayer");
+
+    let audioData = null;
+    let activeChunkId = null;
+
+    // =====================
+    // LOAD EXISTING AUDIO
+    // =====================
+    async function loadAudioById(id) {
+      try {
+        const response = await fetch(`/api/audio/${id}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load audio.");
+        }
+
+        audioData = data;
+        audioPlayer.src = data.audioUrl;
+        fileNameDiv.textContent = "File: " + data.originalName;
+        playPauseBtn.disabled = false;
+
+        renderTranscript(data.transcript);
+
+      } catch (err) {
+        console.error(err);
+        errorDiv.textContent = "Could not load saved audio.";
+      }
+    }
+
+    // =====================
+    // UPLOAD
+    // =====================
+    uploadBtn.addEventListener("click", async () => {
+      const file = audioFileInput.files[0];
+
+      errorDiv.textContent = "";
+      fileNameDiv.textContent = "";
+      transcriptDiv.innerHTML = "";
+      playPauseBtn.disabled = true;
+      audioPlayer.pause();
+
+      if (!file) {
+        errorDiv.textContent = "Please select an audio file first.";
+        return;
+      }
+
+      try {
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "Uploading...";
+
+        const formData = new FormData();
+        formData.append("audio", file);
+
+        const response = await fetch("/api/audio/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Upload failed.");
+        }
+
+        audioData = data;
+
+        // ✅ Save ID locally
+        localStorage.setItem("audioId", data.id);
+
+        audioPlayer.src = data.audioUrl;
+        fileNameDiv.textContent = "File: " + data.originalName;
+        playPauseBtn.disabled = false;
+
+        renderTranscript(data.transcript);
+
+      } catch (err) {
+        errorDiv.textContent = err.message || "Something went wrong.";
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = "Upload";
+      }
+    });
+
+    // =====================
+    // PLAY / PAUSE
+    // =====================
+    playPauseBtn.addEventListener("click", async () => {
+      if (!audioPlayer.src) return;
+
+      try {
+        if (audioPlayer.paused) {
+          await audioPlayer.play();
+        } else {
+          audioPlayer.pause();
+        }
+      } catch (err) {
+        errorDiv.textContent = "Audio playback failed.";
+        console.error(err);
+      }
+    });
+
+    audioPlayer.addEventListener("play", () => {
+      playPauseBtn.textContent = "Pause";
+    });
+
+    audioPlayer.addEventListener("pause", () => {
+      playPauseBtn.textContent = "Play";
+    });
+
+    audioPlayer.addEventListener("ended", () => {
+      playPauseBtn.textContent = "Play";
+      clearActiveHighlight();
+    });
+
+    // =====================
+    // HIGHLIGHT LOGIC
+    // =====================
+    audioPlayer.addEventListener("timeupdate", () => {
+      if (!audioData || !audioData.transcript) return;
+
+      const currentTime = audioPlayer.currentTime;
+
+      const activeChunk = audioData.transcript.find(chunk => {
+        return currentTime >= chunk.start && currentTime < chunk.end;
+      });
+
+      const newActiveChunkId = activeChunk ? activeChunk.id : null;
+
+      if (newActiveChunkId !== activeChunkId) {
+        activeChunkId = newActiveChunkId;
+        updateHighlight();
+      }
+    });
+
+    function renderTranscript(transcript) {
+      transcriptDiv.innerHTML = "";
+
+      transcript.forEach(chunk => {
+        const span = document.createElement("span");
+        span.className = "chunk";
+        span.dataset.id = chunk.id;
+        span.textContent = chunk.text + " ";
+
+        span.addEventListener("click", () => {
+          audioPlayer.currentTime = chunk.start;
+          updateHighlightById(chunk.id);
+        });
+
+        transcriptDiv.appendChild(span);
+      });
+    }
+
+    function clearActiveHighlight() {
+      const activeEl = document.querySelector(".chunk.active");
+      if (activeEl) activeEl.classList.remove("active");
+      activeChunkId = null;
+    }
+
+    function updateHighlight() {
+      document.querySelectorAll(".chunk").forEach(el => {
+        const isActive = Number(el.dataset.id) === activeChunkId;
+        el.classList.toggle("active", isActive);
+      });
+    }
+
+    function updateHighlightById(id) {
+      activeChunkId = id;
+      updateHighlight();
+    }
+
+    // =====================
+    // AUTO LOAD ON PAGE OPEN
+    // =====================
+    window.addEventListener("load", () => {
+      const savedId = localStorage.getItem("audioId");
+
+      if (savedId) {
+        loadAudioById(savedId);
+      }
+    });
+  </script>
+
+</body>
+</html>

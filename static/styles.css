@@ -482,6 +482,13 @@ button:disabled {
   white-space: pre-line;
 }
 
+.transcript-file-name {
+  font-size: 12px;
+  color: #374151;
+  min-height: 16px;
+  word-break: break-word;
+}
+
 .transcript-list {
   flex: 1;
   overflow-y: auto;
@@ -517,6 +524,12 @@ button:disabled {
   border-color: #059669;
   background: #ecfdf5;
   box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.08);
+}
+
+.transcript-segment.active {
+  border-color: #eab308;
+  background: #fefce8;
+  box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.14);
 }
 
 .transcript-segment.interim {

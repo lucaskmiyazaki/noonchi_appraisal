@@ -4,7 +4,7 @@ import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
 import { getActiveBoard } from './board.js';
 import { initTabs, createReflectionTab } from './tabs.js';
-import { getSelectedTimeRange } from './sidebar.js';
+import { getSelectedTimeRange } from './sidebar-upload.js';
 
 initTabs();
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime, timezone
+from functools import lru_cache
 from urllib import error as url_error
 from urllib import request as url_request
 
-from flask import Flask, jsonify, request, render_template, redirect
+from flask import Flask, jsonify, request, render_template, redirect, send_from_directory, abort
 from flask_cors import CORS
 
 from pathlib import Path
@@ -22,15 +24,126 @@ from business_rules import (
     summarize_tone_issue,
     summarize_intensity_issue,
 )
-
-from flask import send_from_directory, abort
-
 app = Flask(__name__)
 CORS(app)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
+UPLOAD_DIR = DATA_DIR
+AUDIO_DATA_DIR = DATA_DIR
 DATA_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+AUDIO_ALLOWED_EXTENSIONS = {
+    "mp3",
+    "wav",
+    "m4a",
+    "ogg",
+    "webm",
+    "mp4",
+    "mpeg",
+    "mpga",
+}
+
+
+def allowed_audio_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in AUDIO_ALLOWED_EXTENSIONS
+
+
+def build_session_name(filename: str, provided_session_name: str = ""):
+    explicit_name = provided_session_name.strip()
+    if explicit_name:
+        return explicit_name
+
+    derived_name = secure_filename(Path(filename or "audio").stem)
+    return derived_name or "audio"
+
+
+@lru_cache(maxsize=1)
+def get_whisper_model():
+    try:
+        import whisper
+    except ImportError as exc:
+        raise RuntimeError(
+            "Whisper is not installed. Install openai-whisper to enable audio transcription."
+        ) from exc
+
+    return whisper.load_model("base")
+
+
+def transcribe_audio_file(file_path: Path):
+    result = get_whisper_model().transcribe(str(file_path), fp16=False)
+
+    transcript = []
+    for index, segment in enumerate(result.get("segments", []), start=1):
+        text = str(segment.get("text", "")).strip()
+        if not text:
+            continue
+
+        transcript.append({
+            "id": index,
+            "text": text,
+            "start": float(segment.get("start", 0.0)),
+            "end": float(segment.get("end", 0.0)),
+            "selected": False,
+        })
+
+    return transcript
+
+
+def save_audio_record(record):
+    record_path = AUDIO_DATA_DIR / f"{record['id']}.json"
+    record_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+
+def load_audio_record(record_id):
+    record_path = AUDIO_DATA_DIR / f"{record_id}.json"
+    if not record_path.exists():
+        return None
+    return json.loads(record_path.read_text(encoding="utf-8"))
+
+
+def is_audio_record(record):
+    return isinstance(record, dict) and {
+        "id",
+        "audioUrl",
+        "audioFilename",
+        "transcript",
+    }.issubset(record.keys())
+
+
+def iter_audio_records():
+    records = []
+    for path in sorted(DATA_DIR.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        if is_audio_record(record):
+            records.append(record)
+
+    return records
+
+
+def find_latest_audio_record(session_name=""):
+    requested_session = session_name.strip()
+    safe_session_name = secure_filename(requested_session)
+
+    for record in iter_audio_records():
+        if not requested_session:
+            return record
+
+        if record.get("sessionName") == requested_session:
+            return record
+
+        if safe_session_name and record.get("safeSessionName") == safe_session_name:
+            return record
+
+    if requested_session:
+        return find_latest_audio_record("")
+
+    return None
 
 def post_tip_to_bangle(message):
     if not message:
@@ -234,7 +347,10 @@ def play_graph():
 @app.post("/save_recording")
 def save_recording():
     audio = request.files.get("audio")
-    session_name = (request.form.get("session_name") or "recording").strip()
+    session_name = build_session_name(
+        audio.filename if audio else "recording",
+        request.form.get("session_name") or "",
+    )
 
     if not audio:
         return jsonify({"error": "missing audio file"}), 400
@@ -252,6 +368,82 @@ def save_recording():
         "filename": filename,
         "path": str(output_path),
     })
+
+
+@app.get("/uploads/<path:filename>")
+def serve_uploaded_audio(filename):
+    return send_from_directory(UPLOAD_DIR, filename, conditional=True)
+
+
+@app.post("/api/audio/upload")
+def upload_audio():
+    audio = request.files.get("audio")
+
+    if not audio:
+        return jsonify({"error": "No audio file uploaded."}), 400
+
+    if not audio.filename:
+        return jsonify({"error": "Empty filename."}), 400
+
+    if not allowed_audio_file(audio.filename):
+        return jsonify({"error": "Unsupported file type."}), 400
+
+    safe_name = secure_filename(audio.filename)
+    if not safe_name:
+        return jsonify({"error": "Invalid filename."}), 400
+
+    session_name = build_session_name(audio.filename, request.form.get("session_name") or "")
+
+    audio_id = str(uuid.uuid4())
+    stored_filename = f"{audio_id}_{safe_name}"
+    output_path = UPLOAD_DIR / stored_filename
+
+    try:
+        audio.save(output_path)
+        transcript = transcribe_audio_file(output_path)
+    except RuntimeError as exc:
+        if output_path.exists():
+            output_path.unlink()
+        return jsonify({"error": str(exc)}), 500
+    except Exception as exc:
+        if output_path.exists():
+            output_path.unlink()
+        return jsonify({"error": f"Failed to process audio: {exc}"}), 500
+
+    record = {
+        "id": audio_id,
+        "audioUrl": f"/uploads/{stored_filename}",
+        "audioFilename": stored_filename,
+        "originalName": audio.filename,
+        "sessionName": session_name,
+        "safeSessionName": secure_filename(session_name),
+        "uploadedAt": datetime.now(timezone.utc).isoformat(),
+        "transcript": transcript,
+    }
+    save_audio_record(record)
+
+    return jsonify(record)
+
+
+@app.get("/api/audio/latest")
+def get_latest_audio():
+    session_name = request.args.get("session_name", "")
+    record = find_latest_audio_record(session_name)
+
+    if record is None:
+        return jsonify({"error": "No uploaded audio found."}), 404
+
+    return jsonify(record)
+
+
+@app.get("/api/audio/<audio_id>")
+def get_audio(audio_id):
+    record = load_audio_record(audio_id)
+
+    if record is None:
+        return jsonify({"error": "Not found"}), 404
+
+    return jsonify(record)
 
 
 # Place the /reflection/<user> endpoint here, after all other route functions
