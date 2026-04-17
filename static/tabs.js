@@ -1,5 +1,5 @@
 import { tabBar, addTabBtn } from './state.js';
-import { boards, activeBoardId, createBoard, createReflectionBoard, setActiveBoard } from './board.js';
+import { boards, activeBoardId, createBoard, createReflectionBoard, setActiveBoard, getActiveBoard } from './board.js';
 
 function renderTabs() {
   tabBar.innerHTML = '';
@@ -31,5 +31,25 @@ export function initTabs() {
 export function createReflectionTab(tree) {
   const board = createReflectionBoard(tree);
   setActiveBoard(board.id);
+  renderTabs();
+}
+
+export function syncReflectionTabs(trees) {
+  const activeBoard = getActiveBoard();
+  const fallbackGraphBoard = boards.find((board) => board.kind === 'graph');
+  const nextActiveGraphBoard = activeBoard?.kind === 'graph' ? activeBoard : fallbackGraphBoard;
+
+  const graphBoards = boards.filter((board) => board.kind !== 'reflection');
+  boards.splice(0, boards.length, ...graphBoards);
+
+  trees.forEach((tree, index) => {
+    const board = createReflectionBoard(tree);
+    board.name = `Reflection ${index + 1}`;
+  });
+
+  if (nextActiveGraphBoard) {
+    setActiveBoard(nextActiveGraphBoard.id);
+  }
+
   renderTabs();
 }

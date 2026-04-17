@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import atexit
 import json
+import os
+import shutil
+import subprocess
+import time
 import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -33,6 +38,9 @@ UPLOAD_DIR = DATA_DIR
 AUDIO_DATA_DIR = DATA_DIR
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+NGROK_API_URL = "http://127.0.0.1:4040/api/tunnels"
+NGROK_PROCESS = None
 
 AUDIO_ALLOWED_EXTENSIONS = {
     "mp3",
@@ -160,6 +168,70 @@ def find_latest_audio_record(session_name=""):
         return find_latest_audio_record("")
 
     return None
+
+
+def stop_ngrok():
+    global NGROK_PROCESS
+
+    if NGROK_PROCESS is None or NGROK_PROCESS.poll() is not None:
+        return
+
+    NGROK_PROCESS.terminate()
+    try:
+        NGROK_PROCESS.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        NGROK_PROCESS.kill()
+        NGROK_PROCESS.wait(timeout=3)
+
+
+def start_ngrok(port: int = 5001):
+    global NGROK_PROCESS
+
+    if NGROK_PROCESS is not None and NGROK_PROCESS.poll() is None:
+        return
+
+    ngrok_path = shutil.which("ngrok")
+    if ngrok_path is None:
+        print("ngrok is not installed or not available on PATH. Skipping tunnel startup.")
+        return
+
+    NGROK_PROCESS = subprocess.Popen(
+        [ngrok_path, "http", str(port), "--scheme=http,https"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+
+    for _ in range(10):
+        if NGROK_PROCESS.poll() is not None:
+            print("ngrok exited before the tunnel became available.")
+            NGROK_PROCESS = None
+            return
+
+        time.sleep(1)
+
+        try:
+            with url_request.urlopen(NGROK_API_URL, timeout=2.0) as response:
+                payload = json.load(response)
+        except (url_error.URLError, TimeoutError, json.JSONDecodeError):
+            continue
+
+        tunnels = payload.get("tunnels", [])
+        if not tunnels:
+            continue
+
+        print("\n===== NGROK URLS =====")
+        for tunnel in tunnels:
+            proto = str(tunnel.get("proto", "")).upper()
+            url = tunnel.get("public_url")
+            if url:
+                print(f"{proto} URL: {url}")
+        print("======================\n")
+        return
+
+    print("Could not get ngrok URL from the local ngrok API.")
+
+
+atexit.register(stop_ngrok)
 
 def post_tip_to_bangle(message):
     if not message:
@@ -458,6 +530,43 @@ def list_audio_sessions():
     return jsonify({"sessions": sessions})
 
 
+@app.get("/api/audio/session/<session_name>/reflections")
+def list_session_reflection_trees(session_name):
+    import csv
+
+    db_path = DATA_DIR / "db.csv"
+    reflections = []
+    if db_path.exists():
+        with open(db_path, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row.get("session_name", "") != session_name:
+                    continue
+
+                reflection_file = row.get("reflection_tree_file", "")
+                if not reflection_file:
+                    continue
+
+                reflection_path = DATA_DIR / reflection_file
+                if not reflection_path.exists() or reflection_path.suffix != ".json":
+                    continue
+
+                try:
+                    tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+
+                reflections.append({
+                    "reflection_tree_file": reflection_file,
+                    "startms": row.get("startms", ""),
+                    "endms": row.get("endms", ""),
+                    "tree": tree,
+                })
+
+    reflections.sort(key=lambda item: int(item.get("startms") or 0))
+    return jsonify({"session": session_name, "reflections": reflections})
+
+
 @app.get("/api/audio/<audio_id>")
 def get_audio(audio_id):
     record = load_audio_record(audio_id)
@@ -528,4 +637,8 @@ def get_reflection_tree(filename):
     return data, 200, {'Content-Type': 'application/json'}
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    debug_enabled = True
+    should_start_ngrok = not debug_enabled or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    if should_start_ngrok:
+        start_ngrok(port=5001)
+    app.run(debug=debug_enabled, port=5001)

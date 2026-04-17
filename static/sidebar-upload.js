@@ -9,6 +9,8 @@ const sessionList = document.getElementById("sessionList");
 const transcriptList = document.getElementById("transcriptList");
 const sessionNameInput = document.getElementById("sessionNameInput");
 
+import { syncReflectionTabs } from "./tabs.js";
+
 const audioPlayer = new Audio();
 
 let audioData = null;
@@ -166,6 +168,7 @@ function clearLoadedAudio() {
 function showSessionListView() {
   audioPlayer.pause();
   activeChunkId = null;
+  syncReflectionTabs([]);
   renderSessionList();
   setSidebarView("list");
   setTranscriptStatus(sessions.length ? "Select a session or upload audio." : "No sessions yet. Upload audio to create one.");
@@ -274,10 +277,39 @@ async function loadAudioById(audioId) {
     }
 
     setLoadedAudio(data);
+    await loadReflectionTabsForSession(data.sessionName);
     return true;
   } catch (error) {
     console.error(error);
     return false;
+  }
+}
+
+async function loadReflectionTabsForSession(sessionName) {
+  if (!sessionName) {
+    syncReflectionTabs([]);
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/audio/session/${encodeURIComponent(sessionName)}/reflections`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      syncReflectionTabs([]);
+      return;
+    }
+
+    const trees = Array.isArray(data.reflections)
+      ? data.reflections
+          .map((reflection) => reflection.tree)
+          .filter(Boolean)
+      : [];
+
+    syncReflectionTabs(trees);
+  } catch (error) {
+    console.error(error);
+    syncReflectionTabs([]);
   }
 }
 
