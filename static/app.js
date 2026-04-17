@@ -4,13 +4,18 @@ import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
 import { getActiveBoard } from './board.js';
 import { initTabs, createReflectionTab } from './tabs.js';
-import { getSelectedTimeRange } from './sidebar-upload.js';
+import { clearSelectedTranscriptSegments, getSelectedTimeRange } from './sidebar-upload.js';
 
 const toolbarActions = document.getElementById('toolbarActions');
 const reflectionMeta = document.getElementById('reflectionMeta');
 const reflectionSessionName = document.getElementById('reflectionSessionName');
 const reflectionStartTime = document.getElementById('reflectionStartTime');
 const reflectionEndTime = document.getElementById('reflectionEndTime');
+
+let graphPlayState = {
+  hasSession: false,
+  hasSelection: false,
+};
 
 initTabs();
 
@@ -43,6 +48,7 @@ function syncToolbarState() {
   addBlockerBtn.disabled = !enabled;
   addFollowupBtn.disabled = !enabled;
   playBtn.disabled = !enabled;
+  playBtn.hidden = !enabled || !graphPlayState.hasSession || !graphPlayState.hasSelection;
 
   const isReflectionBoard = board?.kind === 'reflection';
   if (toolbarActions) toolbarActions.hidden = isReflectionBoard;
@@ -57,6 +63,13 @@ function syncToolbarState() {
 }
 
 window.addEventListener('board:changed', syncToolbarState);
+window.addEventListener('graph-play-state', (event) => {
+  graphPlayState = {
+    hasSession: Boolean(event.detail?.hasSession),
+    hasSelection: Boolean(event.detail?.hasSelection),
+  };
+  syncToolbarState();
+});
 syncToolbarState();
 
 addAgentBtn.onclick = () => {
@@ -94,7 +107,7 @@ addFollowupBtn.onclick = () => {
 };
 
 playBtn.onclick = async () => {
-  if (!isGraphBoardActive()) return;
+  if (!isGraphBoardActive() || playBtn.hidden) return;
   const graph = serializeGraph();
   const timeRange = getSelectedTimeRange();
   const payload = timeRange ? { ...graph, ...timeRange } : graph;
@@ -114,6 +127,7 @@ playBtn.onclick = async () => {
 
     if (result?.reflection_tree) {
       createReflectionTab(result.reflection_tree, timeRange || {});
+      clearSelectedTranscriptSegments();
     }
   } catch (error) {
     console.error('failed to send graph', error);

@@ -18,6 +18,16 @@ let activeChunkId = null;
 let sessions = [];
 let sidebarView = "list";
 
+function dispatchGraphPlayState() {
+  const selectedCount = audioData?.transcript?.filter((segment) => segment.selected).length || 0;
+  window.dispatchEvent(new CustomEvent("graph-play-state", {
+    detail: {
+      hasSession: Boolean(audioData?.id),
+      hasSelection: selectedCount > 0,
+    },
+  }));
+}
+
 function setTranscriptStatus(text) {
   transcriptStatus.textContent = text;
 }
@@ -151,6 +161,7 @@ function setLoadedAudio(data) {
     renderTranscript();
     setTranscriptStatus("Select a session or upload audio.");
     setSidebarView("list");
+    dispatchGraphPlayState();
     return;
   }
 
@@ -159,6 +170,7 @@ function setLoadedAudio(data) {
   renderSessionList();
   renderTranscript();
   setSidebarView("transcript");
+  dispatchGraphPlayState();
 }
 
 function clearLoadedAudio() {
@@ -166,12 +178,8 @@ function clearLoadedAudio() {
 }
 
 function showSessionListView() {
-  audioPlayer.pause();
-  activeChunkId = null;
   syncReflectionTabs([]);
-  renderSessionList();
-  setSidebarView("list");
-  setTranscriptStatus(sessions.length ? "Select a session or upload audio." : "No sessions yet. Upload audio to create one.");
+  clearLoadedAudio();
 }
 
 function renderTranscript() {
@@ -200,6 +208,7 @@ function renderTranscript() {
       audioPlayer.currentTime = Number(segment.start) || 0;
       activeChunkId = segment.id;
       renderTranscript();
+      dispatchGraphPlayState();
     });
 
     transcriptList.appendChild(box);
@@ -410,6 +419,19 @@ export function getSelectedTimeRange() {
   };
 }
 
+export function clearSelectedTranscriptSegments() {
+  if (!audioData?.transcript?.length) {
+    return;
+  }
+
+  audioData.transcript.forEach((segment) => {
+    segment.selected = false;
+  });
+
+  renderTranscript();
+  dispatchGraphPlayState();
+}
+
 export function getSessionName() {
   return getCurrentSessionName();
 }
@@ -422,3 +444,4 @@ loadSessions();
 clearLoadedAudio();
 setSidebarView("list");
 renderTranscript();
+dispatchGraphPlayState();
