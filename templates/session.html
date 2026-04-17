@@ -6,9 +6,6 @@
   <title>Session Detail</title>
   <link rel="stylesheet" href="/static/styles.css">
   <style>
-    .reflection-list { margin: 24px 0; }
-    .reflection-item { cursor: pointer; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; background: #f3f4f6; transition: background 0.2s; }
-    .reflection-item:hover { background: #e5e7eb; }
     .section-title { font-size: 20px; font-weight: 600; margin-top: 24px; }
     .subtle-line { margin-bottom: 16px; color: #6b7280; font-size: 14px; }
     .back-link { color: #4b5563; text-decoration: none; font-size: 14px; }
@@ -64,7 +61,6 @@
     <h1>User Reflection Sessions</h1>
     <div class="subtle-line">Viewing session <strong>{{ resolved_session }}</strong> for <strong>{{ resolved_user }}</strong></div>
     <div id="waveformContainer" style="margin:24px 0;"></div>
-    <div class="reflection-list" id="reflectionList"></div>
   </div>
   <div id="reflectionModal" class="reflection-modal" hidden>
     <div class="reflection-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reflectionModalTitle">
@@ -82,7 +78,6 @@
     </div>
   </div>
   <script>
-    const reflectionList = document.getElementById('reflectionList');
     const waveformContainer = document.getElementById('waveformContainer');
     const currentUser = document.body.dataset.currentUser || '';
     const currentSession = document.body.dataset.currentSession || '';
@@ -245,12 +240,11 @@
     });
 
     async function loadSession() {
-      reflectionList.innerHTML = '';
       waveformContainer.innerHTML = '';
       const user = currentUser.trim();
       const session = currentSession.trim();
       if (!user || !session) {
-        reflectionList.innerHTML = '<div>Missing user or session.</div>';
+        waveformContainer.innerHTML = '<div>Missing user or session.</div>';
         return;
       }
 
@@ -514,14 +508,6 @@
       });
 
       renderLegend();
-      if (!reflectionsWithTypes.length) {
-        reflectionList.innerHTML = '<div>No reflections for this session.</div>';
-      } else {
-        reflectionList.innerHTML = '<div class="section-title">Reflections</div>' + reflectionsWithTypes.map(r => {
-          const treeLabel = r.tree_id || 'unknown';
-          return `<div class="reflection-item">${escapeHtml(r.reflection_tree_file)} <span style="color:#888;font-size:12px;">[${escapeHtml(r.startms)} - ${escapeHtml(r.endms)}]</span> <span style="color:#6b7280;font-size:12px;">${escapeHtml(treeLabel)}</span></div>`;
-        }).join('');
-      }
       updateUI();
       await resolveDuration();
     }
