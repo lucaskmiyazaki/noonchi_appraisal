@@ -126,6 +126,22 @@ def iter_audio_records():
     return records
 
 
+def summarize_audio_record(record):
+    transcript = record.get("transcript") or []
+    last_segment = transcript[-1] if transcript else {}
+    return {
+        "id": record.get("id"),
+        "sessionName": record.get("sessionName"),
+        "safeSessionName": record.get("safeSessionName"),
+        "originalName": record.get("originalName"),
+        "audioFilename": record.get("audioFilename"),
+        "audioUrl": record.get("audioUrl"),
+        "uploadedAt": record.get("uploadedAt"),
+        "segmentCount": len(transcript),
+        "duration": float(last_segment.get("end", 0.0) or 0.0),
+    }
+
+
 def find_latest_audio_record(session_name=""):
     requested_session = session_name.strip()
     safe_session_name = secure_filename(requested_session)
@@ -434,6 +450,12 @@ def get_latest_audio():
         return jsonify({"error": "No uploaded audio found."}), 404
 
     return jsonify(record)
+
+
+@app.get("/api/audio/sessions")
+def list_audio_sessions():
+    sessions = [summarize_audio_record(record) for record in iter_audio_records()]
+    return jsonify({"sessions": sessions})
 
 
 @app.get("/api/audio/<audio_id>")

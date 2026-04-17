@@ -489,6 +489,67 @@ button:disabled {
   word-break: break-word;
 }
 
+.session-list {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+
+.session-list[hidden],
+.transcript-list[hidden] {
+  display: none;
+}
+
+.session-list-empty {
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  color: #6b7280;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.session-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.session-item:hover {
+  border-color: #9ca3af;
+}
+
+.session-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.session-item-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.session-item-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
 .transcript-list {
   flex: 1;
   overflow-y: auto;

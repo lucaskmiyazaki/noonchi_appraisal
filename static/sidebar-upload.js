@@ -1,9 +1,11 @@
 const sidebarAudioInput = document.getElementById("sidebarAudioInput");
 const sidebarUploadBtn = document.getElementById("sidebarUploadBtn");
+const sidebarBackBtn = document.getElementById("sidebarBackBtn");
 const sidebarPlayBtn = document.getElementById("sidebarPlayBtn");
 const sidebarClearBtn = document.getElementById("sidebarClearBtn");
 const transcriptStatus = document.getElementById("transcriptStatus");
 const transcriptFileName = document.getElementById("transcriptFileName");
+const sessionList = document.getElementById("sessionList");
 const transcriptList = document.getElementById("transcriptList");
 const sessionNameInput = document.getElementById("sessionNameInput");
 
@@ -11,6 +13,8 @@ const audioPlayer = new Audio();
 
 let audioData = null;
 let activeChunkId = null;
+let sessions = [];
+let sidebarView = "list";
 
 function setTranscriptStatus(text) {
   transcriptStatus.textContent = text;
@@ -57,6 +61,77 @@ function syncSessionNameInput(value) {
   sessionNameInput.value = value || "audio";
 }
 
+function setSidebarView(view) {
+  sidebarView = view;
+
+  if (sessionList) {
+    sessionList.hidden = view !== "list";
+  }
+
+  if (transcriptList) {
+    transcriptList.hidden = view !== "transcript";
+  }
+
+  if (sidebarBackBtn) {
+    sidebarBackBtn.hidden = view !== "transcript";
+  }
+
+  if (sidebarUploadBtn) {
+    sidebarUploadBtn.hidden = view !== "list";
+  }
+
+  if (sidebarPlayBtn) {
+    sidebarPlayBtn.hidden = view !== "transcript";
+  }
+
+  if (sidebarClearBtn) {
+    sidebarClearBtn.hidden = view !== "transcript";
+  }
+}
+
+function formatSessionTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString();
+}
+
+function renderSessionList() {
+  if (!sessionList) {
+    return;
+  }
+
+  sessionList.innerHTML = "";
+
+  if (!sessions.length) {
+    sessionList.innerHTML = '<div class="session-list-empty">No sessions yet. Upload audio to create one.</div>';
+    return;
+  }
+
+  for (const session of sessions) {
+    const button = document.createElement("button");
+    const isActive = session.id === audioData?.id;
+    button.type = "button";
+    button.className = `session-item ${isActive ? "active" : ""}`.trim();
+    button.dataset.id = session.id;
+    const metaParts = [session.originalName, `${session.segmentCount || 0} transcript boxes`, formatSessionTimestamp(session.uploadedAt)].filter(Boolean);
+    button.innerHTML = `
+      <span class="session-item-title">${escapeHtml(session.sessionName || session.originalName || "Untitled session")}</span>
+      <span class="session-item-meta">${escapeHtml(metaParts.join(" • "))}</span>
+    `;
+    button.addEventListener("click", async () => {
+      await loadAudioById(session.id);
+    });
+    sessionList.appendChild(button);
+  }
+}
+
 function setLoadedAudio(data) {
   audioData = data;
   activeChunkId = null;
@@ -70,25 +145,37 @@ function setLoadedAudio(data) {
   }
 
   if (!data) {
+    renderSessionList();
     renderTranscript();
-    setTranscriptStatus("Idle");
+    setTranscriptStatus("Select a session or upload audio.");
+    setSidebarView("list");
     return;
   }
 
   const segmentCount = Array.isArray(data.transcript) ? data.transcript.length : 0;
   setTranscriptStatus(`Loaded transcript.\n${segmentCount} transcript boxes.`);
+  renderSessionList();
   renderTranscript();
+  setSidebarView("transcript");
 }
 
 function clearLoadedAudio() {
   setLoadedAudio(null);
 }
 
+function showSessionListView() {
+  audioPlayer.pause();
+  activeChunkId = null;
+  renderSessionList();
+  setSidebarView("list");
+  setTranscriptStatus(sessions.length ? "Select a session or upload audio." : "No sessions yet. Upload audio to create one.");
+}
+
 function renderTranscript() {
   transcriptList.innerHTML = "";
 
   if (!audioData?.transcript?.length) {
-    transcriptList.innerHTML = '<div class="transcript-empty">Upload audio to generate a transcript. The latest uploaded audio is loaded automatically when available.</div>';
+    transcriptList.innerHTML = '<div class="transcript-empty">Select a session from the list above or upload audio to create a new one.</div>';
     return;
   }
 
@@ -160,7 +247,7 @@ async function uploadAudioFile(file) {
       throw new Error(data.error || "Upload failed.");
     }
 
-    localStorage.setItem("latestAudioId", data.id);
+    await loadSessions();
     setLoadedAudio(data);
   } catch (error) {
     console.error(error);
@@ -194,33 +281,34 @@ async function loadAudioById(audioId) {
   }
 }
 
-async function loadLatestAudio() {
-  const sessionName = getCurrentSessionName();
-  const params = new URLSearchParams();
-  if (sessionName) {
-    params.set("session_name", sessionName);
-  }
-
+async function loadSessions() {
   try {
-    const response = await fetch(`/api/audio/latest?${params.toString()}`);
+    const response = await fetch("/api/audio/sessions");
     const data = await response.json();
 
     if (!response.ok) {
-      clearLoadedAudio();
-      setTranscriptStatus("No uploaded audio yet.");
+      sessions = [];
+      renderSessionList();
+      setTranscriptStatus("Could not load sessions.");
       return;
     }
 
-    localStorage.setItem("latestAudioId", data.id);
-    setLoadedAudio(data);
+    sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    renderSessionList();
   } catch (error) {
     console.error(error);
-    setTranscriptStatus("Could not load latest audio.");
+    sessions = [];
+    renderSessionList();
+    setTranscriptStatus("Could not load sessions.");
   }
 }
 
 sidebarUploadBtn?.addEventListener("click", () => {
   sidebarAudioInput?.click();
+});
+
+sidebarBackBtn?.addEventListener("click", () => {
+  showSessionListView();
 });
 
 sidebarAudioInput?.addEventListener("change", async () => {
@@ -250,12 +338,7 @@ sidebarPlayBtn?.addEventListener("click", async () => {
 
 sidebarClearBtn?.addEventListener("click", () => {
   audioPlayer.pause();
-  localStorage.removeItem("latestAudioId");
   clearLoadedAudio();
-});
-
-sessionNameInput?.addEventListener("change", () => {
-  loadLatestAudio();
 });
 
 audioPlayer.addEventListener("play", () => {
@@ -298,15 +381,7 @@ if (sessionNameInput && !sessionNameInput.value.trim()) {
   syncSessionNameInput("audio");
 }
 
-const savedAudioId = localStorage.getItem("latestAudioId");
-if (savedAudioId) {
-  loadAudioById(savedAudioId).then((loaded) => {
-    if (!loaded) {
-      loadLatestAudio();
-    }
-  });
-} else {
-  loadLatestAudio();
-}
-
+loadSessions();
+clearLoadedAudio();
+setSidebarView("list");
 renderTranscript();
