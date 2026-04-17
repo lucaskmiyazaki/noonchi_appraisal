@@ -254,7 +254,23 @@
         return;
       }
 
-      const audioUrl = `/recording/${encodeURIComponent(session)}`;
+      let audioUrl = '';
+      try {
+        const latestAudioResponse = await fetch(`/api/audio/latest?session_name=${encodeURIComponent(session)}`);
+        if (latestAudioResponse.ok) {
+          const latestAudio = await latestAudioResponse.json();
+          if (latestAudio?.id) {
+            const audioResponse = await fetch(`/api/audio/${encodeURIComponent(latestAudio.id)}`);
+            if (audioResponse.ok) {
+              const audioRecord = await audioResponse.json();
+              audioUrl = audioRecord.audioUrl || '';
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load audio record for session', session, error);
+      }
+
       const reflectionsResponse = await fetch(`/reflection/${encodeURIComponent(user)}/${encodeURIComponent(session)}`);
       const reflectionData = await reflectionsResponse.json();
       const reflections = reflectionData.reflections || [];
@@ -387,12 +403,25 @@
         return true;
       }
 
+      if (!audioUrl) {
+        audioTime.textContent = 'Audio unavailable';
+      }
+
       function updateUI() {
         audioTime.textContent = `${formatTime(audio.currentTime)} / ${formatTime(duration)}`;
         audioSlider.value = Number.isFinite(audio.currentTime) ? String(audio.currentTime) : '0';
       }
 
       async function resolveDuration() {
+        if (!audioUrl) {
+          const fallbackDuration = reflectionsWithTypes.reduce((maxEnd, reflection) => {
+            const end = Number(reflection.endms) / 1000;
+            return Number.isFinite(end) ? Math.max(maxEnd, end) : maxEnd;
+          }, 0);
+          setDuration(fallbackDuration);
+          return;
+        }
+
         if (setDuration(audio.duration)) {
           return;
         }
@@ -415,7 +444,7 @@
       }
 
       playBtn.onclick = async () => {
-        if (!Number.isFinite(duration) || duration <= 0) {
+        if (!audioUrl || !Number.isFinite(duration) || duration <= 0) {
           return;
         }
         if (audio.paused) {
