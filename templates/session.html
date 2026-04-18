@@ -440,14 +440,15 @@
         reflectionsWithTypes.forEach((reflection) => {
           const anchorChunkNode = getReflectionAnchorChunkNode(reflection);
           const cardNode = list.querySelector(`[data-reflection-key="${CSS.escape(reflection.reflectionKey)}"]`);
+          const itemNode = cardNode?.closest('.session-reflection-item');
 
-          if (!anchorChunkNode || !cardNode) {
+          if (!anchorChunkNode || !cardNode || !itemNode) {
             return;
           }
 
           const chunkRect = anchorChunkNode.getBoundingClientRect();
           if (chunkRect.bottom <= passedThreshold) {
-            offsetY += cardNode.offsetHeight + cardGap;
+            offsetY += itemNode.getBoundingClientRect().height + cardGap;
           }
         });
 
