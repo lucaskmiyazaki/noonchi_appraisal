@@ -488,82 +488,49 @@ class ReflectionTree:
         blocker = issue.get("blocker")
         arousal = issue.get("arousal", 0.0)
         lower_threshold = issue.get("lower_threshold", 0.2)
-        goal_upper_threshold = issue.get("goal_upper_threshold", 0.8)
-        effective_upper_threshold = issue.get("effective_upper_threshold", goal_upper_threshold)
-
         goal_text = getattr(goal, "text", "this goal")
         blocker_text = getattr(blocker, "text", "(no blocker)") if blocker is not None else "(no blocker)"
 
-        if kind == "high_blocker_blame":
-            responsible_agent = getattr(blocker, "responsible_agent", None) if blocker is not None else None
-            responsible_label = self._agent_label(responsible_agent, fallback="this person")
-
+        if kind in {"high_blocker_blame", "high_context"}:
             observation = ReflectionNode(
                 id="observation",
-                text="Your voice might be too elevated.",
-                options=[{"label": "Continue", "next": "feedback_question"}],
-                node_type="message",
+                text="Noonchi detected some elevation in your voice",
+                options=[{"label": "Continue", "next": "appropriateness_question"}],
+                node_type="audio",
             )
 
-            feedback_question = ReflectionNode(
-                id="feedback_question",
-                text=(
-                    f'Are you angry with "{responsible_label}" for "{blocker_text}" and do you want/need to provide '
-                    f'feedback so "{responsible_label}" improves?'
-                ),
+            appropriateness_question = ReflectionNode(
+                id="appropriateness_question",
+                text="Do you think your tone of voice was appropriate for the situation?",
                 options=[
-                    {"label": "Yes", "value": "a", "next": "proportionality_question"},
-                    {"label": "No", "value": "no", "next": "proportionality_question"},
+                    {"label": "No", "value": "no", "next": "why_question"},
+                    {"label": "Yes", "value": "yes", "next": "practice_question"},
                 ],
                 node_type="question",
             )
 
-            proportionality_question = ReflectionNode(
-                id="proportionality_question",
-                text=(
-                    f"Is your voice intensity {arousal:.2f} proportional to the context? "
-                    f"Upper threshold={effective_upper_threshold:.2f} (goal upper={goal_upper_threshold:.2f}) "
-                    f"for goal \"{goal_text}\" and blocker \"{blocker_text}\"."
-                ),
+            why_question = ReflectionNode(
+                id="why_question",
+                text="Why?",
                 options=[],
-                node_type="question",
+                node_type="journaling",
             )
 
-            self.tree_id = "intensity_high_blocker_blame"
+            practice_question = ReflectionNode(
+                id="practice_question",
+                text="Would you like to practice your tone?",
+                options=[],
+                node_type="practice",
+            )
+
+            self.tree_id = "intensity_high_elevation"
             self.reflection_type = "incoherent intensity"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
-                "feedback_question": feedback_question,
-                "proportionality_question": proportionality_question,
-            }
-            return self
-
-        if kind == "high_context":
-            observation = ReflectionNode(
-                id="observation",
-                text="Your voice might be too elevated.",
-                options=[{"label": "Continue", "next": "context_question"}],
-                node_type="message",
-            )
-
-            context_question = ReflectionNode(
-                id="context_question",
-                text=(
-                    f"Is your voice intensity {arousal:.2f} appropriate for this context? "
-                    f"Upper threshold={effective_upper_threshold:.2f} (goal upper={goal_upper_threshold:.2f}) "
-                    f"for goal \"{goal_text}\" and blocker \"{blocker_text}\"."
-                ),
-                options=[],
-                node_type="question",
-            )
-
-            self.tree_id = "intensity_high_context"
-            self.reflection_type = "incoherent intensity"
-            self.start_node = "observation"
-            self.nodes = {
-                "observation": observation,
-                "context_question": context_question,
+                "appropriateness_question": appropriateness_question,
+                "why_question": why_question,
+                "practice_question": practice_question,
             }
             return self
 

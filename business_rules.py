@@ -121,6 +121,52 @@ def blocker_has_actionable(blocker):
     return has_single or has_plural
 
 
+def goal_has_actionable(goal):
+    single = getattr(goal, "actionable", None)
+    plural = getattr(goal, "actionables", None)
+    has_single = single is not None
+    has_plural = isinstance(plural, list) and len(plural) > 0
+    return has_single or has_plural
+
+
+def blocker_has_responsible_agent(blocker):
+    responsible_agent = getattr(blocker, "responsible_agent", None)
+    responsible_agents = getattr(blocker, "responsible_agents", None)
+    has_primary = responsible_agent is not None
+    has_plural = isinstance(responsible_agents, list) and len(responsible_agents) > 0
+    return has_primary or has_plural
+
+
+def blocker_is_clear_for_concern(blocker):
+    blocker_text = getattr(blocker, "text", "")
+    has_text = isinstance(blocker_text, str) and bool(blocker_text.strip())
+    return has_text and blocker_has_responsible_agent(blocker) and blocker_has_actionable(blocker)
+
+
+def goal_has_clear_concern_context(goal):
+    blockers = list(getattr(goal, "blockers", []))
+    if goal_has_actionable(goal):
+        return True
+    return bool(blockers) and all(blocker_is_clear_for_concern(blocker) for blocker in blockers)
+
+
+def find_first_unclear_concern_target(speaker_agent):
+    for goal in get_speaker_goals(speaker_agent):
+        if goal_has_actionable(goal):
+            continue
+
+        blockers = list(getattr(goal, "blockers", []))
+
+        if not blockers:
+            return goal, None
+
+        for blocker in blockers:
+            if not blocker_is_clear_for_concern(blocker):
+                return goal, blocker
+
+    return None, None
+
+
 def summarize_blockers_actionables(blockers):
     blockers_list = list(blockers)
     all_blockers_have_actionable = bool(blockers_list) and all(
@@ -206,13 +252,18 @@ def detect_unclear_concern(speaker_agent):
             "blockers_without_actionables": [],
         }
 
+    if all(goal_has_clear_concern_context(goal) for goal in goals):
+        return None
+
     blockers_list = get_speaker_blockers(speaker_agent)
     _, blockers_without_actionables = summarize_blockers_actionables(blockers_list)
-    blocker = blockers_without_actionables[0] if blockers_without_actionables else None
+    goal, blocker = find_first_unclear_concern_target(speaker_agent)
 
-    if blocker is not None:
+    if goal is None and blockers_without_actionables:
+        blocker = blockers_without_actionables[0]
         goal = find_goal_for_blocker(speaker_agent, blocker)
-    else:
+
+    if goal is None:
         goal, blocker = get_primary_goal_and_blocker(speaker_agent)
 
     if goal is None:
