@@ -10,7 +10,7 @@
     .session-layout { position: relative; max-width: 1220px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
     .session-main { position: relative; z-index: 1; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px; }
     .session-sidebar { position: relative; min-height: 1px; }
-    .session-sidebar-panel { position: fixed; top: 24px; right: max(20px, calc((100vw - 1220px) / 2 + 20px)); width: 320px; z-index: 1; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 20px; max-height: calc(100vh - 48px); overflow: hidden; }
+    .session-sidebar-panel { position: fixed; top: 24px; right: max(20px, calc((100vw - 1220px) / 2 + 20px)); width: 320px; z-index: 1; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 20px; max-height: calc(100vh - 48px); overflow-x: hidden; overflow-y: auto; }
     .reflection-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
     .reflection-link-path { fill: none; stroke-width: 2.5; opacity: 0.92; }
     .session-sidebar-title { margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #111827; }
@@ -117,6 +117,7 @@
     const reflectionSidebar = document.getElementById('reflectionSidebar');
     const reflectionLinks = document.getElementById('reflectionLinks');
     const sessionLayout = document.querySelector('.session-layout');
+    const sessionSidebarPanel = document.querySelector('.session-sidebar-panel');
     const currentUser = document.body.dataset.currentUser || '';
     const currentSession = document.body.dataset.currentSession || '';
     const reflectionModal = document.getElementById('reflectionModal');
@@ -708,7 +709,12 @@
       };
 
       window.addEventListener('resize', scheduleReflectionLinkDraw);
-      window.addEventListener('scroll', scheduleReflectionLinkDraw, { passive: true });
+      window.addEventListener('scroll', () => {
+        if (sessionSidebarPanel) {
+          sessionSidebarPanel.scrollTop = 0;
+        }
+        scheduleReflectionLinkDraw();
+      }, { passive: true });
 
       playBtn.disabled = !audioUrl;
       renderPlayButtonIcon(false);
