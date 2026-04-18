@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import csv
 import json
 import os
 import shutil
@@ -38,6 +39,16 @@ UPLOAD_DIR = DATA_DIR
 AUDIO_DATA_DIR = DATA_DIR
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+REFLECTION_DB_FIELDNAMES = [
+    "speaker_agent",
+    "session_name",
+    "reflection_tree_file",
+    "startms",
+    "endms",
+    "practice",
+    "audio_filename",
+]
 
 NGROK_API_URL = "http://127.0.0.1:4040/api/tunnels"
 NGROK_PROCESS = None
@@ -168,6 +179,54 @@ def find_latest_audio_record(session_name=""):
         return find_latest_audio_record("")
 
     return None
+
+
+def normalize_practice_value(value):
+    normalized = str(value or "").strip().lower()
+    if normalized in {"done", "todo", "null"}:
+        return normalized
+    return "null"
+
+
+def get_reflection_db_fieldnames(fieldnames=None):
+    ordered = []
+    for name in list(fieldnames or []) + REFLECTION_DB_FIELDNAMES:
+        if name and name not in ordered:
+            ordered.append(name)
+    return ordered
+
+
+def load_reflection_db_rows():
+    db_path = DATA_DIR / "db.csv"
+    if not db_path.exists():
+        return [], list(REFLECTION_DB_FIELDNAMES)
+
+    with open(db_path, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        fieldnames = get_reflection_db_fieldnames(reader.fieldnames)
+        rows = []
+
+        for row in reader:
+            normalized_row = {field: row.get(field, "") for field in fieldnames}
+            normalized_row["practice"] = normalize_practice_value(normalized_row.get("practice"))
+
+            if not normalized_row.get("audio_filename"):
+                record = find_latest_audio_record(normalized_row.get("session_name", ""))
+                normalized_row["audio_filename"] = record.get("audioFilename", "") if record else ""
+
+            rows.append(normalized_row)
+
+    return rows, fieldnames
+
+
+def write_reflection_db_rows(rows, fieldnames=None):
+    db_path = DATA_DIR / "db.csv"
+    resolved_fieldnames = get_reflection_db_fieldnames(fieldnames)
+    with open(db_path, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=resolved_fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in resolved_fieldnames})
 
 
 def stop_ngrok():
@@ -397,28 +456,24 @@ def play_graph():
         reflection_path = DATA_DIR / reflection_filename
         reflection_path.write_text(json.dumps(reflection_tree, indent=2))
 
-        # --- DB CSV LOGIC ---
-        import csv
-        db_path = DATA_DIR / "db.csv"
-        db_exists = db_path.exists()
         speaker_agent_name = None
         if speaker_agent is not None:
             # Try to get a readable name, fallback to id
             speaker_agent_name = getattr(speaker_agent, 'name', None) or getattr(speaker_agent, 'role', None) or speaker_id
         else:
             speaker_agent_name = speaker_id
-        row = [
-            speaker_agent_name,
-            reflection_tree.get("session_name", ""),
-            str(reflection_path.name),
-            reflection_tree.get("startMs", ""),
-            reflection_tree.get("endMs", ""),
-        ]
-        with open(db_path, "a", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            if not db_exists:
-                writer.writerow(["speaker_agent", "session_name", "reflection_tree_file", "startms", "endms"])
-            writer.writerow(row)
+        latest_audio_record = find_latest_audio_record(reflection_tree.get("session_name", ""))
+        rows, fieldnames = load_reflection_db_rows()
+        rows.append({
+            "speaker_agent": speaker_agent_name,
+            "session_name": reflection_tree.get("session_name", ""),
+            "reflection_tree_file": str(reflection_path.name),
+            "startms": reflection_tree.get("startMs", ""),
+            "endms": reflection_tree.get("endMs", ""),
+            "practice": "null",
+            "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
+        })
+        write_reflection_db_rows(rows, fieldnames)
 
     return jsonify({
         "message": "ok",
@@ -438,31 +493,21 @@ def play_graph():
 
 @app.delete("/api/audio/reflection/<reflection_filename>")
 def delete_reflection(reflection_filename):
-    import csv
-
     safe_filename = secure_filename(reflection_filename or "")
     if not safe_filename or Path(safe_filename).suffix != ".json":
         return jsonify({"error": "Invalid reflection filename."}), 400
 
-    db_path = DATA_DIR / "db.csv"
     remaining_rows = []
     deleted_row = None
 
-    if db_path.exists():
-        with open(db_path, newline="", encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            fieldnames = reader.fieldnames or ["speaker_agent", "session_name", "reflection_tree_file", "startms", "endms"]
+    rows, fieldnames = load_reflection_db_rows()
+    for row in rows:
+        if row.get("reflection_tree_file", "") == safe_filename and deleted_row is None:
+            deleted_row = row
+            continue
+        remaining_rows.append(row)
 
-            for row in reader:
-                if row.get("reflection_tree_file", "") == safe_filename and deleted_row is None:
-                    deleted_row = row
-                    continue
-                remaining_rows.append(row)
-
-        with open(db_path, "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(remaining_rows)
+    write_reflection_db_rows(remaining_rows, fieldnames)
 
     reflection_path = DATA_DIR / safe_filename
     file_deleted = False
@@ -476,6 +521,40 @@ def delete_reflection(reflection_filename):
     return jsonify({
         "message": "reflection deleted",
         "reflection_tree_file": safe_filename,
+    })
+
+
+@app.post("/api/audio/reflection/<reflection_filename>/practice")
+def update_reflection_practice(reflection_filename):
+    safe_filename = secure_filename(reflection_filename or "")
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid reflection filename."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    requested_practice = payload.get("practice")
+    raw_practice_value = str(requested_practice or "").strip().lower()
+    if raw_practice_value not in {"done", "todo", "null"}:
+        return jsonify({"error": "Invalid practice value."}), 400
+
+    practice_value = normalize_practice_value(requested_practice)
+
+    rows, fieldnames = load_reflection_db_rows()
+    updated_row = None
+    for row in rows:
+        if row.get("reflection_tree_file", "") != safe_filename:
+            continue
+        row["practice"] = practice_value
+        updated_row = row
+        break
+
+    if updated_row is None:
+        return jsonify({"error": "Reflection not found."}), 404
+
+    write_reflection_db_rows(rows, fieldnames)
+    return jsonify({
+        "message": "practice updated",
+        "reflection_tree_file": safe_filename,
+        "practice": updated_row.get("practice", "null"),
     })
 
 @app.post("/save_recording")
@@ -578,36 +657,33 @@ def list_audio_sessions():
 
 @app.get("/api/audio/session/<session_name>/reflections")
 def list_session_reflection_trees(session_name):
-    import csv
-
-    db_path = DATA_DIR / "db.csv"
     reflections = []
-    if db_path.exists():
-        with open(db_path, newline="") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                if row.get("session_name", "") != session_name:
-                    continue
+    rows, _ = load_reflection_db_rows()
+    for row in rows:
+        if row.get("session_name", "") != session_name:
+            continue
 
-                reflection_file = row.get("reflection_tree_file", "")
-                if not reflection_file:
-                    continue
+        reflection_file = row.get("reflection_tree_file", "")
+        if not reflection_file:
+            continue
 
-                reflection_path = DATA_DIR / reflection_file
-                if not reflection_path.exists() or reflection_path.suffix != ".json":
-                    continue
+        reflection_path = DATA_DIR / reflection_file
+        if not reflection_path.exists() or reflection_path.suffix != ".json":
+            continue
 
-                try:
-                    tree = json.loads(reflection_path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
-                    continue
+        try:
+            tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
 
-                reflections.append({
-                    "reflection_tree_file": reflection_file,
-                    "startms": row.get("startms", ""),
-                    "endms": row.get("endms", ""),
-                    "tree": tree,
-                })
+        reflections.append({
+            "reflection_tree_file": reflection_file,
+            "startms": row.get("startms", ""),
+            "endms": row.get("endms", ""),
+            "practice": row.get("practice", "null"),
+            "audio_filename": row.get("audio_filename", ""),
+            "tree": tree,
+        })
 
     reflections.sort(key=lambda item: int(item.get("startms") or 0))
     return jsonify({"session": session_name, "reflections": reflections})
@@ -626,37 +702,29 @@ def get_audio(audio_id):
 # Place the /reflection/<user> endpoint here, after all other route functions
 @app.get("/reflection/<user>")
 def list_reflections_for_user(user):
-    import csv
-    db_path = DATA_DIR / "db.csv"
     session_names = set()
-    if db_path.exists():
-        with open(db_path, newline="") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                # Case-insensitive match for user
-                session = row.get("session_name", "")
-                if row.get("speaker_agent", "").lower() == user.lower() and session:
-                    session_names.add(session)
+    rows, _ = load_reflection_db_rows()
+    for row in rows:
+        session = row.get("session_name", "")
+        if row.get("speaker_agent", "").lower() == user.lower() and session:
+            session_names.add(session)
     return jsonify({"user": user, "session_names": sorted(session_names)})
 
 
 # Place the /reflection/<user>/<session> endpoint here, after all other route functions
 @app.get("/reflection/<user>/<session>")
 def list_reflection_files_for_user_session(user, session):
-    import csv
-    db_path = DATA_DIR / "db.csv"
     results = []
-    if db_path.exists():
-        with open(db_path, newline="") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                # Case-insensitive match for user and exact match for session
-                if row.get("speaker_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
-                    results.append({
-                        "reflection_tree_file": row.get("reflection_tree_file", ""),
-                        "startms": row.get("startms", ""),
-                        "endms": row.get("endms", "")
-                    })
+    rows, _ = load_reflection_db_rows()
+    for row in rows:
+        if row.get("speaker_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
+            results.append({
+                "reflection_tree_file": row.get("reflection_tree_file", ""),
+                "startms": row.get("startms", ""),
+                "endms": row.get("endms", ""),
+                "practice": row.get("practice", "null"),
+                "audio_filename": row.get("audio_filename", ""),
+            })
     return jsonify({
         "user": user,
         "session": session,

@@ -112,6 +112,10 @@
     .reflection-journal-input { width: 100%; min-height: 120px; padding: 12px 14px; border: 1px solid #dbe3ff; border-radius: 12px; background: #fff; color: #111827; font: inherit; line-height: 1.5; resize: vertical; }
     .reflection-journal-submit { align-self: flex-start; border: 0; border-radius: 12px; padding: 10px 16px; background: #111827; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
     .reflection-journal-submit:disabled { opacity: 0.6; cursor: default; }
+    .reflection-practice-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .reflection-practice-btn { border: 0; border-radius: 12px; padding: 10px 16px; background: #eef2ff; color: #1f2937; font: inherit; font-weight: 600; cursor: pointer; }
+    .reflection-practice-btn:hover { background: #e0e7ff; }
+    .reflection-practice-btn:disabled { opacity: 0.6; cursor: default; }
     .reflection-terminal { padding: 12px 14px; border-radius: 12px; background: #f9fafb; color: #4b5563; font-size: 13px; }
     .reflection-node-entry + .reflection-node-entry { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(148, 163, 184, 0.25); }
 
@@ -323,6 +327,27 @@
         .replace(/'/g, '&#39;');
     }
 
+    async function updateReflectionPractice(reflection, practiceValue) {
+      const reflectionFile = reflection?.reflection_tree_file || reflection?.reflectionKey || '';
+      if (!reflectionFile) {
+        throw new Error('Missing reflection file.');
+      }
+
+      const response = await fetch(`/api/audio/reflection/${encodeURIComponent(reflectionFile)}/practice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ practice: practiceValue }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to update practice status.');
+      }
+
+      reflection.practice = payload.practice || practiceValue;
+      return payload;
+    }
+
     function closeActiveReflection() {
       stopSegmentPlayback({ pauseAudio: true, resetProgress: true });
 
@@ -419,6 +444,7 @@
       const nodeType = String(node.type || '').trim().toLowerCase();
       const isAudioNode = nodeType === 'audio';
       const isJournalingNode = nodeType === 'journaling';
+      const isPracticeNode = nodeType === 'practice';
       const options = Array.isArray(node.options) ? node.options : [];
       const nodeText = String(node.text || '');
       const nextNodeId = isAudioNode ? String(options[0]?.next || '') : '';
@@ -438,6 +464,12 @@
         <div class="reflection-journal">
           <textarea class="reflection-journal-input" placeholder="Write your reflection here..."></textarea>
           <button class="reflection-journal-submit" type="button">Submit</button>
+        </div>
+        ` : isPracticeNode ? `
+        <div class="reflection-practice-actions">
+          <button class="reflection-practice-btn" type="button" data-practice-action="now">Practice now</button>
+          <button class="reflection-practice-btn" type="button" data-practice-action="later">Practice later</button>
+          <button class="reflection-practice-btn" type="button" data-practice-action="alert">Set alert</button>
         </div>
         ` : `
         <div class="reflection-options">
@@ -478,7 +510,46 @@
         }
       }
 
-      if (!isAudioNode && !isJournalingNode) {
+      if (isPracticeNode) {
+        entryElement.querySelectorAll('[data-practice-action]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const action = button.dataset.practiceAction || '';
+            const practiceButtons = entryElement.querySelectorAll('[data-practice-action]');
+
+            if (action === 'alert') {
+              const notice = document.createElement('div');
+              notice.className = 'reflection-terminal';
+              notice.textContent = 'Alert support is not available yet.';
+              entryElement.appendChild(notice);
+              return;
+            }
+
+            practiceButtons.forEach((practiceButton) => {
+              practiceButton.disabled = true;
+            });
+
+            try {
+              await updateReflectionPractice(reflection, 'todo');
+              const savedMessage = document.createElement('div');
+              savedMessage.className = 'reflection-terminal';
+              savedMessage.textContent = action === 'now'
+                ? 'Practice marked as todo. You can start now.'
+                : 'Practice marked as todo for later.';
+              entryElement.appendChild(savedMessage);
+            } catch (error) {
+              practiceButtons.forEach((practiceButton) => {
+                practiceButton.disabled = false;
+              });
+              const errorMessage = document.createElement('div');
+              errorMessage.className = 'reflection-terminal';
+              errorMessage.textContent = error.message || 'Failed to update practice status.';
+              entryElement.appendChild(errorMessage);
+            }
+          });
+        });
+      }
+
+      if (!isAudioNode && !isJournalingNode && !isPracticeNode) {
         entryElement.querySelectorAll('.reflection-option').forEach(button => {
           button.addEventListener('click', () => {
             const optionButtons = entryElement.querySelectorAll('.reflection-option');
