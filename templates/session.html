@@ -93,12 +93,14 @@
     .reflection-modal-close, .reflection-modal-voice { border: 0; border-radius: 10px; background: #f3f4f6; padding: 8px 10px; cursor: pointer; }
     .reflection-node-text { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #111827; white-space: pre-wrap; }
     .reflection-audio-controls { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
-    .reflection-audio-play { width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; background: #111827; color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 18px rgba(17, 24, 39, 0.14); }
-    .reflection-audio-play:hover { background: #1f2937; }
+    .reflection-audio-play, .reflection-audio-skip { width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; background: #111827; color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 18px rgba(17, 24, 39, 0.14); }
+    .reflection-audio-play:hover, .reflection-audio-skip:hover { background: #1f2937; }
     .reflection-audio-play.is-playing { background: #2563eb; }
     .reflection-audio-play svg { width: 18px; height: 18px; fill: currentColor; }
-    .reflection-audio-bar { position: relative; flex: 1; height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+    .reflection-audio-skip { font-size: 15px; font-weight: 700; letter-spacing: -0.04em; }
+    .reflection-audio-bar { position: relative; flex: 1; height: 8px; border: 0; border-radius: 999px; background: #e5e7eb; overflow: visible; cursor: pointer; touch-action: none; }
     .reflection-audio-progress { position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #2563eb, #60a5fa); border-radius: inherit; }
+    .reflection-audio-handle { position: absolute; top: 50%; left: 0%; width: 14px; height: 14px; border-radius: 999px; background: #2563eb; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); transform: translate(-50%, -50%); pointer-events: none; }
     .reflection-node-word { transition: background-color 0.08s ease, color 0.08s ease; border-radius: 4px; }
     .reflection-node-word.is-read { color: #4b5563; }
     .reflection-node-word.is-current { background: #fef3c7; color: #111827; }
@@ -214,7 +216,20 @@
     let scheduleReflectionLinkDraw = () => {};
     let sessionAudio = null;
     let activeSegmentPlayback = null;
+    let activeSegmentScrub = null;
     const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+
+    function setSegmentPlaybackUi(progressBar, progressHandle, progress = 0) {
+      const safeProgress = Math.max(0, Math.min(progress, 100));
+
+      if (progressBar) {
+        progressBar.style.width = `${safeProgress}%`;
+      }
+
+      if (progressHandle) {
+        progressHandle.style.left = `${safeProgress}%`;
+      }
+    }
 
     function resetSegmentPlaybackUi() {
       if (activeSegmentPlayback?.playButton) {
@@ -222,9 +237,7 @@
         activeSegmentPlayback.playButton.innerHTML = renderSegmentPlayIcon(false);
       }
 
-      if (activeSegmentPlayback?.progressBar) {
-        activeSegmentPlayback.progressBar.style.width = '0%';
-      }
+      setSegmentPlaybackUi(activeSegmentPlayback?.progressBar, activeSegmentPlayback?.progressHandle, 0);
     }
 
     function stopSegmentPlayback({ pauseAudio = true, resetProgress = false } = {}) {
@@ -257,14 +270,12 @@
         return;
       }
 
-      const { startTime, endTime, progressBar, nextNodeId } = activeSegmentPlayback;
+      const { startTime, endTime, progressBar, progressHandle, nextNodeId } = activeSegmentPlayback;
       const duration = Math.max(0.001, endTime - startTime);
       const elapsed = Math.max(0, Math.min(sessionAudio.currentTime - startTime, duration));
       const progress = Math.max(0, Math.min((elapsed / duration) * 100, 100));
 
-      if (progressBar) {
-        progressBar.style.width = `${progress}%`;
-      }
+      setSegmentPlaybackUi(progressBar, progressHandle, progress);
 
       if (sessionAudio.currentTime >= endTime) {
         stopSegmentPlayback({ pauseAudio: true, resetProgress: false });
@@ -278,10 +289,96 @@
         : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>';
     }
 
-    function playReflectionSegment(reflection, nextNodeId, playButton, progressBar) {
+    function getSegmentSeekTime(barElement, startTime, endTime, clientX) {
+      const rect = barElement?.getBoundingClientRect();
+      if (!rect || !rect.width) {
+        return startTime;
+      }
+
+      const ratio = Math.max(0, Math.min((clientX - rect.left) / rect.width, 1));
+      return startTime + ((endTime - startTime) * ratio);
+    }
+
+    function beginSegmentScrub(event, reflection, nextNodeId, playButton, progressBar, progressHandle, barElement) {
+      const startTime = Number(reflection?.startms) / 1000;
+      const endTime = Number(reflection?.endms) / 1000;
+      if (!sessionAudio || !Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime || !barElement) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (speechSupported) {
+        window.speechSynthesis.cancel();
+        activeUtterance = null;
+      }
+
+      const seekAndPlay = (clientX) => {
+        const seekTime = getSegmentSeekTime(barElement, startTime, endTime, clientX);
+        if (!activeSegmentPlayback || activeSegmentPlayback.playButton !== playButton) {
+          playReflectionSegment(reflection, nextNodeId, playButton, progressBar, progressHandle, seekTime);
+          return;
+        }
+
+        sessionAudio.currentTime = seekTime;
+        handleSegmentPlaybackTimeUpdate();
+      };
+
+      seekAndPlay(event.clientX);
+
+      if (typeof barElement.setPointerCapture === 'function') {
+        barElement.setPointerCapture(event.pointerId);
+      }
+
+      activeSegmentScrub = {
+        pointerId: event.pointerId,
+        barElement,
+        onPointerMove: (moveEvent) => {
+          if (moveEvent.pointerId !== event.pointerId) {
+            return;
+          }
+          seekAndPlay(moveEvent.clientX);
+        },
+        onPointerUp: (upEvent) => {
+          if (upEvent.pointerId !== event.pointerId) {
+            return;
+          }
+
+          if (typeof barElement.releasePointerCapture === 'function' && barElement.hasPointerCapture?.(event.pointerId)) {
+            barElement.releasePointerCapture(event.pointerId);
+          }
+
+          barElement.removeEventListener('pointermove', activeSegmentScrub?.onPointerMove);
+          barElement.removeEventListener('pointerup', activeSegmentScrub?.onPointerUp);
+          barElement.removeEventListener('pointercancel', activeSegmentScrub?.onPointerUp);
+          activeSegmentScrub = null;
+        },
+      };
+
+      barElement.addEventListener('pointermove', activeSegmentScrub.onPointerMove);
+      barElement.addEventListener('pointerup', activeSegmentScrub.onPointerUp);
+      barElement.addEventListener('pointercancel', activeSegmentScrub.onPointerUp);
+    }
+
+    function skipReflectionSegment(nextNodeId) {
+      if (speechSupported) {
+        window.speechSynthesis.cancel();
+        activeUtterance = null;
+      }
+
+      stopSegmentPlayback({ pauseAudio: true, resetProgress: true });
+      advanceAfterSegmentPlayback(nextNodeId);
+    }
+
+    function playReflectionSegment(reflection, nextNodeId, playButton, progressBar, progressHandle, startAtTime = null) {
       const startTime = Number(reflection?.startms) / 1000;
       const endTime = Number(reflection?.endms) / 1000;
       if (!sessionAudio || !Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
+        return;
+      }
+
+      if (activeSegmentPlayback?.playButton === playButton) {
+        stopSegmentPlayback({ pauseAudio: true, resetProgress: false });
         return;
       }
 
@@ -299,6 +396,7 @@
         nextNodeId,
         playButton,
         progressBar,
+        progressHandle,
       };
 
       if (playButton) {
@@ -306,12 +404,11 @@
         playButton.innerHTML = renderSegmentPlayIcon(true);
       }
 
-      if (progressBar) {
-        progressBar.style.width = '0%';
-      }
+      setSegmentPlaybackUi(progressBar, progressHandle, 0);
 
-      sessionAudio.currentTime = startTime;
+      sessionAudio.currentTime = Math.max(startTime, Math.min(startAtTime ?? startTime, endTime));
       sessionAudio.addEventListener('timeupdate', handleSegmentPlaybackTimeUpdate);
+      handleSegmentPlaybackTimeUpdate();
       sessionAudio.play().catch((error) => {
         console.error('Failed to play reflection segment', error);
         stopSegmentPlayback({ pauseAudio: false, resetProgress: true });
@@ -346,6 +443,42 @@
 
       reflection.practice = payload.practice || practiceValue;
       return payload;
+    }
+
+    function ensureReflectionNotice(entryElement, noticeKey = 'default') {
+      let notice = entryElement.querySelector(`.reflection-terminal[data-notice-key="${noticeKey}"]`);
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.className = 'reflection-terminal';
+        notice.dataset.noticeKey = noticeKey;
+        entryElement.appendChild(notice);
+      }
+      return notice;
+    }
+
+    function removeReflectionTrailAfter(entryElement) {
+      let sibling = entryElement?.nextElementSibling || null;
+      while (sibling) {
+        const nextSibling = sibling.nextElementSibling;
+        sibling.remove();
+        sibling = nextSibling;
+      }
+    }
+
+    function moveReflectionToNode(entryElement, nextNodeId) {
+      if (!activeReflectionState) {
+        return;
+      }
+
+      removeReflectionTrailAfter(entryElement);
+      if (!nextNodeId || !activeReflectionState.tree?.nodes?.[nextNodeId]) {
+        activeReflectionState.currentNodeId = entryElement?.dataset.nodeId || activeReflectionState.currentNodeId;
+        scheduleReflectionLinkDraw();
+        return;
+      }
+
+      activeReflectionState.currentNodeId = nextNodeId;
+      renderActiveReflectionNode();
     }
 
     function closeActiveReflection() {
@@ -456,8 +589,10 @@
         ${isAudioNode ? `
           <div class="reflection-audio-controls">
             <button class="reflection-audio-play" type="button" aria-label="Play reflection audio">${renderSegmentPlayIcon(false)}</button>
-            <div class="reflection-audio-bar" aria-hidden="true">
+            <button class="reflection-audio-skip" type="button" aria-label="Skip to next reflection step">&gt;&gt;</button>
+            <div class="reflection-audio-bar" role="slider" aria-label="Reflection audio progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="reflection-audio-progress"></div>
+              <div class="reflection-audio-handle"></div>
             </div>
           </div>
         ` : isJournalingNode ? `
@@ -486,10 +621,23 @@
 
       if (isAudioNode) {
         const playButton = entryElement.querySelector('.reflection-audio-play');
+        const skipButton = entryElement.querySelector('.reflection-audio-skip');
+        const audioBar = entryElement.querySelector('.reflection-audio-bar');
         const progressBar = entryElement.querySelector('.reflection-audio-progress');
-        if (playButton && progressBar) {
+        const progressHandle = entryElement.querySelector('.reflection-audio-handle');
+        if (playButton && progressBar && progressHandle && audioBar) {
           playButton.addEventListener('click', () => {
-            playReflectionSegment(reflection, nextNodeId, playButton, progressBar);
+            playReflectionSegment(reflection, nextNodeId, playButton, progressBar, progressHandle);
+          });
+
+          audioBar.addEventListener('pointerdown', (event) => {
+            beginSegmentScrub(event, reflection, nextNodeId, playButton, progressBar, progressHandle, audioBar);
+          });
+        }
+
+        if (skipButton) {
+          skipButton.addEventListener('click', () => {
+            skipReflectionSegment(nextNodeId);
           });
         }
       }
@@ -499,13 +647,8 @@
         const submitButton = entryElement.querySelector('.reflection-journal-submit');
         if (journalInput && submitButton) {
           submitButton.addEventListener('click', () => {
-            journalInput.disabled = true;
-            submitButton.disabled = true;
-
-            const savedMessage = document.createElement('div');
-            savedMessage.className = 'reflection-terminal';
-            savedMessage.textContent = 'Journal entry saved.';
-            entryElement.appendChild(savedMessage);
+            const savedMessage = ensureReflectionNotice(entryElement, 'journal');
+            savedMessage.textContent = 'Journal entry saved. You can still edit your answer.';
           });
         }
       }
@@ -515,35 +658,35 @@
           button.addEventListener('click', async () => {
             const action = button.dataset.practiceAction || '';
             const practiceButtons = entryElement.querySelectorAll('[data-practice-action]');
+            const statusMessage = ensureReflectionNotice(entryElement, 'practice');
 
             if (action === 'alert') {
-              const notice = document.createElement('div');
-              notice.className = 'reflection-terminal';
-              notice.textContent = 'Alert support is not available yet.';
-              entryElement.appendChild(notice);
+              practiceButtons.forEach((practiceButton) => {
+                practiceButton.classList.toggle('is-selected', practiceButton === button);
+              });
+              statusMessage.textContent = 'Alert support is not available yet.';
               return;
             }
 
             practiceButtons.forEach((practiceButton) => {
               practiceButton.disabled = true;
+              practiceButton.classList.toggle('is-selected', practiceButton === button);
             });
 
             try {
               await updateReflectionPractice(reflection, 'todo');
-              const savedMessage = document.createElement('div');
-              savedMessage.className = 'reflection-terminal';
-              savedMessage.textContent = action === 'now'
+              statusMessage.textContent = action === 'now'
                 ? 'Practice marked as todo. You can start now.'
                 : 'Practice marked as todo for later.';
-              entryElement.appendChild(savedMessage);
             } catch (error) {
+              practiceButtons.forEach((practiceButton) => {
+                practiceButton.classList.remove('is-selected');
+              });
+              statusMessage.textContent = error.message || 'Failed to update practice status.';
+            } finally {
               practiceButtons.forEach((practiceButton) => {
                 practiceButton.disabled = false;
               });
-              const errorMessage = document.createElement('div');
-              errorMessage.className = 'reflection-terminal';
-              errorMessage.textContent = error.message || 'Failed to update practice status.';
-              entryElement.appendChild(errorMessage);
             }
           });
         });
@@ -554,17 +697,11 @@
           button.addEventListener('click', () => {
             const optionButtons = entryElement.querySelectorAll('.reflection-option');
             optionButtons.forEach(optionButton => {
-              optionButton.disabled = true;
               optionButton.classList.toggle('is-selected', optionButton === button);
             });
 
             const nextNodeId = button.dataset.next;
-            if (!nextNodeId || !tree?.nodes?.[nextNodeId]) {
-              return;
-            }
-
-            activeReflectionState.currentNodeId = nextNodeId;
-            renderActiveReflectionNode();
+            moveReflectionToNode(entryElement, nextNodeId);
           });
         });
       }
