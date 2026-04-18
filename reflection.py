@@ -538,18 +538,32 @@ class ReflectionTree:
         observation = ReflectionNode(
             id="observation",
             text="Your voice might be too low energy.",
-            options=[{"label": "Continue", "next": "context_question"}],
-            node_type="message",
+            options=[{"label": "Continue", "next": "appropriateness_question"}],
+            node_type="audio",
         )
 
-        context_question = ReflectionNode(
-            id="context_question",
-            text=(
-                f"Is your voice intensity {arousal:.2f} appropriate for this context? "
-                f"Lower threshold={lower_threshold:.2f} for goal \"{goal_text}\" and blocker \"{blocker_text}\"."
-            ),
-            options=[],
+        appropriateness_question = ReflectionNode(
+            id="appropriateness_question",
+            text="Do you think your tone of voice was appropriate for the situation?",
+            options=[
+                {"label": "No", "value": "no", "next": "why_question"},
+                {"label": "Yes", "value": "yes", "next": "practice_question"},
+            ],
             node_type="question",
+        )
+
+        why_question = ReflectionNode(
+            id="why_question",
+            text="Why?",
+            options=[],
+            node_type="journaling",
+        )
+
+        practice_question = ReflectionNode(
+            id="practice_question",
+            text="Would you like to practice your tone?",
+            options=[],
+            node_type="practice",
         )
 
         self.tree_id = "intensity_low_context"
@@ -557,7 +571,9 @@ class ReflectionTree:
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
-            "context_question": context_question,
+            "appropriateness_question": appropriateness_question,
+            "why_question": why_question,
+            "practice_question": practice_question,
         }
         return self
 
