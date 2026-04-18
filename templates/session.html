@@ -6,6 +6,7 @@
   <title>Session Detail</title>
   <link rel="stylesheet" href="/static/styles.css">
   <style>
+    html, body { min-height: 100%; overflow-y: auto; }
     .section-title { font-size: 20px; font-weight: 600; margin-top: 24px; }
     .subtle-line { margin-bottom: 16px; color: #6b7280; font-size: 14px; }
     .back-link { color: #4b5563; text-decoration: none; font-size: 14px; }
@@ -18,7 +19,9 @@
     .session-chunk { display: inline; padding: 2px 4px; border-radius: 5px; color: #c7cbd1; cursor: pointer; transition: color 0.12s ease, background-color 0.12s ease; }
     .session-chunk.is-read { color: #111827; }
     .session-chunk.is-active { color: #05070b; font-weight: 700; }
-    .session-chunk.has-reflection { background: #fef08a; }
+    .session-chunk.has-reflection-tone { background: #fbcfe8; }
+    .session-chunk.has-reflection-clarity { background: #fef08a; }
+    .session-chunk.has-reflection-intensity { background: #bbf7d0; }
     .reflection-modal[hidden] { display: none; }
     .reflection-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 23, 42, 0.45); }
     .reflection-modal-dialog { width: min(560px, 100%); max-height: 80vh; overflow: auto; padding: 24px; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22); }
@@ -259,17 +262,26 @@
       const reflectionData = await reflectionsResponse.json();
       const reflections = reflectionData.reflections || [];
 
-      function getTreeTypeKey(treeId) {
-        if (!treeId) return 'unknown';
-        if (treeId.startsWith('unclear_feedback')) return 'unclear_feedback';
-        if (treeId.startsWith('unclear_concerns')) return 'unclear_concerns';
-        if (treeId.startsWith('intensity_')) return 'intensity';
-        if (treeId.includes('outcome') || treeId.includes('tone')) return 'goal_tone';
-        return 'unknown';
+      function getReflectionHighlightClass(reflectionType) {
+        const normalizedType = String(reflectionType || '').trim().toLowerCase();
+
+        if (normalizedType === 'incoherent tone') {
+          return 'has-reflection-tone';
+        }
+
+        if (normalizedType === 'unclear feedback' || normalizedType === 'unclear concern') {
+          return 'has-reflection-clarity';
+        }
+
+        if (normalizedType === 'incoherent intensity') {
+          return 'has-reflection-intensity';
+        }
+
+        return '';
       }
 
       const reflectionsWithTypes = await Promise.all(reflections.map(async reflection => {
-        const nextReflection = { ...reflection, tree_id: null, treeTypeKey: 'unknown', tree: null };
+        const nextReflection = { ...reflection, tree_id: null, reflectionType: '', tree: null };
         if (!reflection.reflection_tree_file) {
           return nextReflection;
         }
@@ -281,7 +293,7 @@
           const treeData = await treeResponse.json();
           nextReflection.tree = treeData;
           nextReflection.tree_id = treeData.tree_id || null;
-          nextReflection.treeTypeKey = getTreeTypeKey(nextReflection.tree_id);
+          nextReflection.reflectionType = treeData.type || '';
         } catch (error) {
           console.warn('Failed to load reflection tree', reflection.reflection_tree_file, error);
         }
@@ -335,13 +347,14 @@
         transcriptSegments.forEach((chunk) => {
           const span = document.createElement('span');
           const reflection = findReflectionForChunk(chunk);
+          const reflectionClass = getReflectionHighlightClass(reflection?.reflectionType);
           const chunkStart = Number(chunk.start);
           const chunkEnd = Number(chunk.end);
           const isRead = Number.isFinite(chunkEnd) && audio.currentTime >= chunkEnd;
           const isActive = chunk.id === activeChunkId;
 
           span.className = 'session-chunk';
-          if (reflection) span.classList.add('has-reflection');
+          if (reflectionClass) span.classList.add(reflectionClass);
           if (isRead) span.classList.add('is-read');
           if (isActive) span.classList.add('is-active');
           span.textContent = `${chunk.text || ''} `;

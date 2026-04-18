@@ -25,13 +25,15 @@ class ReflectionNode:
 
 
 class ReflectionTree:
-    def __init__(self, tree_id=None, start_node=None, nodes=None):
+    def __init__(self, tree_id=None, start_node=None, nodes=None, reflection_type=None):
         self.tree_id = tree_id
         self.start_node = start_node
         self.nodes = nodes if nodes else {}
+        self.reflection_type = reflection_type
 
     def to_dict(self):
         return {
+            "type": self.reflection_type,
             "tree_id": self.tree_id,
             "start_node": self.start_node,
             "nodes": {
@@ -303,6 +305,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "unclear_feedback_unknown_target"
+            self.reflection_type = "unclear feedback"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -356,6 +359,7 @@ class ReflectionTree:
         )
 
         self.tree_id = "unclear_feedback_known_target"
+        self.reflection_type = "unclear feedback"
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
@@ -422,6 +426,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "unclear_concerns_clear_risks_no_actionables"
+            self.reflection_type = "unclear concern"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -469,6 +474,7 @@ class ReflectionTree:
         )
 
         self.tree_id = "unclear_concerns_unclear_risks"
+        self.reflection_type = "unclear concern"
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
@@ -538,6 +544,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "intensity_high_blocker_blame"
+            self.reflection_type = "incoherent intensity"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -566,6 +573,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "intensity_high_context"
+            self.reflection_type = "incoherent intensity"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -592,6 +600,7 @@ class ReflectionTree:
         )
 
         self.tree_id = "intensity_low_context"
+        self.reflection_type = "incoherent intensity"
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
@@ -680,6 +689,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "positive_outcome_negative_tone_speaker"
+            self.reflection_type = "incoherent tone"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -769,6 +779,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "negative_outcome_positive_tone_speaker_missing_responsibility"
+            self.reflection_type = "incoherent tone"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -804,6 +815,7 @@ class ReflectionTree:
             )
 
             self.tree_id = "negative_outcome_positive_tone_speaker_self_responsible"
+            self.reflection_type = "incoherent tone"
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
@@ -848,6 +860,7 @@ class ReflectionTree:
         )
 
         self.tree_id = "negative_outcome_positive_tone_speaker_other_responsible"
+        self.reflection_type = "incoherent tone"
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
