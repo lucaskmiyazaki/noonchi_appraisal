@@ -32,9 +32,10 @@
     .session-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
     .session-main { position: relative; z-index: 1; background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
     .session-main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; border-bottom: 1px solid #f0f0f0; }
-    .session-main-title-group { display: flex; align-items: center; gap: 16px; min-width: 0; }
-    .back-link { color: var(--text-muted); text-decoration: none; font-size: 22px; line-height: 1; }
+    .session-main-title-group { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 22px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: 0 0 auto; }
     .session-heading { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .session-heading-title-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .session-heading h1 { font-size: 20px; font-weight: 600; margin: 0; }
     .subtle-line { color: var(--text-muted); font-size: 14px; margin: 0; }
     .session-toggle-group { display: inline-flex; background: #f0f0f0; border-radius: 8px; padding: 4px; gap: 4px; }
@@ -44,8 +45,7 @@
     .transcript-scroll { height: 100%; overflow-y: auto; padding: 32px; }
     .transcript-content { max-width: 700px; margin: 0 auto; }
     .section-title { font-size: 20px; font-weight: 600; margin: 0 0 24px; }
-    .session-floating-play { position: fixed; top: 124px; left: 112px; z-index: 4; }
-    .session-play-btn { width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: #111827; color: #fff; box-shadow: 0 10px 24px rgba(17, 24, 39, 0.18); cursor: pointer; }
+    .session-play-btn { width: 40px; height: 40px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: #111827; color: #fff; box-shadow: 0 8px 18px rgba(17, 24, 39, 0.14); cursor: pointer; }
     .session-play-btn:hover { background: #1f2937; }
     .session-play-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
     .session-play-btn svg { width: 22px; height: 22px; fill: currentColor; }
@@ -108,7 +108,6 @@
       .session-nav { display: none; }
       .session-main { min-height: 60vh; }
       .session-sidebar-panel { height: auto; min-height: 0; }
-      .session-floating-play { top: 24px; left: 20px; }
       .reflection-links { display: none; }
     }
   </style>
@@ -128,17 +127,17 @@
       </div>
       <div class="session-nav-avatar"></div>
     </nav>
-    <div class="session-floating-play">
-      <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
-      </button>
-    </div>
     <div class="session-main">
       <header class="session-main-header">
         <div class="session-main-title-group">
-          <a class="back-link" href="/{{ resolved_user|urlencode }}" aria-label="Back to sessions">←</a>
           <div class="session-heading">
-            <h1>{{ resolved_session }}</h1>
+            <div class="session-heading-title-row">
+              <a class="back-link" href="/{{ resolved_user|urlencode }}" aria-label="Back to sessions">←</a>
+              <h1>{{ resolved_session }}</h1>
+              <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
+              </button>
+            </div>
             <p class="subtle-line">Viewing session for <strong>{{ resolved_user }}</strong></p>
           </div>
         </div>
