@@ -108,6 +108,10 @@
     .reflection-option:disabled { opacity: 0.72; cursor: default; }
     .reflection-option.is-selected { background: #e0e7ff; border-color: #a5b4fc; }
     .reflection-option-label { display: block; font-size: 14px; font-weight: 600; color: #111827; }
+    .reflection-journal { display: flex; flex-direction: column; gap: 12px; }
+    .reflection-journal-input { width: 100%; min-height: 120px; padding: 12px 14px; border: 1px solid #dbe3ff; border-radius: 12px; background: #fff; color: #111827; font: inherit; line-height: 1.5; resize: vertical; }
+    .reflection-journal-submit { align-self: flex-start; border: 0; border-radius: 12px; padding: 10px 16px; background: #111827; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    .reflection-journal-submit:disabled { opacity: 0.6; cursor: default; }
     .reflection-terminal { padding: 12px 14px; border-radius: 12px; background: #f9fafb; color: #4b5563; font-size: 13px; }
     .reflection-node-entry + .reflection-node-entry { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(148, 163, 184, 0.25); }
 
@@ -414,6 +418,7 @@
 
       const nodeType = String(node.type || '').trim().toLowerCase();
       const isAudioNode = nodeType === 'audio';
+      const isJournalingNode = nodeType === 'journaling';
       const options = Array.isArray(node.options) ? node.options : [];
       const nodeText = String(node.text || '');
       const nextNodeId = isAudioNode ? String(options[0]?.next || '') : '';
@@ -429,6 +434,11 @@
               <div class="reflection-audio-progress"></div>
             </div>
           </div>
+        ` : isJournalingNode ? `
+        <div class="reflection-journal">
+          <textarea class="reflection-journal-input" placeholder="Write your reflection here..."></textarea>
+          <button class="reflection-journal-submit" type="button">Submit</button>
+        </div>
         ` : `
         <div class="reflection-options">
           ${options.length ? options.map((option, index) => {
@@ -452,7 +462,23 @@
         }
       }
 
-      if (!isAudioNode) {
+      if (isJournalingNode) {
+        const journalInput = entryElement.querySelector('.reflection-journal-input');
+        const submitButton = entryElement.querySelector('.reflection-journal-submit');
+        if (journalInput && submitButton) {
+          submitButton.addEventListener('click', () => {
+            journalInput.disabled = true;
+            submitButton.disabled = true;
+
+            const savedMessage = document.createElement('div');
+            savedMessage.className = 'reflection-terminal';
+            savedMessage.textContent = 'Journal entry saved.';
+            entryElement.appendChild(savedMessage);
+          });
+        }
+      }
+
+      if (!isAudioNode && !isJournalingNode) {
         entryElement.querySelectorAll('.reflection-option').forEach(button => {
           button.addEventListener('click', () => {
             const optionButtons = entryElement.querySelectorAll('.reflection-option');
