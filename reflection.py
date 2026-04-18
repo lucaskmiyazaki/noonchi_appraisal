@@ -239,69 +239,57 @@ class ReflectionTree:
 
         responsible_agent = getattr(blocker, "responsible_agent", None) if blocker is not None else None
         responsible_label = self._agent_label(responsible_agent, fallback="someone in the room")
-        tone_text = self._voice_tone_text(speaker)
-        positive_reframe = f"We had to {goal_text}, but {blocker_text} and that is fine (positive tone)."
 
         if responsible_agent is None:
             observation = ReflectionNode(
                 id="observation",
-                text=(
-                    "Your voice tone suggests that someone needs to improve. "
-                    "However, it might not be clear who your feedback was directed to."
-                ),
-                options=[{"label": "Continue", "next": "target_question"}],
-                node_type="message",
+                text="You sounded upset.",
+                options=[{"label": "Continue", "next": "feedback_question"}],
+                node_type="audio",
             )
 
-            target_question = ReflectionNode(
-                id="target_question",
-                text="Who do you think needs improvement?",
+            feedback_question = ReflectionNode(
+                id="feedback_question",
+                text="But it is not clear what is causing it. Were you trying to share any feedback?",
                 options=[
-                    {"label": "Nobody in the room", "value": "a", "next": "frustration_context_question"},
-                    {"label": "Someone in the room", "value": "b", "next": "context_question"},
+                    {"label": "Yes", "value": "yes", "next": "actionable_journal"},
+                    {"label": "No", "value": "no", "next": "clarity_question"},
                 ],
                 node_type="question",
             )
 
-            frustration_context_question = ReflectionNode(
-                id="frustration_context_question",
-                text="Do you think the context is appropriate to demonstrate frustration?",
-                options=[
-                    {"label": "Yes", "value": "yes", "next": "clarity_tips"},
-                    {"label": "No", "value": "no", "next": "tone_reframe"},
-                ],
-                node_type="question",
-            )
-
-            clarity_tips = ReflectionNode(
-                id="clarity_tips",
+            actionable_journal = ReflectionNode(
+                id="actionable_journal",
                 text=(
-                    "You might want to be more clear about what you are mad about."
-                    "Tips: name the exact issue, describe impact, state who is responsible (if anyone), and what are the actionable steps to avoid future mistakes."
+                    "When providing feedback, suggesting clear and specific points of improvement can make your message more constructive and actionable. "
+                    "What do you think those points might be?"
                 ),
                 options=[],
-                node_type="message",
+                node_type="journaling",
             )
 
-            tone_reframe = ReflectionNode(
-                id="tone_reframe",
-                text=(
-                    "You might want to change voice tone. "
-                    f"This is your tone: {tone_text}. "
-                    f"This is a more positive tone: \"{positive_reframe}\""
-                ),
-                options=[],
-                node_type="message",
-            )
-
-            context_question = ReflectionNode(
-                id="context_question",
-                text="Is the context right to provide feedback?",
+            clarity_question = ReflectionNode(
+                id="clarity_question",
+                text="Do you think you would have been more clear if you had not expressed anger?",
                 options=[
-                    {"label": "Yes", "value": "c", "next": "clarity_tips"},
-                    {"label": "No", "value": "a", "next": "tone_reframe"},
+                    {"label": "Yes", "value": "yes", "next": "practice_question"},
+                    {"label": "No", "value": "no", "next": "why_question"},
                 ],
                 node_type="question",
+            )
+
+            practice_question = ReflectionNode(
+                id="practice_question",
+                text="Would you lie to practice your tone?",
+                options=[],
+                node_type="practice",
+            )
+
+            why_question = ReflectionNode(
+                id="why_question",
+                text="Why?",
+                options=[],
+                node_type="journaling",
             )
 
             self.tree_id = "unclear_feedback_unknown_target"
@@ -309,11 +297,11 @@ class ReflectionTree:
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
-                "target_question": target_question,
-                "frustration_context_question": frustration_context_question,
-                "clarity_tips": clarity_tips,
-                "tone_reframe": tone_reframe,
-                "context_question": context_question,
+                "feedback_question": feedback_question,
+                "actionable_journal": actionable_journal,
+                "clarity_question": clarity_question,
+                "practice_question": practice_question,
+                "why_question": why_question,
             }
             return self
 
