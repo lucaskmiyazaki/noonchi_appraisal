@@ -7,6 +7,19 @@
   <link rel="stylesheet" href="/static/styles.css">
   <style>
     html, body { min-height: 100%; overflow-y: auto; }
+    .session-layout { max-width: 1180px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
+    .session-main { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px; }
+    .session-sidebar { position: sticky; top: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 20px; }
+    .session-sidebar-title { margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #111827; }
+    .session-sidebar-empty { font-size: 13px; color: #6b7280; }
+    .session-reflection-list { display: flex; flex-direction: column; gap: 12px; }
+    .session-reflection-card { width: 100%; border: 0; border-radius: 12px; padding: 14px; text-align: left; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06); }
+    .session-reflection-card-title { display: block; font-size: 14px; font-weight: 700; color: #111827; text-transform: capitalize; }
+    .session-reflection-card-meta { display: block; margin-top: 6px; font-size: 12px; color: #4b5563; }
+    .session-reflection-card-tone { background: #fbcfe8; }
+    .session-reflection-card-clarity { background: #fef08a; }
+    .session-reflection-card-intensity { background: #bbf7d0; }
+    .session-reflection-card-default { background: #e5e7eb; }
     .section-title { font-size: 20px; font-weight: 600; margin-top: 24px; }
     .subtle-line { margin-bottom: 16px; color: #6b7280; font-size: 14px; }
     .back-link { color: #4b5563; text-decoration: none; font-size: 14px; }
@@ -42,16 +55,27 @@
     .reflection-option-next { display: block; margin-top: 4px; font-size: 12px; color: #6b7280; }
     .reflection-terminal { padding: 12px 14px; border-radius: 12px; background: #f9fafb; color: #4b5563; font-size: 13px; }
     .reflection-voice-note { margin: -8px 0 16px; font-size: 12px; color: #6b7280; }
+
+    @media (max-width: 980px) {
+      .session-layout { grid-template-columns: 1fr; }
+      .session-sidebar { position: static; }
+    }
   </style>
 </head>
 {% set resolved_user = current_user or '' %}
 {% set resolved_session = current_session or '' %}
 <body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
-  <div style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 32px;">
-    <a class="back-link" href="/{{ resolved_user|urlencode }}">Back to sessions</a>
-    <h1>User Reflection Sessions</h1>
-    <div class="subtle-line">Viewing session <strong>{{ resolved_session }}</strong> for <strong>{{ resolved_user }}</strong></div>
-    <div id="waveformContainer" style="margin:24px 0;"></div>
+  <div class="session-layout">
+    <div class="session-main">
+      <a class="back-link" href="/{{ resolved_user|urlencode }}">Back to sessions</a>
+      <h1>User Reflection Sessions</h1>
+      <div class="subtle-line">Viewing session <strong>{{ resolved_session }}</strong> for <strong>{{ resolved_user }}</strong></div>
+      <div id="waveformContainer" style="margin:24px 0;"></div>
+    </div>
+    <aside class="session-sidebar">
+      <h2 class="session-sidebar-title">Reflections</h2>
+      <div id="reflectionSidebar"></div>
+    </aside>
   </div>
   <div id="reflectionModal" class="reflection-modal" hidden>
     <div class="reflection-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reflectionModalTitle">
@@ -70,6 +94,7 @@
   </div>
   <script>
     const waveformContainer = document.getElementById('waveformContainer');
+    const reflectionSidebar = document.getElementById('reflectionSidebar');
     const currentUser = document.body.dataset.currentUser || '';
     const currentSession = document.body.dataset.currentSession || '';
     const reflectionModal = document.getElementById('reflectionModal');
@@ -280,6 +305,26 @@
         return '';
       }
 
+      function getReflectionCardClass(reflectionType) {
+        const highlightClass = getReflectionHighlightClass(reflectionType);
+        if (highlightClass === 'has-reflection-tone') return 'session-reflection-card-tone';
+        if (highlightClass === 'has-reflection-clarity') return 'session-reflection-card-clarity';
+        if (highlightClass === 'has-reflection-intensity') return 'session-reflection-card-intensity';
+        return 'session-reflection-card-default';
+      }
+
+      function formatReflectionTime(msValue) {
+        const totalMs = Number(msValue);
+        if (!Number.isFinite(totalMs) || totalMs < 0) {
+          return '--:--';
+        }
+
+        const totalSeconds = Math.floor(totalMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${String(seconds).padStart(2, '0')}`;
+      }
+
       const reflectionsWithTypes = await Promise.all(reflections.map(async reflection => {
         const nextReflection = { ...reflection, tree_id: null, reflectionType: '', tree: null };
         if (!reflection.reflection_tree_file) {
@@ -299,6 +344,42 @@
         }
         return nextReflection;
       }));
+
+      function renderReflectionSidebar() {
+        if (!reflectionsWithTypes.length) {
+          reflectionSidebar.innerHTML = '<div class="session-sidebar-empty">No reflections for this session.</div>';
+          return;
+        }
+
+        const list = document.createElement('div');
+        list.className = 'session-reflection-list';
+
+        reflectionsWithTypes.forEach((reflection, index) => {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = `session-reflection-card ${getReflectionCardClass(reflection.reflectionType)}`;
+
+          const title = document.createElement('span');
+          title.className = 'session-reflection-card-title';
+          title.textContent = reflection.reflectionType || `reflection ${index + 1}`;
+
+          const meta = document.createElement('span');
+          meta.className = 'session-reflection-card-meta';
+          meta.textContent = `${formatReflectionTime(reflection.startms)} - ${formatReflectionTime(reflection.endms)}`;
+
+          card.appendChild(title);
+          card.appendChild(meta);
+          card.addEventListener('click', () => {
+            if (reflection.tree) {
+              openReflectionModal(reflection);
+            }
+          });
+          list.appendChild(card);
+        });
+
+        reflectionSidebar.innerHTML = '';
+        reflectionSidebar.appendChild(list);
+      }
 
       waveformContainer.innerHTML = `
         <div class="section-title">Audio</div>
@@ -418,6 +499,7 @@
       };
 
       playBtn.disabled = !audioUrl;
+      renderReflectionSidebar();
       renderTranscript();
     }
 
