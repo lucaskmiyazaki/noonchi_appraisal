@@ -31,9 +31,11 @@
     .subtle-line { margin-bottom: 16px; color: #6b7280; font-size: 14px; }
     .back-link { color: #4b5563; text-decoration: none; font-size: 14px; }
     .back-link:hover { text-decoration: underline; }
-    .audio-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-    .session-play-btn { border: 0; border-radius: 10px; background: #111827; color: #fff; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
-    .session-play-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .session-floating-play { position: fixed; top: 120px; left: max(20px, calc((100vw - 1220px) / 2 - 76px)); z-index: 4; }
+    .session-play-btn { width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: #111827; color: #fff; box-shadow: 0 10px 24px rgba(17, 24, 39, 0.18); cursor: pointer; }
+    .session-play-btn:hover { background: #1f2937; }
+    .session-play-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .session-play-btn svg { width: 22px; height: 22px; fill: currentColor; }
     .session-transcript { font-size: 20px; line-height: 1.95; }
     .session-transcript-empty { font-size: 14px; color: #6b7280; }
     .session-chunk { display: inline; padding: 2px 4px; border-radius: 5px; color: #c7cbd1; cursor: pointer; transition: color 0.12s ease, background-color 0.12s ease; }
@@ -67,6 +69,7 @@
       .session-layout { grid-template-columns: 1fr; }
       .session-sidebar { position: static; }
       .session-sidebar-panel { position: static; width: auto; max-height: none; overflow: visible; }
+      .session-floating-play { left: 20px; top: 24px; }
       .reflection-links { display: none; }
     }
   </style>
@@ -76,6 +79,11 @@
 <body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
   <div class="session-layout">
     <svg id="reflectionLinks" class="reflection-links" aria-hidden="true"></svg>
+    <div class="session-floating-play">
+      <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
+      </button>
+    </div>
     <div class="session-main">
       <a class="back-link" href="/{{ resolved_user|urlencode }}">Back to sessions</a>
       <h1>User Reflection Sessions</h1>
@@ -578,13 +586,9 @@
 
       waveformContainer.innerHTML = `
         <div class="section-title">Audio</div>
-        <div class="audio-controls">
-          <button id="playBtn" class="session-play-btn" disabled>Play</button>
-        </div>
         <div id="sessionTranscript" class="session-transcript"></div>
       `;
 
-      const playBtn = document.getElementById('playBtn');
       const sessionTranscript = document.getElementById('sessionTranscript');
       const audio = new Audio(audioUrl);
       audio.preload = 'metadata';
@@ -687,11 +691,18 @@
         }
       };
 
-      audio.onplay = () => { playBtn.textContent = 'Pause'; };
-      audio.onpause = () => { playBtn.textContent = 'Play'; };
+      function renderPlayButtonIcon(isPlaying) {
+        playBtn.innerHTML = isPlaying
+          ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"></path></svg>'
+          : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>';
+        playBtn.setAttribute('aria-label', isPlaying ? 'Pause audio' : 'Play audio');
+      }
+
+      audio.onplay = () => { renderPlayButtonIcon(true); };
+      audio.onpause = () => { renderPlayButtonIcon(false); };
       audio.ontimeupdate = syncActiveChunk;
       audio.onended = () => {
-        playBtn.textContent = 'Play';
+        renderPlayButtonIcon(false);
         activeChunkId = null;
         renderTranscript();
       };
@@ -700,6 +711,7 @@
       window.addEventListener('scroll', scheduleReflectionLinkDraw, { passive: true });
 
       playBtn.disabled = !audioUrl;
+      renderPlayButtonIcon(false);
       renderReflectionSidebar();
       renderTranscript();
     }
