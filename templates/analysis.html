@@ -18,19 +18,19 @@
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
-    .user-layout { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .analysis-layout { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
     .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
-    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
     .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
     .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
     .app-nav-icon.is-active { color: #111827; }
     .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
-    .user-main { min-width: 0; border-radius: var(--card-radius); background: linear-gradient(135deg, #e8f0ff 0%, #eef4fb 52%, #f8fbff 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow-y: auto; }
-    .user-main-inner { max-width: 1040px; margin: 0 auto; padding: 40px 40px 56px; }
-    .user-kicker { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; }
-    .user-title { margin: 0; font-size: 36px; line-height: 1.1; letter-spacing: -0.03em; }
-    .user-subtitle { margin: 14px 0 0; max-width: 640px; font-size: 15px; line-height: 1.7; color: var(--text-muted); }
+    .analysis-main { min-width: 0; border-radius: var(--card-radius); background: linear-gradient(135deg, #e8f0ff 0%, #eef4fb 52%, #f8fbff 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow-y: auto; }
+    .analysis-main-inner { max-width: 1040px; margin: 0 auto; padding: 40px 40px 56px; }
+    .analysis-kicker { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; }
+    .analysis-title { margin: 0; font-size: 36px; line-height: 1.1; letter-spacing: -0.03em; }
+    .analysis-subtitle { margin: 14px 0 0; max-width: 640px; font-size: 15px; line-height: 1.7; color: var(--text-muted); }
     .session-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; margin-top: 32px; }
     .session-card { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 20px; background: rgba(255, 255, 255, 0.82); box-shadow: 0 18px 40px rgba(148, 163, 184, 0.14); padding: 22px 22px 20px; transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease; backdrop-filter: blur(8px); }
     .session-card:hover { transform: translateY(-2px); box-shadow: 0 22px 48px rgba(148, 163, 184, 0.2); border-color: rgba(191, 219, 254, 0.95); }
@@ -41,23 +41,25 @@
 
     @media (max-width: 980px) {
       body { overflow: auto; }
-      .user-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+      .analysis-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
       .app-nav { display: none; }
-      .user-main-inner { padding: 28px 20px 40px; }
-      .user-title { font-size: 30px; }
+      .analysis-main-inner { padding: 28px 20px 40px; }
+      .analysis-title { font-size: 30px; }
     }
   </style>
 </head>
 {% set resolved_user = current_user or '' %}
-{% set active_nav_icon = 'grid' %}
+{% set active_nav_icon = 'chart' %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
+{% set meetings_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
 <body data-current-user="{{ resolved_user }}">
-  <div class="user-layout">
+  <div class="analysis-layout">
     {% include '_left_sidebar.html' %}
-    <main class="user-main">
-      <div class="user-main-inner">
-        <p class="user-kicker">Meetings</p>
-        <h1 class="user-title">{{ resolved_user }}'s meetings</h1>
-        <p class="user-subtitle">Open any meeting to review its transcript, reflections, and practice prompts.</p>
+    <main class="analysis-main">
+      <div class="analysis-main-inner">
+        <p class="analysis-kicker">Meetings</p>
+        <h1 class="analysis-title">{{ resolved_user }}'s meetings</h1>
+        <p class="analysis-subtitle">Open any meeting to review its transcript, reflections, and practice prompts.</p>
         <div class="session-list" id="sessionList"></div>
       </div>
     </main>

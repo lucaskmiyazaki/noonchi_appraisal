@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
 from urllib import error as url_error
+from urllib.parse import quote
 from urllib import request as url_request
 
 from flask import Flask, jsonify, request, render_template, redirect, send_from_directory, abort
@@ -340,9 +341,13 @@ def user_session_detail(user_name, session_name):
 def user_practice(user_name):
     return render_template("practice.html", current_user=user_name)
 
+@app.get("/<user_name>/analysis")
+def user_analysis(user_name):
+    return render_template("analysis.html", current_user=user_name)
+
 @app.get("/<user_name>")
 def user_sessions(user_name):
-    return render_template("user.html", current_user=user_name)
+    return redirect(f"/{quote(user_name)}/analysis")
 
 @app.post("/play_graph")
 def play_graph():

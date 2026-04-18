@@ -26,9 +26,9 @@
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
     .session-layout { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
     .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
-    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
     .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
     .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
     .app-nav-icon.is-active { color: #111827; }
     .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
@@ -133,6 +133,8 @@
 {% set resolved_user = current_user or '' %}
 {% set resolved_session = current_session or '' %}
 {% set active_nav_icon = 'chart' %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis/' ~ (resolved_session|urlencode) %}
+{% set meetings_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
 <body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
   <div class="session-layout">
     <svg id="reflectionLinks" class="reflection-links" aria-hidden="true"></svg>
@@ -142,7 +144,7 @@
         <div class="session-main-title-group">
           <div class="session-heading">
             <div class="session-heading-title-row">
-              <a class="back-link" href="/{{ resolved_user|urlencode }}" aria-label="Back to sessions">←</a>
+              <a class="back-link" href="/{{ resolved_user|urlencode }}/analysis" aria-label="Back to sessions">←</a>
               <h1>{{ resolved_session }}</h1>
               <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
