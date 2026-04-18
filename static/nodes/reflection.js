@@ -7,16 +7,26 @@ function nextReflectionId() {
   return `reflection-${reflCounter}`;
 }
 
+function getReflectionTitle(badge) {
+  if (badge === 'audio') return 'Reflection audio';
+  if (badge === 'practice') return 'Reflection practice';
+  if (badge === 'journaling') return 'Reflection journaling';
+  if (badge === 'question') return 'Reflection Question';
+  return 'Reflection';
+}
+
 export function createReflectionNode({ _id = null, title, badge, x = 0, y = 0, data = {} } = {}) {
   const id = _id || nextReflectionId();
+  const resolvedBadge = badge || 'message';
+  const resolvedTitle = title || getReflectionTitle(resolvedBadge);
 
   const node = createNodeBase({
     id,
     type: 'reflection',
-    title: title || 'Reflection',
+    title: resolvedTitle,
     x,
     y,
-    badge: badge || 'message',
+    badge: resolvedBadge,
   });
 
   // No manual port connections on reflection nodes

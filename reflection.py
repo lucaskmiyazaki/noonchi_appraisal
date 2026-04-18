@@ -608,7 +608,7 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_incoherent_goal(self, goal, speaker=None):
+    def build_from_incoherent_tone(self, goal, speaker=None):
         """
         Builds a reflection tree for:
         Positive outcome, negative tone, speaker
@@ -628,7 +628,7 @@ class ReflectionTree:
         """
         if goal.status not in {GOAL_STATUS_SUCCESS, GOAL_STATUS_FAIL}:
             raise ValueError(
-                "build_from_incoherent_goal currently supports successful or failed goals."
+                "build_from_incoherent_tone currently supports successful or failed goals."
             )
 
         goal_text = goal.text
@@ -699,44 +699,25 @@ class ReflectionTree:
             }
             return self
 
-        # Negative outcome + positive tone (incoherent): branch by responsibility.
-        blocker = goal.get_most_critical_blocker() if hasattr(goal, "get_most_critical_blocker") else None
-        if blocker is None:
-            blockers = getattr(goal, "blockers", []) or []
-            blocker = blockers[0] if blockers else None
-
-        blocker_text = getattr(blocker, "text", "this blocker")
-
-        responsible_agent = None
-        if blocker is not None:
-            responsible_agents = getattr(blocker, "responsible_agents", []) or []
-            if responsible_agents:
-                responsible_agent = responsible_agents[0]
-            else:
-                responsible_agent = getattr(blocker, "responsible_agent", None)
-
-        speaker_is_responsible = speaker is not None and responsible_agent is not None and speaker is responsible_agent
-        tone_text = self._voice_tone_text(speaker)
-        responsible_label = self._agent_label(responsible_agent)
-
         observation = ReflectionNode(
             id="observation",
             text=(
-                f'The goal "{goal_text}" was not successful, '
-                f'but your tone may not have fully reflected that.'
+                f'You were talking about "{goal_text}". '
+                "It seems it did not go as planned. "
+                "However, you sounded happy when talking about that."
             ),
             options=[
                 {"label": "Continue", "next": "sarcasm_question"}
             ],
-            node_type="message",
+            node_type="audio",
         )
 
         sarcasm_question = ReflectionNode(
             id="sarcasm_question",
-            text="Are you being sarcastic?",
+            text="Were you being sarcastic?",
             options=[
                 {"label": "Yes", "value": "a", "next": "tone_interpretation"},
-                {"label": "No", "value": "b", "next": "responsibility_question"},
+                {"label": "No", "value": "b", "next": "clarity_question"},
             ],
             node_type="question",
         )
@@ -744,131 +725,47 @@ class ReflectionTree:
         tone_interpretation = ReflectionNode(
             id="tone_interpretation",
             text=(
-                "People interpret tone differently. Some may understand the intended "
-                "meaning, while others may take it more literally or feel unsure about "
-                "your intent."
-            ),
-            options=[
-                {"label": "Continue", "next": "responsibility_question"}
-            ],
-            node_type="message",
-        )
-
-        if blocker is None or responsible_agent is None:
-            responsibility_question = ReflectionNode(
-                id="responsibility_question",
-                text=(
-                    "Do you think you should have expressed a negative feeling "
-                    "instead of showing signs of joy?"
-                ),
-                options=[
-                    {"label": "Yes", "value": "c", "next": "negative_feeling_tone_examples"},
-                    {"label": "No", "value": "no", "next": "negative_feeling_tone_examples"},
-                ],
-                node_type="question",
-            )
-
-            negative_feeling_tone_examples = ReflectionNode(
-                id="negative_feeling_tone_examples",
-                text=(
-                    f"This is your voice tone: {tone_text}. "
-                    "These are some examples of negative-feeling voice tone using the same phrase on AI voice tone."
-                ),
-                options=[],
-                node_type="message",
-            )
-
-            self.tree_id = "negative_outcome_positive_tone_speaker_missing_responsibility"
-            self.reflection_type = "incoherent tone"
-            self.start_node = "observation"
-            self.nodes = {
-                "observation": observation,
-                "sarcasm_question": sarcasm_question,
-                "tone_interpretation": tone_interpretation,
-                "responsibility_question": responsibility_question,
-                "negative_feeling_tone_examples": negative_feeling_tone_examples,
-            }
-            return self
-
-        if speaker_is_responsible:
-            responsibility_question = ReflectionNode(
-                id="responsibility_question",
-                text=(
-                    f'During the meeting, it was mentioned that "{blocker_text}". '
-                    "Do you think you should have expressed regret in this situation to show accountability of your mistake?"
-                ),
-                options=[
-                    {"label": "Yes", "value": "c", "next": "regret_tone_examples"},
-                    {"label": "No", "value": "no", "next": "regret_tone_examples"},
-                ],
-                node_type="question",
-            )
-
-            regret_tone_examples = ReflectionNode(
-                id="regret_tone_examples",
-                text=(
-                    f"This is your voice tone: {tone_text}. "
-                    "These are some examples of regret voice tone using the same phrase on AI voice tone."
-                ),
-                options=[],
-                node_type="message",
-            )
-
-            self.tree_id = "negative_outcome_positive_tone_speaker_self_responsible"
-            self.reflection_type = "incoherent tone"
-            self.start_node = "observation"
-            self.nodes = {
-                "observation": observation,
-                "sarcasm_question": sarcasm_question,
-                "tone_interpretation": tone_interpretation,
-                "responsibility_question": responsibility_question,
-                "regret_tone_examples": regret_tone_examples,
-            }
-            return self
-
-        responsibility_question = ReflectionNode(
-            id="responsibility_question",
-            text=(
-                f'During the meeting, it was mentioned that "{blocker_text}". '
-                f'Do you think "{responsible_label}" should change/improve?'
-            ),
-            options=[
-                {"label": "Yes", "value": "c", "next": "urgency_question"},
-                {"label": "No", "value": "no", "next": "urgency_question"},
-            ],
-            node_type="question",
-        )
-
-        urgency_question = ReflectionNode(
-            id="urgency_question",
-            text="Do you think you could have been tougher to express urgency for change/improvement?",
-            options=[
-                {"label": "Yes", "value": "d", "next": "tough_tone_examples"},
-                {"label": "No", "value": "no", "next": "tough_tone_examples"},
-            ],
-            node_type="question",
-        )
-
-        tough_tone_examples = ReflectionNode(
-            id="tough_tone_examples",
-            text=(
-                f"This is your voice tone: {tone_text} when talking about {blocker_text}. "
-                "These are some examples of tough voice tone using the same phrase on AI voice tone."
+                "Humor is great, but keep in mind that neurodivergent people might interpret tones differently. "
+                "Some may understand the intended meaning, while others may take it more literally or feel unsure about the intent."
             ),
             options=[],
             node_type="message",
         )
 
-        self.tree_id = "negative_outcome_positive_tone_speaker_other_responsible"
+        clarity_question = ReflectionNode(
+            id="clarity_question",
+            text="Do you think it would have been more clear if you had not expressed joy?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "practice_question"},
+                {"label": "No", "value": "no", "next": "why_question"},
+            ],
+            node_type="question",
+        )
+
+        why_question = ReflectionNode(
+            id="why_question",
+            text="Why?",
+            options=[],
+            node_type="journaling",
+        )
+
+        practice_question = ReflectionNode(
+            id="practice_question",
+            text="Would you like to practice your tone?",
+            options=[],
+            node_type="practice",
+        )
+
+        self.tree_id = "negative_outcome_incoherent_tone"
         self.reflection_type = "incoherent tone"
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
             "sarcasm_question": sarcasm_question,
             "tone_interpretation": tone_interpretation,
-            "responsibility_question": responsibility_question,
-            "urgency_question": urgency_question,
-            "tough_tone_examples": tough_tone_examples,
+            "clarity_question": clarity_question,
+            "why_question": why_question,
+            "practice_question": practice_question,
         }
 
         return self

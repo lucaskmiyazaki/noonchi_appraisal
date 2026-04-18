@@ -339,7 +339,7 @@ def play_graph():
         intensity_check["is_intensity_coherent"], intensity_check["issues"] = summarize_intensity_issue(intensity_issue)
 
         if reflection_tree is None and tone_issue is not None:
-            reflection_tree = ReflectionTree().build_from_incoherent_goal(
+            reflection_tree = ReflectionTree().build_from_incoherent_tone(
                 tone_issue["goal"],
                 speaker=speaker_agent,
             ).to_dict()

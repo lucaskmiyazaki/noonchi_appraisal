@@ -67,10 +67,19 @@ function buildReflectionGraph(tree) {
     const levelIds = levels.get(depth);
     levelIds.forEach((id, index) => {
       const source = treeNodes[id] || {};
+      const reflectionTitle = source.type === 'question'
+        ? 'Reflection Question'
+        : source.type === 'audio'
+          ? 'Reflection audio'
+          : source.type === 'practice'
+            ? 'Reflection practice'
+            : source.type === 'journaling'
+              ? 'Reflection journaling'
+              : 'Reflection Note';
       reflectionNodes.push({
         id,
         type: 'reflection',
-        title: source.type === 'question' ? 'Reflection Question' : 'Reflection Note',
+        title: reflectionTitle,
         badge: source.type || 'reflection',
         x: 120 + index * 340,
         y: 120 + depth * 220,
