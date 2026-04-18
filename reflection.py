@@ -320,42 +320,68 @@ class ReflectionTree:
         observation = ReflectionNode(
             id="observation",
             text=(
-                f"Your voice tone suggests that {responsible_label} needs to improve. "
-                "However, it might not be clear what the points of improvement are."
+                f"You sounded upset with {responsible_label}."
             ),
-            options=[{"label": "Continue", "next": "context_question"}],
-            node_type="message",
+            options=[{"label": "Continue", "next": "feedback_question"}],
+            node_type="audio",
         )
 
-        context_question = ReflectionNode(
-            id="context_question",
+        feedback_question = ReflectionNode(
+            id="feedback_question",
             text=(
-                f"Do you think {responsible_label} needs to improve? "
-                "Is the context right to provide feedback?"
+                "Were you trying to share any feedback with them?"
             ),
             options=[
-                {"label": "Yes", "value": "a", "next": "actionable_guidance"},
-                {"label": "No", "value": "b", "next": "tone_reframe"},
+                {"label": "Yes", "value": "yes", "next": "timing_question"},
+                {"label": "No", "value": "no", "next": "clarity_question"},
             ],
             node_type="question",
         )
 
-        actionable_guidance = ReflectionNode(
-            id="actionable_guidance",
-            text=f"Provide clear actionable steps and conditions for addressing {blocker_text}.",
-            options=[{"label": "Continue", "next": "tone_reframe"}],
-            node_type="message",
+        timing_question = ReflectionNode(
+            id="timing_question",
+            text="Was that a good moment to provide feedback?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "actionable_journal"},
+                {"label": "No", "value": "no", "next": "clarity_question"},
+            ],
+            node_type="question",
         )
 
-        tone_reframe = ReflectionNode(
-            id="tone_reframe",
+        clarity_question = ReflectionNode(
+            id="clarity_question",
             text=(
-                "If you don't want to express change, you might want to use a different tone. "
-                f"This is your tone: {tone_text}. "
-                f"This is more positive tone: \"{positive_reframe}\""
+                "Do you think you have been more clear if you had not expressed anger?"
+            ),
+            options=[
+                {"label": "Yes", "value": "yes", "next": "practice_question"},
+                {"label": "No", "value": "no", "next": "why_question"},
+            ],
+            node_type="question",
+        )
+
+        actionable_journal = ReflectionNode(
+            id="actionable_journal",
+            text=(
+                "When providing feedback, suggesting clear and specific points of improvement can make your message more constructive and actionable. "
+                "What do you think those points might be?"
             ),
             options=[],
-            node_type="message",
+            node_type="journaling",
+        )
+
+        practice_question = ReflectionNode(
+            id="practice_question",
+            text="Would you like to practice your tone?",
+            options=[],
+            node_type="practice",
+        )
+
+        why_question = ReflectionNode(
+            id="why_question",
+            text="Why?",
+            options=[],
+            node_type="journaling",
         )
 
         self.tree_id = "unclear_feedback_known_target"
@@ -363,9 +389,12 @@ class ReflectionTree:
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
-            "context_question": context_question,
-            "actionable_guidance": actionable_guidance,
-            "tone_reframe": tone_reframe,
+            "feedback_question": feedback_question,
+            "timing_question": timing_question,
+            "clarity_question": clarity_question,
+            "actionable_journal": actionable_journal,
+            "practice_question": practice_question,
+            "why_question": why_question,
         }
         return self
 
@@ -377,110 +406,67 @@ class ReflectionTree:
         - concerns unclear
         - concerns clear but no actionables
         """
-        goal = issue.get("goal")
-        goal_text = getattr(goal, "text", "this goal")
-        tone_text = self._voice_tone_text(speaker)
-
-        blockers_without_actionables = blockers_without_actionables or []
-        blocker_labels = [getattr(b, "text", "") for b in blockers_without_actionables if getattr(b, "text", "")]
-        blockers_text = ", ".join(blocker_labels) if blocker_labels else "some risks"
-
-        confident_tone_example = f"I am confident that we are going to {goal_text}."
-
-        if blocker_labels:
-            observation = ReflectionNode(
-                id="observation",
-                text=(
-                    f"Your voice tone suggests you are concerned about {blockers_text} "
-                    f"as it may hinder {goal_text}."
-                ),
-                options=[{"label": "Continue", "next": "importance_question"}],
-                node_type="message",
-            )
-
-            importance_question = ReflectionNode(
-                id="importance_question",
-                text="Is it important to point out these risks to people at the meeting?",
-                options=[
-                    {"label": "Yes", "value": "a", "next": "tone_reframe"},
-                    {"label": "No", "value": "b", "next": "tone_reframe"},
-                ],
-                node_type="question",
-            )
-
-            tone_reframe = ReflectionNode(
-                id="tone_reframe",
-                text=(
-                    f"You might want to change your voice tone. This is your tone: {tone_text}. "
-                    f"This is a more confident tone: {confident_tone_example}"
-                ),
-                options=[{"label": "Continue", "next": "actionables_question"}],
-                node_type="message",
-            )
-
-            actionables_question = ReflectionNode(
-                id="actionables_question",
-                text="What are the actionable steps that should be taken to mitigate these concerns? And who should act?",
-                options=[],
-                node_type="question",
-            )
-
-            self.tree_id = "unclear_concerns_clear_risks_no_actionables"
-            self.reflection_type = "unclear concern"
-            self.start_node = "observation"
-            self.nodes = {
-                "observation": observation,
-                "importance_question": importance_question,
-                "tone_reframe": tone_reframe,
-                "actionables_question": actionables_question,
-            }
-            return self
-
         observation = ReflectionNode(
             id="observation",
-            text=(
-                "Your voice tone suggests there are points of risk that should be addressed. "
-                "However, these points are not clear."
-            ),
-            options=[{"label": "Continue", "next": "risks_question"}],
-            node_type="message",
+            text="Your voice suggests you are concerned.",
+            options=[{"label": "Continue", "next": "timing_question"}],
+            node_type="audio",
         )
 
-        risks_question = ReflectionNode(
-            id="risks_question",
-            text="What are the points of risks that should be mitigated?",
+        timing_question = ReflectionNode(
+            id="timing_question",
+            text="Was that a good moment to share your concerns?",
             options=[
-                {"label": "No concerns", "value": "a", "next": "tone_reframe"},
-                {"label": "Some concerns", "value": "b", "next": "tone_reframe"},
+                {"label": "Yes", "value": "yes", "next": "actionable_journal"},
+                {"label": "No", "value": "no", "next": "clarity_question"},
             ],
             node_type="question",
         )
 
-        tone_reframe = ReflectionNode(
-            id="tone_reframe",
+        actionable_journal = ReflectionNode(
+            id="actionable_journal",
             text=(
-                "You might want to change your voice tone. "
-                f"This is an example of a more confident tone: {confident_tone_example}"
+                "When sharing concerns, pointing out specific points of risk and steps for mitigation can make message more constructive and actionable. "
+                "What do you think those points might be?"
             ),
-            options=[{"label": "Continue", "next": "actionables_question"}],
-            node_type="message",
+            options=[],
+            node_type="journaling",
         )
 
-        actionables_question = ReflectionNode(
-            id="actionables_question",
-            text="What are the actionable steps that should be taken to mitigate these concerns? And who should act?",
-            options=[],
+        clarity_question = ReflectionNode(
+            id="clarity_question",
+            text="Do you think you would have been more clear if you had not expressed concern in your voice tone?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "practice_question"},
+                {"label": "No", "value": "no", "next": "why_question"},
+            ],
             node_type="question",
         )
 
-        self.tree_id = "unclear_concerns_unclear_risks"
+        practice_question = ReflectionNode(
+            id="practice_question",
+            text="Would you like to practice your tone?",
+            options=[],
+            node_type="practice",
+        )
+
+        why_question = ReflectionNode(
+            id="why_question",
+            text="Why?",
+            options=[],
+            node_type="journaling",
+        )
+
+        self.tree_id = "unclear_concerns"
         self.reflection_type = "unclear concern"
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
-            "risks_question": risks_question,
-            "tone_reframe": tone_reframe,
-            "actionables_question": actionables_question,
+            "timing_question": timing_question,
+            "actionable_journal": actionable_journal,
+            "clarity_question": clarity_question,
+            "practice_question": practice_question,
+            "why_question": why_question,
         }
         return self
 
