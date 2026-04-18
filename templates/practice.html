@@ -20,11 +20,17 @@
       --card-radius: 16px;
     }
 
-    html, body { height: 100%; margin: 0; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
-    .practice-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; min-height: 100vh; padding: 16px; }
-    .practice-main { background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 32px; }
-    .practice-sidebar { background: var(--right-panel-bg); border-radius: var(--card-radius); padding: 32px 24px; border: 1px solid var(--border-soft); }
+    .practice-layout { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .practice-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
+    .practice-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; }
+    .practice-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .practice-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; }
+    .practice-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+    .practice-main { background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 32px; min-width: 0; overflow-y: auto; }
+    .practice-sidebar { min-width: 0; }
+    .practice-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; border-radius: var(--card-radius); border: 1px solid var(--border-soft); }
     .practice-detail { padding: 24px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); }
     .practice-detail[hidden] { display: none; }
     .practice-detail-title { margin: 0; font-size: 24px; line-height: 1.2; }
@@ -41,6 +47,8 @@
     .practice-record-status { margin: 12px 0 0; min-height: 20px; font-size: 14px; color: #64748b; }
     .practice-record-status.is-recording { color: #b91c1c; }
     .practice-detail-empty { padding: 24px; border-radius: 16px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 15px; }
+    .session-search-bar { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+    .session-search-input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; color: var(--text-dark); }
     .practice-sidebar-title { margin: 0 0 18px; font-size: 14px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
     .practice-list { display: flex; flex-direction: column; gap: 12px; }
     .practice-item { width: 100%; display: block; padding: 14px 16px; border-radius: 12px; background: #fff; border: 1px solid var(--border-soft); text-align: left; color: inherit; transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; cursor: pointer; }
@@ -56,14 +64,28 @@
     .practice-item-title { font-size: 14px; font-weight: 600; color: var(--text-dark); }
     .practice-empty { padding: 16px; border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 14px; }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
       .practice-layout { grid-template-columns: 1fr; }
+      .practice-nav { display: none; }
+      .practice-main { min-height: 60vh; }
+      .practice-sidebar-panel { height: auto; min-height: 0; }
     }
   </style>
 </head>
 {% set resolved_user = current_user or '' %}
 <body data-current-user="{{ resolved_user }}">
   <div class="practice-layout">
+    <nav class="practice-nav" aria-hidden="true">
+      <div class="practice-logo">▲</div>
+      <div class="practice-nav-icons">
+        <div class="practice-nav-icon">◫</div>
+        <div class="practice-nav-icon">📊</div>
+        <div class="practice-nav-icon">📅</div>
+        <div class="practice-nav-icon">⑃</div>
+      </div>
+      <div class="practice-nav-avatar"></div>
+    </nav>
     <main class="practice-main">
       <section id="practiceDetailEmpty" class="practice-detail-empty">Select a practice reflection from the sidebar.</section>
 
@@ -81,8 +103,14 @@
     </main>
 
     <aside class="practice-sidebar">
-      <h2 class="practice-sidebar-title">Practice Reflections</h2>
-      <div id="practiceList" class="practice-list"></div>
+      <div class="practice-sidebar-panel">
+        <label class="session-search-bar" aria-label="Search reflections">
+          <span>🔍</span>
+          <input id="practiceSearchInput" class="session-search-input" type="text" placeholder="Search">
+        </label>
+        <h2 class="practice-sidebar-title">Practice Reflections</h2>
+        <div id="practiceList" class="practice-list"></div>
+      </div>
     </aside>
   </div>
 
@@ -95,6 +123,7 @@
     const practiceDetailText = document.getElementById('practiceDetailText');
     const practiceDetailAudio = document.getElementById('practiceDetailAudio');
     const practicePlaceholderAudio = document.getElementById('practicePlaceholderAudio');
+    const practiceSearchInput = document.getElementById('practiceSearchInput');
     const practiceRecordings = document.getElementById('practiceRecordings');
     const practiceRecordButton = document.getElementById('practiceRecordButton');
     const practiceRecordStatus = document.getElementById('practiceRecordStatus');
@@ -127,6 +156,26 @@
       return String(startNode?.text || '').trim();
     }
 
+    function getPracticeSearchQuery() {
+      return String(practiceSearchInput?.value || '').trim().toLowerCase();
+    }
+
+    function getFilteredPracticeReflections() {
+      const query = getPracticeSearchQuery();
+      if (!query) {
+        return practiceReflectionsState;
+      }
+
+      return practiceReflectionsState.filter((reflection) => {
+        const haystack = [
+          getReflectionTypeLabel(reflection),
+          reflection.session || '',
+          getFirstNodeText(reflection),
+        ].join(' ').toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
     function updatePracticeSelectionUi() {
       practiceList.querySelectorAll('.practice-item').forEach((item) => {
         item.classList.toggle('is-selected', item.dataset.practiceKey === selectedPracticeKey);
@@ -141,6 +190,51 @@
       practiceRecordButton.textContent = getRecordingButtonLabel();
       practiceRecordButton.disabled = !selectedPracticeKey;
       practiceRecordStatus.classList.toggle('is-recording', Boolean(activeMediaRecorder && activeMediaRecorder.state === 'recording'));
+    }
+
+    function renderPracticeList() {
+      const filteredReflections = getFilteredPracticeReflections();
+
+      if (!filteredReflections.length) {
+        practiceList.innerHTML = '<div class="practice-empty">No practice reflections match your search.</div>';
+        if (!practiceReflectionsState.some((reflection) => reflection.reflectionKey === selectedPracticeKey)) {
+          selectedPracticeKey = '';
+        }
+        updatePracticeSelectionUi();
+        return;
+      }
+
+      practiceList.innerHTML = filteredReflections.map((reflection) => {
+        const status = String(reflection.practice || '').toLowerCase();
+        const typeLabel = getReflectionTypeLabel(reflection);
+        const colorClass = getReflectionColorClass(reflection);
+        return `
+          <button class="practice-item ${colorClass}" type="button" data-practice-key="${escapeHtml(reflection.reflectionKey)}">
+            <div class="practice-item-row">
+              <span class="practice-item-checkbox ${status === 'done' ? 'is-done' : 'is-todo'}" aria-hidden="true">${status === 'done' ? '&#10003;' : ''}</span>
+              <span class="practice-item-title">${escapeHtml(typeLabel)} on ${escapeHtml(reflection.session || 'Untitled session')}</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+
+      practiceList.querySelectorAll('.practice-item').forEach((item) => {
+        item.addEventListener('click', () => {
+          const reflectionKey = item.dataset.practiceKey || '';
+          selectPracticeReflection(reflectionKey).catch((error) => {
+            console.error('Failed to select practice reflection', error);
+          });
+        });
+      });
+
+      if (!filteredReflections.some((reflection) => reflection.reflectionKey === selectedPracticeKey)) {
+        selectPracticeReflection(filteredReflections[0]?.reflectionKey || '').catch((error) => {
+          console.error('Failed to select practice reflection', error);
+        });
+        return;
+      }
+
+      updatePracticeSelectionUi();
     }
 
     function pauseRecordedClips() {
@@ -424,31 +518,8 @@
         practiceList.innerHTML = '<div class="practice-empty">No practice reflections are currently marked as todo or done.</div>';
         return;
       }
-
-      practiceList.innerHTML = practiceReflections.map((reflection) => {
-        const status = String(reflection.practice || '').toLowerCase();
-        const typeLabel = getReflectionTypeLabel(reflection);
-        const colorClass = getReflectionColorClass(reflection);
-        return `
-          <button class="practice-item ${colorClass}" type="button" data-practice-key="${escapeHtml(reflection.reflectionKey)}">
-            <div class="practice-item-row">
-              <span class="practice-item-checkbox ${status === 'done' ? 'is-done' : 'is-todo'}" aria-hidden="true">${status === 'done' ? '&#10003;' : ''}</span>
-              <span class="practice-item-title">${escapeHtml(typeLabel)} on ${escapeHtml(reflection.session || 'Untitled session')}</span>
-            </div>
-          </button>
-        `;
-      }).join('');
-
-      practiceList.querySelectorAll('.practice-item').forEach((item) => {
-        item.addEventListener('click', () => {
-          const reflectionKey = item.dataset.practiceKey || '';
-          selectPracticeReflection(reflectionKey).catch((error) => {
-            console.error('Failed to select practice reflection', error);
-          });
-        });
-      });
-
       await selectPracticeReflection(practiceReflections[0]?.reflectionKey || '');
+      renderPracticeList();
     }
 
     practiceRecordButton.addEventListener('click', () => {
@@ -457,6 +528,10 @@
         practiceRecordStatus.textContent = 'Recording failed.';
         teardownActiveMediaStream();
       });
+    });
+
+    practiceSearchInput.addEventListener('input', () => {
+      renderPracticeList();
     });
 
     updateRecordButtonUi();
