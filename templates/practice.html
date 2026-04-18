@@ -23,11 +23,13 @@
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
     .practice-layout { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
-    .practice-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
-    .practice-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; }
-    .practice-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .practice-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; }
-    .practice-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+    .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; }
+    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; }
+    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
+    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
     .practice-main { background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 32px; min-width: 0; overflow-y: auto; }
     .practice-sidebar { min-width: 0; }
     .practice-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; border-radius: var(--card-radius); border: 1px solid var(--border-soft); }
@@ -67,25 +69,17 @@
     @media (max-width: 1180px) {
       body { overflow: auto; }
       .practice-layout { grid-template-columns: 1fr; }
-      .practice-nav { display: none; }
+      .app-nav { display: none; }
       .practice-main { min-height: 60vh; }
       .practice-sidebar-panel { height: auto; min-height: 0; }
     }
   </style>
 </head>
 {% set resolved_user = current_user or '' %}
+{% set active_nav_icon = 'chart' %}
 <body data-current-user="{{ resolved_user }}">
   <div class="practice-layout">
-    <nav class="practice-nav" aria-hidden="true">
-      <div class="practice-logo">▲</div>
-      <div class="practice-nav-icons">
-        <div class="practice-nav-icon">◫</div>
-        <div class="practice-nav-icon">📊</div>
-        <div class="practice-nav-icon">📅</div>
-        <div class="practice-nav-icon">⑃</div>
-      </div>
-      <div class="practice-nav-avatar"></div>
-    </nav>
+    {% include '_left_sidebar.html' %}
     <main class="practice-main">
       <section id="practiceDetailEmpty" class="practice-detail-empty">Select a practice reflection from the sidebar.</section>
 
