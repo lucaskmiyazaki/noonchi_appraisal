@@ -328,13 +328,17 @@ def login():
 def user_interface():
     return redirect("/login")
 
-@app.get("/<user_name>/<session_name>")
+@app.get("/<user_name>/analysis/<session_name>")
 def user_session_detail(user_name, session_name):
     return render_template(
         "session.html",
         current_user=user_name,
         current_session=session_name,
     )
+
+@app.get("/<user_name>/practice")
+def user_practice(user_name):
+    return render_template("practice.html", current_user=user_name)
 
 @app.get("/<user_name>")
 def user_sessions(user_name):

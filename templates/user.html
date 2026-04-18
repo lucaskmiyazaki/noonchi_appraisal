@@ -58,7 +58,7 @@
       document.querySelectorAll('.session-item').forEach(item => {
         item.addEventListener('click', () => {
           const session = item.dataset.session || '';
-          window.location.href = `/${encodeURIComponent(user)}/${encodeURIComponent(session)}`;
+          window.location.href = `/${encodeURIComponent(user)}/analysis/${encodeURIComponent(session)}`;
         });
       });
     }
