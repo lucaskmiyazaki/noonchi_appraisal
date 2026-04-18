@@ -637,55 +637,70 @@ class ReflectionTree:
             observation = ReflectionNode(
                 id="observation",
                 text=(
-                    f'The goal "{goal_text}" was successful, '
-                    f'but your tone may not have fully reflected that.'
+                    f'You were talking about "{goal_text}". '
+                    'It seems everything went well. '
+                    'However, you sounded upset when talking about that.'
                 ),
                 options=[
-                    {"label": "Continue", "next": "reflection_question"}
+                    {"label": "Continue", "next": "concerns_question"}
                 ],
-                node_type="message",
+                node_type="audio",
             )
 
-            reflection_question = ReflectionNode(
-                id="reflection_question",
+            concerns_question = ReflectionNode(
+                id="concerns_question",
                 text=(
-                    "Are there any underlying concerns or dissatisfaction, "
-                    "or is it possible that your tone simply did not show how you felt "
-                    "about the outcome?"
+                    "Do you have any underlying concerns or dissatisfaction?"
                 ),
                 options=[
                     {
-                        "label": "There are underlying concerns or dissatisfaction",
-                        "value": "a",
-                        "next": "make_explicit",
+                        "label": "Yes",
+                        "value": "yes",
+                        "next": "concerns_journal",
                     },
                     {
-                        "label": "My tone just did not show how I felt",
-                        "value": "b",
-                        "next": "happy_tone_examples",
+                        "label": "No",
+                        "value": "no",
+                        "next": "clarity_question",
                     },
                 ],
                 node_type="question",
             )
 
-            make_explicit = ReflectionNode(
-                id="make_explicit",
+            concerns_journal = ReflectionNode(
+                id="concerns_journal",
                 text=(
-                    "If something still feels off, it might help to make it explicit "
-                    "so others understand your perspective."
+                    "If something feels off, it might help to make it explicit. "
+                    "Can you describe what your concerns are?"
                 ),
                 options=[],
-                node_type="message",
+                node_type="journaling",
             )
 
-            happy_tone_examples = ReflectionNode(
-                id="happy_tone_examples",
+            clarity_question = ReflectionNode(
+                id="clarity_question",
                 text=(
-                    f"This is your voice tone: {self._voice_tone_text(speaker)}. "
-                    "These are some examples of happy voice tone using the same phrase."
+                    "Do you think it would have been more clear if you had expressed joy instead?"
                 ),
+                options=[
+                    {"label": "Yes", "value": "yes", "next": "practice_question"},
+                    {"label": "No", "value": "no", "next": "why_question"},
+                ],
+                node_type="question",
+            )
+
+            practice_question = ReflectionNode(
+                id="practice_question",
+                text="Would you like to practice your tone?",
                 options=[],
-                node_type="message",
+                node_type="practice",
+            )
+
+            why_question = ReflectionNode(
+                id="why_question",
+                text="Why?",
+                options=[],
+                node_type="journaling",
             )
 
             self.tree_id = "positive_outcome_negative_tone_speaker"
@@ -693,9 +708,11 @@ class ReflectionTree:
             self.start_node = "observation"
             self.nodes = {
                 "observation": observation,
-                "reflection_question": reflection_question,
-                "make_explicit": make_explicit,
-                "happy_tone_examples": happy_tone_examples,
+                "concerns_question": concerns_question,
+                "concerns_journal": concerns_journal,
+                "clarity_question": clarity_question,
+                "practice_question": practice_question,
+                "why_question": why_question,
             }
             return self
 
