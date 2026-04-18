@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root {
+      --bg-main: #f3f6fa;
+      --panel-bg: #ffffff;
+      --sidebar-bg: #e5ebf4;
+      --text-dark: #111827;
+      --text-muted: #6b7280;
+      --border-soft: rgba(226, 232, 240, 0.9);
+      --card-radius: 16px;
+    }
+
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    .dashboard-layout { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
+    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
+    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
+    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+    .dashboard-main { min-width: 0; border-radius: var(--card-radius); background: linear-gradient(135deg, rgba(189, 219, 246, 0.85) 0%, rgba(229, 239, 248, 0.82) 50%, rgba(246, 247, 248, 0.96) 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow-y: auto; }
+    .dashboard-inner { max-width: 1080px; margin: 0 auto; padding: 28px 36px 44px; }
+    .dashboard-toolbar { display: flex; align-items: center; justify-content: flex-end; }
+    .dashboard-search-btn { width: 34px; height: 34px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.85); color: var(--text-dark); display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(148, 163, 184, 0.12); }
+    .dashboard-search-btn svg { width: 18px; height: 18px; stroke: currentColor; }
+    .dashboard-hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; margin-top: 8px; }
+    .dashboard-title { margin: 0; font-size: 54px; line-height: 1; letter-spacing: -0.05em; text-align: center; }
+    .dashboard-date { margin: 36px 0 0; font-size: 18px; letter-spacing: 0.02em; color: #1f2937; }
+    .dashboard-toggle { position: relative; width: 82px; height: 34px; border-radius: 999px; background: #2563eb; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25); }
+    .dashboard-toggle::before { content: ''; position: absolute; top: 5px; right: 8px; width: 22px; height: 22px; border-radius: 999px; background: #f8fafc; box-shadow: 0 2px 6px rgba(0,0,0,0.16); }
+    .dashboard-toggle::after { content: ''; position: absolute; inset: 0; margin: auto 0 auto 12px; width: 20px; height: 14px; border-radius: 999px; border-top: 3px solid #fff; border-bottom: 3px solid #fff; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; }
+    .dashboard-card { min-height: 184px; border-radius: 20px; background: rgba(255, 255, 255, 0.82); box-shadow: 0 18px 40px rgba(148, 163, 184, 0.14); padding: 20px 18px; backdrop-filter: blur(8px); }
+    .dashboard-card h2 { margin: 0; font-size: 19px; line-height: 1.2; }
+    .dashboard-card-body { margin-top: 26px; }
+    .dashboard-metric { font-size: 38px; line-height: 1; letter-spacing: -0.04em; }
+    .dashboard-metric-copy { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
+    .dashboard-secondary-metric { margin-top: 24px; font-size: 18px; }
+    .dashboard-secondary-copy { margin-top: 6px; font-size: 13px; color: #64748b; }
+    .dashboard-upcoming-title { font-size: 34px; line-height: 1.05; letter-spacing: -0.04em; }
+    .dashboard-upcoming-meta { margin-top: 16px; font-size: 13px; color: #475569; display: flex; flex-direction: column; gap: 6px; }
+    .dashboard-upcoming-footer { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .dashboard-avatars { display: flex; align-items: center; }
+    .dashboard-avatar { width: 24px; height: 24px; border-radius: 999px; margin-right: -6px; background: linear-gradient(135deg, #fca5a5, #fcd34d); border: 2px solid rgba(255,255,255,0.92); }
+    .dashboard-avatar.is-two { background: linear-gradient(135deg, #93c5fd, #c4b5fd); }
+    .dashboard-avatars-more { margin-left: 8px; font-size: 11px; color: #475569; }
+    .dashboard-pill { border: 0; border-radius: 999px; padding: 6px 12px; background: #111827; color: #fff; font-size: 11px; font-weight: 700; }
+    .dashboard-nudge-count { font-size: 38px; line-height: 1; letter-spacing: -0.04em; }
+    .dashboard-nudge-label { margin-top: 6px; font-size: 14px; color: #475569; }
+    .dashboard-nudge-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .dashboard-nudge-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #374151; }
+    .dashboard-switch { width: 40px; height: 20px; border-radius: 999px; background: #111827; position: relative; flex: 0 0 auto; }
+    .dashboard-switch::before { content: ''; position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 999px; background: #fff; }
+    .dashboard-switch.is-off { background: #e5e7eb; }
+    .dashboard-switch.is-off::before { right: auto; left: 2px; }
+    .dashboard-chart { display: flex; align-items: end; gap: 10px; height: 92px; margin-top: 20px; }
+    .dashboard-bar { width: 18px; border-radius: 999px 999px 0 0; background: linear-gradient(180deg, #d1d5db, #f3f4f6); }
+    .dashboard-bar.is-today { background: #111827; }
+    .dashboard-bar.a { height: 82px; }
+    .dashboard-bar.b { height: 64px; }
+    .dashboard-bar.c { height: 60px; }
+    .dashboard-bar.d { height: 34px; }
+    .dashboard-chart-axis { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 11px; color: #64748b; }
+    .dashboard-stat { font-size: 16px; color: #111827; margin-top: 18px; }
+    .dashboard-stat strong { display: block; font-size: 36px; line-height: 1; letter-spacing: -0.05em; margin-bottom: 4px; }
+    .dashboard-add-card { display: flex; align-items: center; justify-content: center; min-height: 184px; border-radius: 20px; background: rgba(241, 245, 249, 0.75); box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9); }
+    .dashboard-plus { position: relative; width: 64px; height: 64px; }
+    .dashboard-plus::before, .dashboard-plus::after { content: ''; position: absolute; inset: 0; margin: auto; background: #1f2937; border-radius: 999px; }
+    .dashboard-plus::before { width: 52px; height: 2px; }
+    .dashboard-plus::after { width: 2px; height: 52px; }
+
+    @media (max-width: 1080px) {
+      .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 820px) {
+      body { overflow: auto; }
+      .dashboard-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+      .app-nav { display: none; }
+      .dashboard-inner { padding: 24px 18px 34px; }
+      .dashboard-hero { grid-template-columns: 1fr; }
+      .dashboard-title { font-size: 42px; text-align: left; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+{% set resolved_user = current_user or '' %}
+{% set active_nav_icon = 'grid' %}
+{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
+{% set meetings_nav_href = '/' ~ (resolved_user|urlencode) %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
+<body data-current-user="{{ resolved_user }}">
+  <div class="dashboard-layout">
+    {% include '_left_sidebar.html' %}
+    <main class="dashboard-main">
+      <div class="dashboard-inner">
+        <div class="dashboard-toolbar">
+          <button class="dashboard-search-btn" type="button" aria-label="Search dashboard">
+            <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </button>
+        </div>
+        <div class="dashboard-hero">
+          <div>
+            <h1 class="dashboard-title">Welcome, {{ resolved_user }}!</h1>
+            <p id="dashboardDate" class="dashboard-date"></p>
+          </div>
+          <div class="dashboard-toggle" aria-hidden="true"></div>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="dashboard-card">
+            <h2>Schedule</h2>
+            <div class="dashboard-card-body">
+              <div id="scheduleCount" class="dashboard-metric">0</div>
+              <div class="dashboard-metric-copy">Meetings today</div>
+              <div id="scheduleDuration" class="dashboard-secondary-metric">0 hr</div>
+              <div class="dashboard-secondary-copy">Estimated review time</div>
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <h2>Upcoming</h2>
+            <div class="dashboard-card-body">
+              <div id="upcomingSession" class="dashboard-upcoming-title">No meetings</div>
+              <div class="dashboard-upcoming-meta">
+                <span id="upcomingTime">No time scheduled</span>
+                <span id="upcomingRoom">Reflection workspace</span>
+              </div>
+              <div class="dashboard-upcoming-footer">
+                <div class="dashboard-avatars">
+                  <div class="dashboard-avatar"></div>
+                  <div class="dashboard-avatar is-two"></div>
+                  <span id="upcomingAttendees" class="dashboard-avatars-more">+0</span>
+                </div>
+                <button id="upcomingOpen" class="dashboard-pill" type="button">Open</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <h2>Nudges</h2>
+            <div class="dashboard-card-body">
+              <div id="nudgeCount" class="dashboard-nudge-count">0</div>
+              <div class="dashboard-nudge-label">Practice items added</div>
+              <div class="dashboard-nudge-list">
+                <div class="dashboard-nudge-item"><span>Interruptions</span><span id="nudgeInterruptions" class="dashboard-switch is-off"></span></div>
+                <div class="dashboard-nudge-item"><span>Loudness</span><span id="nudgeLoudness" class="dashboard-switch is-off"></span></div>
+                <div class="dashboard-nudge-item"><span>Elevation</span><span id="nudgeElevation" class="dashboard-switch is-off"></span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <h2>Emotions</h2>
+            <div class="dashboard-card-body">
+              <div class="dashboard-chart" aria-hidden="true">
+                <div class="dashboard-bar a"></div>
+                <div class="dashboard-bar b"></div>
+                <div class="dashboard-bar c"></div>
+                <div class="dashboard-bar d"></div>
+                <div id="emotionToday" class="dashboard-bar is-today d"></div>
+              </div>
+              <div class="dashboard-chart-axis"><span>Weekly trend</span><span>Today</span></div>
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <h2>Stats</h2>
+            <div class="dashboard-card-body">
+              <div class="dashboard-stat"><strong id="statSessions">0x</strong>More meetings reviewed than last week</div>
+              <div class="dashboard-stat"><strong id="statPractice">0x</strong>Practice reflections waiting today</div>
+            </div>
+          </section>
+
+          <section class="dashboard-add-card" aria-hidden="true">
+            <div class="dashboard-plus"></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    const currentUser = document.body.dataset.currentUser || '';
+    const dashboardDate = document.getElementById('dashboardDate');
+    const scheduleCount = document.getElementById('scheduleCount');
+    const scheduleDuration = document.getElementById('scheduleDuration');
+    const upcomingSession = document.getElementById('upcomingSession');
+    const upcomingTime = document.getElementById('upcomingTime');
+    const upcomingRoom = document.getElementById('upcomingRoom');
+    const upcomingAttendees = document.getElementById('upcomingAttendees');
+    const upcomingOpen = document.getElementById('upcomingOpen');
+    const nudgeCount = document.getElementById('nudgeCount');
+    const nudgeInterruptions = document.getElementById('nudgeInterruptions');
+    const nudgeLoudness = document.getElementById('nudgeLoudness');
+    const nudgeElevation = document.getElementById('nudgeElevation');
+    const emotionToday = document.getElementById('emotionToday');
+    const statSessions = document.getElementById('statSessions');
+    const statPractice = document.getElementById('statPractice');
+
+    function formatDashboardDate() {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+      dashboardDate.textContent = formatter.format(now);
+    }
+
+    function setSwitchState(element, isOn) {
+      element.classList.toggle('is-off', !isOn);
+    }
+
+    async function loadDashboard() {
+      formatDashboardDate();
+      const user = currentUser.trim();
+      if (!user) {
+        return;
+      }
+
+      const sessionResponse = await fetch(`/reflection/${encodeURIComponent(user)}`);
+      const sessionData = await sessionResponse.json().catch(() => ({ session_names: [] }));
+      const sessionNames = Array.isArray(sessionData.session_names) ? sessionData.session_names : [];
+      scheduleCount.textContent = String(sessionNames.length);
+      scheduleDuration.textContent = `${Math.max(sessionNames.length, 1)} hr ${String((sessionNames.length * 30) % 60).padStart(2, '0')} min`;
+      statSessions.textContent = `${Math.max(sessionNames.length, 1)}x`;
+
+      if (sessionNames.length) {
+        const nextSession = sessionNames[0];
+        upcomingSession.textContent = nextSession;
+        upcomingTime.textContent = `Today at ${String(9 + (sessionNames.length % 5)).padStart(2, '0')}:30`;
+        upcomingRoom.textContent = `Room ${String.fromCharCode(65 + (sessionNames.length % 4))}`;
+        upcomingAttendees.textContent = `+${Math.max(1, sessionNames.length - 1)}`;
+        upcomingOpen.addEventListener('click', () => {
+          window.location.href = `/${encodeURIComponent(user)}/analysis/${encodeURIComponent(nextSession)}`;
+        });
+      } else {
+        upcomingOpen.disabled = true;
+        upcomingOpen.textContent = 'Empty';
+      }
+
+      let practiceTodoCount = 0;
+      for (const sessionName of sessionNames) {
+        const reflectionResponse = await fetch(`/${'reflection'}/${encodeURIComponent(user)}/${encodeURIComponent(sessionName)}`);
+        const reflectionData = await reflectionResponse.json().catch(() => ({ reflections: [] }));
+        const reflections = Array.isArray(reflectionData.reflections) ? reflectionData.reflections : [];
+        practiceTodoCount += reflections.filter((reflection) => String(reflection.practice || '').toLowerCase() === 'todo').length;
+      }
+
+      nudgeCount.textContent = String(practiceTodoCount);
+      statPractice.textContent = `${Math.max(practiceTodoCount, 1)}x`;
+      setSwitchState(nudgeInterruptions, practiceTodoCount >= 1);
+      setSwitchState(nudgeLoudness, practiceTodoCount >= 2);
+      setSwitchState(nudgeElevation, practiceTodoCount >= 3);
+      emotionToday.style.height = `${Math.max(28, Math.min(82, 28 + practiceTodoCount * 12))}px`;
+    }
+
+    loadDashboard().catch((error) => {
+      console.error('Failed to load dashboard', error);
+    });
+  </script>
+</body>
+</html>

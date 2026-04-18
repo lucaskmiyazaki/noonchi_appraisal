@@ -347,7 +347,7 @@ def user_analysis(user_name):
 
 @app.get("/<user_name>")
 def user_sessions(user_name):
-    return redirect(f"/{quote(user_name)}/analysis")
+    return render_template("dashboard.html", current_user=user_name)
 
 @app.post("/play_graph")
 def play_graph():

@@ -133,6 +133,7 @@
 {% set resolved_user = current_user or '' %}
 {% set resolved_session = current_session or '' %}
 {% set active_nav_icon = 'chart' %}
+{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
 {% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis/' ~ (resolved_session|urlencode) %}
 {% set meetings_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
 <body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
