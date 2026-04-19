@@ -123,6 +123,14 @@ def load_audio_record(record_id):
     return json.loads(record_path.read_text(encoding="utf-8"))
 
 
+def delete_audio_record(record_id):
+    record_path = AUDIO_DATA_DIR / f"{record_id}.json"
+    if not record_path.exists():
+        return False
+    record_path.unlink()
+    return True
+
+
 def is_audio_record(record):
     return isinstance(record, dict) and {
         "id",
@@ -180,6 +188,26 @@ def find_latest_audio_record(session_name=""):
         return find_latest_audio_record("")
 
     return None
+
+
+def build_reflection_response_row(row, reflection_file):
+    reflection_path = DATA_DIR / reflection_file
+    if not reflection_path.exists() or reflection_path.suffix != ".json":
+        return None
+
+    try:
+        tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    return {
+        "reflection_tree_file": reflection_file,
+        "startms": row.get("startms", ""),
+        "endms": row.get("endms", ""),
+        "practice": row.get("practice", "null"),
+        "audio_filename": row.get("audio_filename", ""),
+        "tree": tree,
+    }
 
 
 def normalize_practice_value(value):
@@ -676,25 +704,13 @@ def list_session_reflection_trees(session_name):
         if not reflection_file:
             continue
 
-        reflection_path = DATA_DIR / reflection_file
-        if not reflection_path.exists() or reflection_path.suffix != ".json":
+        reflection_payload = build_reflection_response_row(row, reflection_file)
+        if reflection_payload is None:
             continue
 
-        try:
-            tree = json.loads(reflection_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
+        reflections.append(reflection_payload)
 
-        reflections.append({
-            "reflection_tree_file": reflection_file,
-            "startms": row.get("startms", ""),
-            "endms": row.get("endms", ""),
-            "practice": row.get("practice", "null"),
-            "audio_filename": row.get("audio_filename", ""),
-            "tree": tree,
-        })
-
-    reflections.sort(key=lambda item: int(item.get("startms") or 0))
+    reflections.sort(key=lambda item: float(item.get("startms") or 0))
     return jsonify({"session": session_name, "reflections": reflections})
 
 
@@ -706,6 +722,79 @@ def get_audio(audio_id):
         return jsonify({"error": "Not found"}), 404
 
     return jsonify(record)
+
+
+@app.delete("/api/audio/<audio_id>")
+def delete_audio(audio_id):
+    record = load_audio_record(audio_id)
+
+    if record is None:
+        return jsonify({"error": "Not found"}), 404
+
+    audio_filename = str(record.get("audioFilename", "") or "").strip()
+    deleted_reflection_files = []
+
+    rows, fieldnames = load_reflection_db_rows()
+    remaining_rows = []
+    for row in rows:
+        if audio_filename and row.get("audio_filename", "") == audio_filename:
+            reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
+            if reflection_file:
+                reflection_path = DATA_DIR / reflection_file
+                if reflection_path.exists() and reflection_path.is_file():
+                    reflection_path.unlink()
+                deleted_reflection_files.append(reflection_file)
+            continue
+        remaining_rows.append(row)
+
+    write_reflection_db_rows(remaining_rows, fieldnames)
+
+    deleted_audio_file = False
+    if audio_filename:
+        audio_path = UPLOAD_DIR / audio_filename
+        if audio_path.exists() and audio_path.is_file():
+            audio_path.unlink()
+            deleted_audio_file = True
+
+    delete_audio_record(audio_id)
+
+    return jsonify({
+        "message": "audio deleted",
+        "audio_id": audio_id,
+        "audio_filename": audio_filename,
+        "deleted_audio_file": deleted_audio_file,
+        "deleted_reflection_files": deleted_reflection_files,
+    })
+
+
+@app.get("/api/audio/<audio_id>/reflections")
+def list_reflections_for_audio(audio_id):
+    record = load_audio_record(audio_id)
+
+    if record is None:
+        return jsonify({"error": "Not found"}), 404
+
+    audio_filename = str(record.get("audioFilename", "") or "").strip()
+    session_name = str(record.get("sessionName", "") or "").strip()
+    reflections = []
+    rows, _ = load_reflection_db_rows()
+
+    for row in rows:
+        if audio_filename and row.get("audio_filename", "") != audio_filename:
+            continue
+
+        reflection_file = row.get("reflection_tree_file", "")
+        if not reflection_file:
+            continue
+
+        reflection_payload = build_reflection_response_row(row, reflection_file)
+        if reflection_payload is None:
+            continue
+
+        reflections.append(reflection_payload)
+
+    reflections.sort(key=lambda item: float(item.get("startms") or 0))
+    return jsonify({"session": session_name, "reflections": reflections})
 
 
 # Place the /reflection/<user> endpoint here, after all other route functions

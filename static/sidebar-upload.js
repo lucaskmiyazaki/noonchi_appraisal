@@ -127,20 +127,65 @@ function renderSessionList() {
   }
 
   for (const session of sessions) {
-    const button = document.createElement("button");
+    const item = document.createElement("div");
     const isActive = session.id === audioData?.id;
-    button.type = "button";
-    button.className = `session-item ${isActive ? "active" : ""}`.trim();
-    button.dataset.id = session.id;
+    item.className = `session-item ${isActive ? "active" : ""}`.trim();
+    item.dataset.id = session.id;
     const metaParts = [session.originalName, `${session.segmentCount || 0} transcript boxes`, formatSessionTimestamp(session.uploadedAt)].filter(Boolean);
-    button.innerHTML = `
-      <span class="session-item-title">${escapeHtml(session.sessionName || session.originalName || "Untitled session")}</span>
-      <span class="session-item-meta">${escapeHtml(metaParts.join(" • "))}</span>
+    item.innerHTML = `
+      <button class="session-item-main" type="button">
+        <span class="session-item-title">${escapeHtml(session.sessionName || session.originalName || "Untitled session")}</span>
+        <span class="session-item-meta">${escapeHtml(metaParts.join(" • "))}</span>
+      </button>
+      <button class="session-item-delete" type="button" aria-label="Delete recording" title="Delete recording">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12a2 2 0 0 1-2-2V7h12v12a2 2 0 0 1-2 2H8z"></path>
+        </svg>
+      </button>
     `;
-    button.addEventListener("click", async () => {
+
+    const mainButton = item.querySelector(".session-item-main");
+    const deleteButton = item.querySelector(".session-item-delete");
+
+    mainButton?.addEventListener("click", async () => {
       await loadAudioById(session.id);
     });
-    sessionList.appendChild(button);
+
+    deleteButton?.addEventListener("click", async (event) => {
+      event.stopPropagation();
+
+      const confirmed = window.confirm(`Delete recording "${session.sessionName || session.originalName || "Untitled session"}"? This will also delete its transcript and linked reflections.`);
+      if (!confirmed) {
+        return;
+      }
+
+      deleteButton.disabled = true;
+
+      try {
+        const response = await fetch(`/api/audio/${encodeURIComponent(session.id)}`, {
+          method: "DELETE",
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to delete recording.");
+        }
+
+        if (audioData?.id === session.id) {
+          showSessionListView();
+          setTranscriptStatus("Recording deleted.");
+        }
+
+        await loadSessions();
+      } catch (error) {
+        console.error(error);
+        setTranscriptStatus(error.message || "Failed to delete recording.");
+      } finally {
+        deleteButton.disabled = false;
+      }
+    });
+
+    sessionList.appendChild(item);
   }
 }
 
@@ -286,7 +331,7 @@ async function loadAudioById(audioId) {
     }
 
     setLoadedAudio(data);
-    await loadReflectionTabsForSession(data.sessionName);
+    await loadReflectionTabsForAudio(data.id, data.sessionName);
     return true;
   } catch (error) {
     console.error(error);
@@ -294,14 +339,14 @@ async function loadAudioById(audioId) {
   }
 }
 
-async function loadReflectionTabsForSession(sessionName) {
-  if (!sessionName) {
+async function loadReflectionTabsForAudio(audioId, sessionName) {
+  if (!audioId) {
     syncReflectionTabs([]);
     return;
   }
 
   try {
-    const response = await fetch(`/api/audio/session/${encodeURIComponent(sessionName)}/reflections`);
+    const response = await fetch(`/api/audio/${encodeURIComponent(audioId)}/reflections`);
     const data = await response.json();
 
     if (!response.ok) {

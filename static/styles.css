@@ -594,12 +594,13 @@ button:disabled {
 
 .session-item {
   width: 100%;
-  text-align: left;
   border: 1px solid #d1d5db;
   border-radius: 12px;
   background: #fff;
-  padding: 10px 12px;
-  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -611,6 +612,48 @@ button:disabled {
   border-color: #2563eb;
   background: #eff6ff;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.session-item-main {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 2px 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.session-item-delete {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  background: #fee2e2;
+  color: #b91c1c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.session-item-delete svg {
+  width: 30px;
+  height: 30px;
+  fill: currentColor;
+}
+
+.session-item-delete:hover:not(:disabled) {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
+.session-item-delete:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .session-item-title {
