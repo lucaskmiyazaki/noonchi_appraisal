@@ -144,6 +144,9 @@
 
     function getReflectionTypeLabel(reflection) {
       const type = String(reflection?.tree?.type || '').trim();
+      const normalizedType = type.toLowerCase();
+      if (normalizedType === 'incoherent intensity') return 'elevation';
+      if (normalizedType === 'incoherent tone') return 'tone difference';
       return type || 'reflection';
     }
 

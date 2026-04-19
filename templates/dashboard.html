@@ -39,12 +39,18 @@
     .dashboard-toggle::after { content: ''; position: absolute; inset: 0; margin: auto 0 auto 12px; width: 20px; height: 14px; border-radius: 999px; border-top: 3px solid #fff; border-bottom: 3px solid #fff; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; }
     .dashboard-card { min-height: 184px; border-radius: 20px; background: rgba(255, 255, 255, 0.82); box-shadow: 0 18px 40px rgba(148, 163, 184, 0.14); padding: 20px 18px; backdrop-filter: blur(8px); }
+    .dashboard-card.is-link { cursor: pointer; transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease; }
+    .dashboard-card.is-link:hover,
+    .dashboard-card.is-hoverable:hover { transform: translateY(-2px); box-shadow: 0 22px 48px rgba(148, 163, 184, 0.2); }
     .dashboard-card h2 { margin: 0; font-size: 19px; line-height: 1.2; }
     .dashboard-card-body { margin-top: 26px; }
     .dashboard-metric { font-size: 38px; line-height: 1; letter-spacing: -0.04em; }
     .dashboard-metric-copy { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
     .dashboard-secondary-metric { margin-top: 24px; font-size: 18px; }
     .dashboard-secondary-copy { margin-top: 6px; font-size: 13px; color: #64748b; }
+    .dashboard-upcoming-link { display: block; color: inherit; text-decoration: none; }
+    .dashboard-upcoming-link:hover .dashboard-upcoming-title,
+    .dashboard-upcoming-link:hover .dashboard-upcoming-meta { opacity: 0.78; }
     .dashboard-upcoming-title { font-size: 34px; line-height: 1.05; letter-spacing: -0.04em; }
     .dashboard-upcoming-meta { margin-top: 16px; font-size: 13px; color: #475569; display: flex; flex-direction: column; gap: 6px; }
     .dashboard-upcoming-footer { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -56,7 +62,8 @@
     .dashboard-nudge-count { font-size: 38px; line-height: 1; letter-spacing: -0.04em; }
     .dashboard-nudge-label { margin-top: 6px; font-size: 14px; color: #475569; }
     .dashboard-nudge-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-    .dashboard-nudge-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #374151; }
+    .dashboard-nudge-item { width: 100%; border: 0; padding: 0; background: transparent; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #374151; text-align: left; cursor: pointer; }
+    .dashboard-nudge-item:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.45); outline-offset: 4px; border-radius: 10px; }
     .dashboard-switch { width: 40px; height: 20px; border-radius: 999px; background: #111827; position: relative; flex: 0 0 auto; }
     .dashboard-switch::before { content: ''; position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 999px; background: #fff; }
     .dashboard-switch.is-off { background: #e5e7eb; }
@@ -69,8 +76,6 @@
     .dashboard-bar.c { height: 60px; }
     .dashboard-bar.d { height: 34px; }
     .dashboard-chart-axis { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 11px; color: #64748b; }
-    .dashboard-stat { font-size: 16px; color: #111827; margin-top: 18px; }
-    .dashboard-stat strong { display: block; font-size: 36px; line-height: 1; letter-spacing: -0.05em; margin-bottom: 4px; }
     .dashboard-add-card { display: flex; align-items: center; justify-content: center; min-height: 184px; border-radius: 20px; background: rgba(241, 245, 249, 0.75); box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9); }
     .dashboard-plus { position: relative; width: 64px; height: 64px; }
     .dashboard-plus::before, .dashboard-plus::after { content: ''; position: absolute; inset: 0; margin: auto; background: #1f2937; border-radius: 999px; }
@@ -116,8 +121,8 @@
         </div>
 
         <div class="dashboard-grid">
-          <section class="dashboard-card">
-            <h2>Schedule</h2>
+          <section id="meetingAnalysisCard" class="dashboard-card is-link">
+            <h2>Meeting Analysis</h2>
             <div class="dashboard-card-body">
               <div id="scheduleCount" class="dashboard-metric">0</div>
               <div class="dashboard-metric-copy">Meetings today</div>
@@ -126,14 +131,16 @@
             </div>
           </section>
 
-          <section class="dashboard-card">
+          <section class="dashboard-card is-hoverable">
             <h2>Upcoming</h2>
             <div class="dashboard-card-body">
-              <div id="upcomingSession" class="dashboard-upcoming-title">No meetings</div>
-              <div class="dashboard-upcoming-meta">
-                <span id="upcomingTime">No time scheduled</span>
-                <span id="upcomingRoom">Reflection workspace</span>
-              </div>
+              <a id="upcomingJoinLink" class="dashboard-upcoming-link" href="https://zoom.us/" target="_blank" rel="noopener noreferrer" aria-label="Open Zoom meeting link">
+                <div id="upcomingSession" class="dashboard-upcoming-title">No meetings</div>
+                <div class="dashboard-upcoming-meta">
+                  <span id="upcomingTime">No time scheduled</span>
+                  <span id="upcomingRoom">Reflection workspace</span>
+                </div>
+              </a>
               <div class="dashboard-upcoming-footer">
                 <div class="dashboard-avatars">
                   <div class="dashboard-avatar"></div>
@@ -149,17 +156,29 @@
             <h2>Nudges</h2>
             <div class="dashboard-card-body">
               <div id="nudgeCount" class="dashboard-nudge-count">0</div>
-              <div class="dashboard-nudge-label">Practice items added</div>
               <div class="dashboard-nudge-list">
-                <div class="dashboard-nudge-item"><span>Interruptions</span><span id="nudgeInterruptions" class="dashboard-switch is-off"></span></div>
-                <div class="dashboard-nudge-item"><span>Loudness</span><span id="nudgeLoudness" class="dashboard-switch is-off"></span></div>
-                <div class="dashboard-nudge-item"><span>Elevation</span><span id="nudgeElevation" class="dashboard-switch is-off"></span></div>
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                  <span>Elevation</span>
+                  <span class="dashboard-switch is-off"></span>
+                </button>
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                  <span>Tone Difference</span>
+                  <span class="dashboard-switch is-off"></span>
+                </button>
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                  <span>Unclear Feedback</span>
+                  <span class="dashboard-switch is-off"></span>
+                </button>
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                  <span>Unclear Concern</span>
+                  <span class="dashboard-switch is-off"></span>
+                </button>
               </div>
             </div>
           </section>
 
-          <section class="dashboard-card">
-            <h2>Emotions</h2>
+          <section id="practiceToneCard" class="dashboard-card is-link">
+            <h2>Practice your Tone</h2>
             <div class="dashboard-card-body">
               <div class="dashboard-chart" aria-hidden="true">
                 <div class="dashboard-bar a"></div>
@@ -173,11 +192,8 @@
           </section>
 
           <section class="dashboard-card">
-            <h2>Stats</h2>
-            <div class="dashboard-card-body">
-              <div class="dashboard-stat"><strong id="statSessions">0x</strong>More meetings reviewed than last week</div>
-              <div class="dashboard-stat"><strong id="statPractice">0x</strong>Practice reflections waiting today</div>
-            </div>
+            <h2>Journaling (WIP)</h2>
+            <div class="dashboard-card-body"></div>
           </section>
 
           <section class="dashboard-add-card" aria-hidden="true">
@@ -190,20 +206,19 @@
   <script>
     const currentUser = document.body.dataset.currentUser || '';
     const dashboardDate = document.getElementById('dashboardDate');
+    const meetingAnalysisCard = document.getElementById('meetingAnalysisCard');
     const scheduleCount = document.getElementById('scheduleCount');
     const scheduleDuration = document.getElementById('scheduleDuration');
     const upcomingSession = document.getElementById('upcomingSession');
     const upcomingTime = document.getElementById('upcomingTime');
     const upcomingRoom = document.getElementById('upcomingRoom');
+    const upcomingJoinLink = document.getElementById('upcomingJoinLink');
     const upcomingAttendees = document.getElementById('upcomingAttendees');
     const upcomingOpen = document.getElementById('upcomingOpen');
     const nudgeCount = document.getElementById('nudgeCount');
-    const nudgeInterruptions = document.getElementById('nudgeInterruptions');
-    const nudgeLoudness = document.getElementById('nudgeLoudness');
-    const nudgeElevation = document.getElementById('nudgeElevation');
+    const nudgeToggleButtons = Array.from(document.querySelectorAll('[data-nudge-toggle]'));
     const emotionToday = document.getElementById('emotionToday');
-    const statSessions = document.getElementById('statSessions');
-    const statPractice = document.getElementById('statPractice');
+    const practiceToneCard = document.getElementById('practiceToneCard');
 
     function formatDashboardDate() {
       const now = new Date();
@@ -215,9 +230,45 @@
       dashboardDate.textContent = formatter.format(now);
     }
 
-    function setSwitchState(element, isOn) {
-      element.classList.toggle('is-off', !isOn);
+    function setSwitchState(toggleButton, isOn) {
+      const switchElement = toggleButton.querySelector('.dashboard-switch');
+      if (!switchElement) {
+        return;
+      }
+
+      toggleButton.setAttribute('aria-pressed', String(isOn));
+      switchElement.classList.toggle('is-off', !isOn);
     }
+
+    function syncNudgeCount() {
+      const activeCount = nudgeToggleButtons.filter((button) => button.getAttribute('aria-pressed') === 'true').length;
+      nudgeCount.textContent = String(activeCount);
+    }
+
+    practiceToneCard?.addEventListener('click', () => {
+      const user = currentUser.trim();
+      if (!user) {
+        return;
+      }
+      window.location.href = `/${encodeURIComponent(user)}/practice`;
+    });
+
+    meetingAnalysisCard?.addEventListener('click', () => {
+      const user = currentUser.trim();
+      if (!user) {
+        return;
+      }
+      window.location.href = `/${encodeURIComponent(user)}/analysis`;
+    });
+
+    nudgeToggleButtons.forEach((button) => {
+      setSwitchState(button, false);
+      button.addEventListener('click', () => {
+        const isActive = button.getAttribute('aria-pressed') === 'true';
+        setSwitchState(button, !isActive);
+        syncNudgeCount();
+      });
+    });
 
     async function loadDashboard() {
       formatDashboardDate();
@@ -231,13 +282,13 @@
       const sessionNames = Array.isArray(sessionData.session_names) ? sessionData.session_names : [];
       scheduleCount.textContent = String(sessionNames.length);
       scheduleDuration.textContent = `${Math.max(sessionNames.length, 1)} hr ${String((sessionNames.length * 30) % 60).padStart(2, '0')} min`;
-      statSessions.textContent = `${Math.max(sessionNames.length, 1)}x`;
 
       if (sessionNames.length) {
         const nextSession = sessionNames[0];
-        upcomingSession.textContent = nextSession;
-        upcomingTime.textContent = `Today at ${String(9 + (sessionNames.length % 5)).padStart(2, '0')}:30`;
-        upcomingRoom.textContent = `Room ${String.fromCharCode(65 + (sessionNames.length % 4))}`;
+        upcomingSession.textContent = 'Meeting with the President';
+        upcomingTime.textContent = 'Today at 10:30';
+        upcomingRoom.textContent = 'Room B';
+        upcomingJoinLink.href = 'https://zoom.us/';
         upcomingAttendees.textContent = `+${Math.max(1, sessionNames.length - 1)}`;
         upcomingOpen.addEventListener('click', () => {
           window.location.href = `/${encodeURIComponent(user)}/analysis/${encodeURIComponent(nextSession)}`;
@@ -247,20 +298,8 @@
         upcomingOpen.textContent = 'Empty';
       }
 
-      let practiceTodoCount = 0;
-      for (const sessionName of sessionNames) {
-        const reflectionResponse = await fetch(`/${'reflection'}/${encodeURIComponent(user)}/${encodeURIComponent(sessionName)}`);
-        const reflectionData = await reflectionResponse.json().catch(() => ({ reflections: [] }));
-        const reflections = Array.isArray(reflectionData.reflections) ? reflectionData.reflections : [];
-        practiceTodoCount += reflections.filter((reflection) => String(reflection.practice || '').toLowerCase() === 'todo').length;
-      }
-
-      nudgeCount.textContent = String(practiceTodoCount);
-      statPractice.textContent = `${Math.max(practiceTodoCount, 1)}x`;
-      setSwitchState(nudgeInterruptions, practiceTodoCount >= 1);
-      setSwitchState(nudgeLoudness, practiceTodoCount >= 2);
-      setSwitchState(nudgeElevation, practiceTodoCount >= 3);
-      emotionToday.style.height = `${Math.max(28, Math.min(82, 28 + practiceTodoCount * 12))}px`;
+      syncNudgeCount();
+      emotionToday.style.height = '28px';
     }
 
     loadDashboard().catch((error) => {

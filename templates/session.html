@@ -813,6 +813,14 @@
         return { color: '#6b7280', markerId: 'arrow-default' };
       }
 
+      function formatReflectionTypeLabel(reflectionType) {
+        const type = String(reflectionType || '').trim();
+        const normalizedType = type.toLowerCase();
+        if (normalizedType === 'incoherent intensity') return 'elevation';
+        if (normalizedType === 'incoherent tone') return 'tone difference';
+        return type;
+      }
+
       function formatReflectionTime(msValue) {
         const totalMs = Number(msValue);
         if (!Number.isFinite(totalMs) || totalMs < 0) {
@@ -1003,7 +1011,7 @@
 
           const title = document.createElement('span');
           title.className = 'session-reflection-card-title';
-          title.textContent = reflection.reflectionType || `reflection ${index + 1}`;
+          title.textContent = formatReflectionTypeLabel(reflection.reflectionType) || `reflection ${index + 1}`;
 
           const meta = document.createElement('span');
           meta.className = 'session-reflection-card-meta';
