@@ -77,6 +77,10 @@
         .replace(/'/g, '&#39;');
     }
 
+    function formatSessionLabel(value) {
+      return String(value || '').replace(/_/g, ' ');
+    }
+
     async function loadSessions() {
       const user = currentUser.trim();
       sessionList.innerHTML = '';
@@ -95,7 +99,7 @@
 
       sessionList.innerHTML = data.session_names.map(session => (
         `<article class="session-card" data-session="${escapeHtml(session)}">
-          <h2 class="session-card-title">${escapeHtml(session)}</h2>
+          <h2 class="session-card-title">${escapeHtml(formatSessionLabel(session))}</h2>
           <p class="session-card-copy">Review the analysis and reflection trail for this meeting.</p>
           <div class="session-card-meta">Open session <span>→</span></div>
         </article>`

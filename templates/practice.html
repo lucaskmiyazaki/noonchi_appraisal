@@ -142,6 +142,10 @@
         .replace(/'/g, '&#39;');
     }
 
+    function formatSessionLabel(value) {
+      return String(value || '').replace(/_/g, ' ');
+    }
+
     function getReflectionTypeLabel(reflection) {
       const type = String(reflection?.tree?.type || '').trim();
       const normalizedType = type.toLowerCase();
@@ -212,7 +216,7 @@
           <button class="practice-item ${colorClass}" type="button" data-practice-key="${escapeHtml(reflection.reflectionKey)}">
             <div class="practice-item-row">
               <span class="practice-item-checkbox ${status === 'done' ? 'is-done' : 'is-todo'}" aria-hidden="true">${status === 'done' ? '&#10003;' : ''}</span>
-              <span class="practice-item-title">${escapeHtml(typeLabel)} on ${escapeHtml(reflection.session || 'Untitled session')}</span>
+              <span class="practice-item-title">${escapeHtml(typeLabel)} on ${escapeHtml(formatSessionLabel(reflection.session || 'Untitled session'))}</span>
             </div>
           </button>
         `;
@@ -374,7 +378,7 @@
       updatePracticeSelectionUi();
 
       const typeLabel = getReflectionTypeLabel(reflection);
-      const sessionLabel = reflection.session || 'Untitled session';
+      const sessionLabel = formatSessionLabel(reflection.session || 'Untitled session');
       const firstNodeText = getFirstNodeText(reflection) || 'No text available for this reflection.';
       const startTime = Number(reflection.startms || 0) / 1000;
       const endTime = Number(reflection.endms || 0) / 1000;

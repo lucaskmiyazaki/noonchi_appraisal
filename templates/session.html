@@ -146,7 +146,7 @@
           <div class="session-heading">
             <div class="session-heading-title-row">
               <a class="back-link" href="/{{ resolved_user|urlencode }}/analysis" aria-label="Back to sessions">←</a>
-              <h1>{{ resolved_session }}</h1>
+              <h1>{{ resolved_session|replace('_', ' ') }}</h1>
               <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
               </button>
@@ -665,9 +665,11 @@
 
             try {
               await updateReflectionPractice(reflection, 'todo');
-              statusMessage.textContent = action === 'now'
-                ? 'Practice marked as todo. You can start now.'
-                : 'Practice marked as todo for later.';
+              if (action === 'now') {
+                window.location.href = `/${encodeURIComponent(currentUser.trim())}/practice`;
+                return;
+              }
+              statusMessage.textContent = 'Practice marked as todo for later.';
             } catch (error) {
               practiceButtons.forEach((practiceButton) => {
                 practiceButton.classList.remove('is-selected');
@@ -996,10 +998,29 @@
           return;
         }
 
+        const sortedReflections = [...reflectionsWithTypes].sort((left, right) => {
+          const leftStart = Number(left?.startms);
+          const rightStart = Number(right?.startms);
+
+          if (!Number.isFinite(leftStart) && !Number.isFinite(rightStart)) {
+            return 0;
+          }
+
+          if (!Number.isFinite(leftStart)) {
+            return 1;
+          }
+
+          if (!Number.isFinite(rightStart)) {
+            return -1;
+          }
+
+          return leftStart - rightStart;
+        });
+
         const list = document.createElement('div');
         list.className = 'session-reflection-list';
 
-        reflectionsWithTypes.forEach((reflection, index) => {
+        sortedReflections.forEach((reflection, index) => {
           const item = document.createElement('div');
           item.className = `session-reflection-item ${getReflectionCardClass(reflection.reflectionType)}`;
 

@@ -491,8 +491,8 @@ class ReflectionTree:
                 id="appropriateness_question",
                 text="Do you think your tone of voice was appropriate for the situation?",
                 options=[
-                    {"label": "No", "value": "no", "next": "why_question"},
-                    {"label": "Yes", "value": "yes", "next": "practice_question"},
+                    {"label": "No", "value": "no", "next": "practice_question"},
+                    {"label": "Yes", "value": "yes", "next": "why_question"},
                 ],
                 node_type="question",
             )
@@ -534,8 +534,8 @@ class ReflectionTree:
             id="appropriateness_question",
             text="Do you think your tone of voice was appropriate for the situation?",
             options=[
-                {"label": "No", "value": "no", "next": "why_question"},
-                {"label": "Yes", "value": "yes", "next": "practice_question"},
+                {"label": "No", "value": "no", "next": "practice_question"},
+                {"label": "Yes", "value": "yes", "next": "why_question"},
             ],
             node_type="question",
         )
