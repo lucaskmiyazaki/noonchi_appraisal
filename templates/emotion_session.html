@@ -320,9 +320,23 @@
       return normalized;
     }
 
+    function getTopEmotionProbability(segment) {
+      const probabilities = Array.isArray(segment?.emotion_probabilities)
+        ? segment.emotion_probabilities
+        : [];
+      const topEntry = probabilities[0] || null;
+      const score = Number(topEntry?.score);
+      return Number.isFinite(score) ? score : 0;
+    }
+
     function getCombinedEmotionState(segment) {
       const label = normalizeEmotionLabel(segment?.emotion_label);
       const valence = clampUnit(segment?.valence);
+      const probability = getTopEmotionProbability(segment);
+
+      if (probability < 0.5) {
+        return 'neutral';
+      }
 
       if (label === 'happy' && valence > PAD_NEUTRAL_MAX) {
         return 'happy';
