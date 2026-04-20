@@ -1,3 +1,6 @@
+from constants import PAD_HIGH_AROUSAL_THRESHOLD
+
+
 class Blocker:
     def __init__(self, text, responsible_agents=None, actionable=None, question=None):
         self.text = text
@@ -5,7 +8,7 @@ class Blocker:
         self.responsible_agent = self.responsible_agents[0] if self.responsible_agents else None
         self.actionable = actionable
         self.question = question
-        self.arousal_threshold = 0.5
+        self.arousal_threshold = PAD_HIGH_AROUSAL_THRESHOLD
 
     def set_responsible(self, agent):
         self.responsible_agents = [agent]
@@ -24,7 +27,7 @@ class Blocker:
         self.question = question
 
     def calculate_arousal_threshold(self, blocked_goal):
-        self.arousal_threshold = 0.5
+        self.arousal_threshold = PAD_HIGH_AROUSAL_THRESHOLD
 
     def __repr__(self):
         if not self.responsible_agents:

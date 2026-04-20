@@ -1,16 +1,25 @@
 # emotion_constants.py
 
-DEFAULT_PAD = (0, 0, 0)
+PAD_NEUTRAL_MIN = 0.35
+PAD_NEUTRAL_MAX = 0.65
+PAD_LOW_DEFAULT = 0.25
+PAD_HIGH_DEFAULT = 0.75
+PAD_DEFAULT = 0.5
+
+PAD_LOW_AROUSAL_THRESHOLD = 0.15
+PAD_HIGH_AROUSAL_THRESHOLD = 0.85
+
+DEFAULT_PAD = (PAD_DEFAULT, PAD_DEFAULT, PAD_DEFAULT)
 
 NAME_TO_PAD = {
-    "excited":      (1, 1, 1),
-    "surprised":    (1, 1, 0),
-    "enjoyment":    (1, 0, 1),
-    "relaxed":      (1, 0, 0),
-    "angry":        (-1, 1, 1),
-    "anxious":      (-1, 1, 0),
-    "disappointed": (-1, 0, 1),
-    "sad":          (-1, 0, 0),
+    "excited":      (PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT),
+    "surprised":    (PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT),
+    "enjoyment":    (PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT),
+    "relaxed":      (PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT, PAD_LOW_DEFAULT),
+    "angry":        (PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT),
+    "anxious":      (PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT),
+    "disappointed": (PAD_LOW_DEFAULT, PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT),
+    "sad":          (PAD_LOW_DEFAULT, PAD_LOW_DEFAULT, PAD_LOW_DEFAULT),
 }
 
 GOAL_STATUS_ON_GOING = "on_going"

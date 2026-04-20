@@ -122,9 +122,12 @@ function applyData(node, type, data, badge) {
     if (nameInput) nameInput.value = data.name || '';
     const sliders = node.querySelectorAll('.slider-row input');
     const outputs = node.querySelectorAll('.slider-row output');
-    [data.valence ?? 0, data.arousal ?? 0, data.dominance ?? 0].forEach((val, i) => {
+    [data.valence ?? 0.5, data.arousal ?? 0.5, data.dominance ?? 0.5].forEach((val, i) => {
       if (sliders[i]) sliders[i].value = val;
       if (outputs[i]) outputs[i].value = Number(val).toFixed(2);
+    });
+    sliders.forEach((slider) => {
+      slider.dispatchEvent(new Event('input'));
     });
   }
 

@@ -16,7 +16,7 @@ export function createField(label, inputHtml) {
   return wrapper;
 }
 
-export function createSliderRow(letter, { min = -1, max = 1, value = 0 } = {}) {
+export function createSliderRow(letter, { min = 0, max = 1, value = 0.5 } = {}) {
   const row = document.createElement('div');
   row.className = 'slider-row';
   row.innerHTML = `

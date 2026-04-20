@@ -1,4 +1,9 @@
-from constants import NAME_TO_PAD, DEFAULT_PAD
+from constants import (
+    DEFAULT_PAD,
+    NAME_TO_PAD,
+    PAD_NEUTRAL_MAX,
+    PAD_NEUTRAL_MIN,
+)
 
 class Emotion:
 
@@ -25,22 +30,36 @@ class Emotion:
 
     def _pad_from_name(self):
         self.valence, self.arousal, self.dominance = \
-            self.NAME_TO_PAD.get(self.name, (0.5, 0.5, 0.5))
+            NAME_TO_PAD.get(self.name, DEFAULT_PAD)
+
+    @staticmethod
+    def _classify_axis(value):
+        if value < PAD_NEUTRAL_MIN:
+            return "low"
+        if value > PAD_NEUTRAL_MAX:
+            return "high"
+        return "neutral"
 
     def _name_from_pad(self):
-        # simple rule-based (faster + aligned with your model)
         v, a, d = self.valence, self.arousal, self.dominance
+        v_state = self._classify_axis(v)
+        a_state = self._classify_axis(a)
+        d_state = self._classify_axis(d)
 
-        if v > 0:
-            if a > 0.5:
-                self.name = "excited" if d > 0.5 else "surprised"
+        if "neutral" in {v_state, a_state, d_state}:
+            self.name = "unknown"
+            return
+
+        if v_state == "high":
+            if a_state == "high":
+                self.name = "excited" if d_state == "high" else "surprised"
             else:
-                self.name = "enjoyment" if d > 0.5 else "relaxed"
+                self.name = "enjoyment" if d_state == "high" else "relaxed"
         else:
-            if a > 0.5:
-                self.name = "angry" if d > 0.5 else "anxious"
+            if a_state == "high":
+                self.name = "angry" if d_state == "high" else "anxious"
             else:
-                self.name = "disappointed" if d > 0.5 else "sad"
+                self.name = "disappointed" if d_state == "high" else "sad"
 
     def __repr__(self):
         return f"{self.name} (V={self.valence:.2f}, A={self.arousal:.2f}, D={self.dominance:.2f})"

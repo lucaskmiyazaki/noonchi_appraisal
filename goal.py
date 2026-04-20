@@ -1,6 +1,8 @@
 from constants import (
     GOAL_STATUS_ON_GOING,
     GOAL_STATUSES,
+    PAD_HIGH_AROUSAL_THRESHOLD,
+    PAD_LOW_AROUSAL_THRESHOLD,
 )
 
 
@@ -10,8 +12,8 @@ class Goal:
         self.status = status if status in GOAL_STATUSES else GOAL_STATUS_ON_GOING
         self.blockers = blockers if blockers else []
 
-        self.lower_arousal_threshold = 0.2
-        self.upper_arousal_threshold = 0.8
+        self.lower_arousal_threshold = PAD_LOW_AROUSAL_THRESHOLD
+        self.upper_arousal_threshold = PAD_HIGH_AROUSAL_THRESHOLD
         self.calculate_arousal_threshold()
 
     def calculate_arousal_threshold(self):
@@ -19,8 +21,8 @@ class Goal:
         For now: sets fixed lower/upper thresholds
         Later: can depend on goal importance, urgency, etc.
         """
-        self.lower_arousal_threshold = 0.2
-        self.upper_arousal_threshold = 0.8
+        self.lower_arousal_threshold = PAD_LOW_AROUSAL_THRESHOLD
+        self.upper_arousal_threshold = PAD_HIGH_AROUSAL_THRESHOLD
 
     def update_status(self, status):
         if status in GOAL_STATUSES:

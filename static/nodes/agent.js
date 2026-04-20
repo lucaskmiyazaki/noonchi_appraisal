@@ -3,25 +3,42 @@ import { createNodeBase } from '../node-base.js';
 import { addEdge } from '../edges.js';
 import { createGoalNode } from './goal.js';
 
+const PAD_NEUTRAL_MIN = 0.35;
+const PAD_NEUTRAL_MAX = 0.65;
+const PAD_DEFAULT = 0.5;
+const PAD_LOW_DEFAULT = 0.25;
+const PAD_HIGH_DEFAULT = 0.75;
+
 const EMOTIONS = {
-  excited:      { valence:  1, arousal: 1, dominance: 1 },
-  surprised:    { valence:  1, arousal: 1, dominance: 0 },
-  enjoyment:    { valence:  1, arousal: 0, dominance: 1 },
-  relaxed:      { valence:  1, arousal: 0, dominance: 0 },
-  angry:        { valence: -1, arousal: 1, dominance: 1 },
-  anxious:      { valence: -1, arousal: 1, dominance: 0 },
-  disappointed: { valence: -1, arousal: 0, dominance: 1 },
-  sad:          { valence: -1, arousal: 0, dominance: 0 },
+  excited:      { valence: PAD_HIGH_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+  surprised:    { valence: PAD_HIGH_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_LOW_DEFAULT },
+  enjoyment:    { valence: PAD_HIGH_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+  relaxed:      { valence: PAD_HIGH_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_LOW_DEFAULT },
+  angry:        { valence: PAD_LOW_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+  anxious:      { valence: PAD_LOW_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_LOW_DEFAULT },
+  disappointed: { valence: PAD_LOW_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+  sad:          { valence: PAD_LOW_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_LOW_DEFAULT },
 };
 
+function classifyAxis(value) {
+  if (value < PAD_NEUTRAL_MIN) return 'low';
+  if (value > PAD_NEUTRAL_MAX) return 'high';
+  return 'neutral';
+}
+
 function nameFromPad(v, a, d) {
-  if (v > 0) {
-    if (a > 0.5) return d > 0.5 ? 'excited' : 'surprised';
-    return d > 0.5 ? 'enjoyment' : 'relaxed';
-  } else {
-    if (a > 0.5) return d > 0.5 ? 'angry' : 'anxious';
-    return d > 0.5 ? 'disappointed' : 'sad';
+  const vState = classifyAxis(v);
+  const aState = classifyAxis(a);
+  const dState = classifyAxis(d);
+
+  if ([vState, aState, dState].includes('neutral')) return null;
+  if (vState === 'high') {
+    if (aState === 'high') return dState === 'high' ? 'excited' : 'surprised';
+    return dState === 'high' ? 'enjoyment' : 'relaxed';
   }
+
+  if (aState === 'high') return dState === 'high' ? 'angry' : 'anxious';
+  return dState === 'high' ? 'disappointed' : 'sad';
 }
 
 export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromId = null, _id = null } = {}) {
@@ -43,7 +60,7 @@ export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromI
   for (const [name, pad] of Object.entries(EMOTIONS)) {
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.className = `emotion-chip ${pad.valence > 0 ? 'positive' : 'negative'}`;
+    chip.className = `emotion-chip ${pad.valence >= PAD_DEFAULT ? 'positive' : 'negative'}`;
     chip.textContent = name;
     chip.dataset.emotion = name;
     chip.addEventListener('click', () => {
@@ -67,9 +84,9 @@ export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromI
   padField.className = 'field';
   padField.innerHTML = '<label>PAD</label>';
 
-  const pRow = createSliderRow('P', { min: -1, max: 1, value: 0 });
-  const aRow = createSliderRow('A', { min: 0,  max: 1, value: 0.5 });
-  const dRow = createSliderRow('D', { min: 0,  max: 1, value: 0.5 });
+  const pRow = createSliderRow('P', { min: 0, max: 1, value: PAD_DEFAULT });
+  const aRow = createSliderRow('A', { min: 0, max: 1, value: PAD_DEFAULT });
+  const dRow = createSliderRow('D', { min: 0, max: 1, value: PAD_DEFAULT });
   padField.appendChild(pRow);
   padField.appendChild(aRow);
   padField.appendChild(dRow);
@@ -129,8 +146,8 @@ export function getAgentData(node) {
   return {
     name: nameInput?.value || '',
     role,
-    valence: Number(sliders[0]?.value || 0),
-    arousal: Number(sliders[1]?.value || 0),
-    dominance: Number(sliders[2]?.value || 0),
+    valence: Number(sliders[0]?.value || PAD_DEFAULT),
+    arousal: Number(sliders[1]?.value || PAD_DEFAULT),
+    dominance: Number(sliders[2]?.value || PAD_DEFAULT),
   };
 }

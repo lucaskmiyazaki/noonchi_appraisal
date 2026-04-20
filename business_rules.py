@@ -1,4 +1,12 @@
-from constants import GOAL_STATUS_SUCCESS, GOAL_STATUS_FAIL
+from constants import (
+    GOAL_STATUS_FAIL,
+    GOAL_STATUS_SUCCESS,
+    PAD_DEFAULT,
+    PAD_HIGH_AROUSAL_THRESHOLD,
+    PAD_LOW_AROUSAL_THRESHOLD,
+    PAD_NEUTRAL_MAX,
+    PAD_NEUTRAL_MIN,
+)
 
 
 def find_speaker(agents):
@@ -29,9 +37,9 @@ def detect_tone_incoherence(speaker_agent):
     incoherent_goals = []
 
     for goal in get_speaker_goals(speaker_agent):
-        if goal.status == GOAL_STATUS_SUCCESS and emotion.valence < 0:
+        if goal.status == GOAL_STATUS_SUCCESS and emotion.valence < PAD_NEUTRAL_MIN:
             incoherent_goals.append(goal)
-        elif goal.status == GOAL_STATUS_FAIL and emotion.valence > 0:
+        elif goal.status == GOAL_STATUS_FAIL and emotion.valence > PAD_NEUTRAL_MAX:
             incoherent_goals.append(goal)
 
     if not incoherent_goals:
@@ -53,8 +61,8 @@ def detect_intensity_incoherence(speaker_agent):
     issues = []
 
     for goal in get_speaker_goals(speaker_agent):
-        lower_threshold = getattr(goal, "lower_arousal_threshold", 0.2)
-        goal_upper_threshold = getattr(goal, "upper_arousal_threshold", 0.8)
+        lower_threshold = getattr(goal, "lower_arousal_threshold", PAD_LOW_AROUSAL_THRESHOLD)
+        goal_upper_threshold = getattr(goal, "upper_arousal_threshold", PAD_HIGH_AROUSAL_THRESHOLD)
 
         blocker = goal.get_most_critical_blocker() if hasattr(goal, "get_most_critical_blocker") else None
         blocker_threshold = getattr(blocker, "arousal_threshold", None) if blocker is not None else None
@@ -326,10 +334,10 @@ def classify_emotional_profile(speaker_agent):
     if emotion is None:
         return False, False
 
-    valence = getattr(emotion, "valence", 0.0)
-    dominance = getattr(emotion, "dominance", 0.0)
+    valence = getattr(emotion, "valence", PAD_DEFAULT)
+    dominance = getattr(emotion, "dominance", PAD_DEFAULT)
 
-    negative_valence = valence < 0
-    looks_angry = negative_valence and dominance >= 0.5
-    looks_concerned = negative_valence and dominance < 0.5
+    negative_valence = valence < PAD_NEUTRAL_MIN
+    looks_angry = negative_valence and dominance > PAD_NEUTRAL_MAX
+    looks_concerned = negative_valence and dominance < PAD_NEUTRAL_MIN
     return looks_angry, looks_concerned

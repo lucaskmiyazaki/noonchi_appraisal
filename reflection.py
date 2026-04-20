@@ -1,7 +1,7 @@
 from actionable import Actionable
 from agent import Agent
 from blocker import Blocker
-from constants import GOAL_STATUS_ON_GOING
+from constants import DEFAULT_PAD, GOAL_STATUS_ON_GOING
 from constants import GOAL_STATUS_SUCCESS, GOAL_STATUS_FAIL
 from emotion import Emotion
 from goal import Goal
@@ -98,9 +98,9 @@ class ReflectionTree:
 
             if node_type == "agent":
                 emotion = Emotion(
-                    valence=float(data.get("valence", 0.0)),
-                    arousal=float(data.get("arousal", 0.0)),
-                    dominance=float(data.get("dominance", 0.0)),
+                    valence=float(data.get("valence", DEFAULT_PAD[0])),
+                    arousal=float(data.get("arousal", DEFAULT_PAD[1])),
+                    dominance=float(data.get("dominance", DEFAULT_PAD[2])),
                 )
 
                 role = data.get("role", "listener")
