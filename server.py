@@ -190,6 +190,36 @@ def find_latest_audio_record(session_name=""):
     return None
 
 
+def build_emotion_session_payload(session_name=""):
+    record = find_latest_audio_record(session_name)
+    if record is None:
+        raise FileNotFoundError("No uploaded audio found.")
+
+    transcript_segments = []
+    for chunk in list(record.get("transcript") or []):
+        transcript_segments.append({
+            "id": chunk.get("id"),
+            "text": str(chunk.get("text", "")),
+            "start": float(chunk.get("start", 0.0) or 0.0),
+            "end": float(chunk.get("end", 0.0) or 0.0),
+            "valence": chunk.get("valence"),
+            "arousal": chunk.get("arousal"),
+            "dominance": chunk.get("dominance"),
+            "emotion_label": chunk.get("emotion_label"),
+            "emotion_probabilities": chunk.get("emotion_probabilities") or [],
+        })
+
+    return {
+        "id": record.get("id"),
+        "sessionName": record.get("sessionName"),
+        "audioFilename": record.get("audioFilename", ""),
+        "audioUrl": record.get("audioUrl", ""),
+        "uploadedAt": record.get("uploadedAt"),
+        "segmentCount": len(transcript_segments),
+        "segments": transcript_segments,
+    }
+
+
 def build_reflection_response_row(row, reflection_file):
     reflection_path = DATA_DIR / reflection_file
     if not reflection_path.exists() or reflection_path.suffix != ".json":
@@ -361,6 +391,15 @@ def user_interface():
 def user_session_detail(user_name, session_name):
     return render_template(
         "session.html",
+        current_user=user_name,
+        current_session=session_name,
+    )
+
+
+@app.get("/<user_name>/emotion/<session_name>")
+def user_emotion_detail(user_name, session_name):
+    return render_template(
+        "emotion_session.html",
         current_user=user_name,
         current_session=session_name,
     )
@@ -712,6 +751,20 @@ def list_session_reflection_trees(session_name):
 
     reflections.sort(key=lambda item: float(item.get("startms") or 0))
     return jsonify({"session": session_name, "reflections": reflections})
+
+
+@app.get("/api/audio/session/<session_name>/emotion")
+def get_session_emotion(session_name):
+    try:
+        payload = build_emotion_session_payload(session_name)
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 500
+    except Exception as exc:
+        return jsonify({"error": f"Failed to analyze PAD for session: {exc}"}), 500
+
+    return jsonify(payload)
 
 
 @app.get("/api/audio/<audio_id>")

@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session Emotion Detail</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root {
+      --bg-main: #f3f6fa;
+      --sidebar-bg: #e5ebf4;
+      --panel-bg: #ffffff;
+      --right-panel-bg: #f8fafc;
+      --text-dark: #1e1e1e;
+      --text-muted: #5a5a5a;
+      --border-soft: rgba(226, 232, 240, 0.92);
+      --card-radius: 16px;
+      --metric-low: #2563eb;
+      --metric-mid: #f59e0b;
+      --metric-high: #dc2626;
+      --label-neutral: #cbd5e1;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    .session-layout { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: #64748b; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
+    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; background: transparent; font-size: 18px; text-decoration: none; }
+    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
+    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+    .session-main { position: relative; z-index: 1; background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    .session-main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; border-bottom: 1px solid #f0f0f0; }
+    .session-main-title-group { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
+    .back-link { color: var(--text-muted); text-decoration: none; font-size: 22px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: 0 0 auto; }
+    .session-heading { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .session-heading-title-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .session-heading h1 { font-size: 20px; font-weight: 600; margin: 0; }
+    .subtle-line { color: var(--text-muted); font-size: 14px; margin: 0; }
+    .session-content { position: relative; flex: 1; min-height: 0; }
+    .transcript-scroll { position: relative; height: 100%; overflow-y: auto; padding: 32px; }
+    .transcript-content { position: relative; max-width: 720px; margin: 0 auto; }
+    .section-title { font-size: 20px; font-weight: 600; margin: 0 0 24px; }
+    .session-play-btn { width: 40px; height: 40px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: #111827; color: #fff; box-shadow: 0 8px 18px rgba(17, 24, 39, 0.14); cursor: pointer; }
+    .session-play-btn:hover { background: #1f2937; }
+    .session-play-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .session-play-btn svg { width: 22px; height: 22px; fill: currentColor; }
+    .session-transcript { font-size: 14px; line-height: 1.9; }
+    .session-transcript-empty { font-size: 14px; color: var(--text-muted); }
+    .session-chunk { display: inline; padding: 4px 6px; margin-right: 2px; border-radius: 8px; color: #0f172a; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+    .session-chunk:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08); }
+    .session-chunk.is-active { outline: 2px solid rgba(15, 23, 42, 0.72); outline-offset: 1px; }
+    .session-chunk.is-read { opacity: 0.82; }
+    .session-sidebar { position: relative; z-index: 1; min-width: 0; }
+    .session-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; }
+    .session-summary { font-size: 14px; margin: 0 0 20px; line-height: 1.6; color: #334155; }
+    .session-sidebar-title { margin: 24px 0 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .session-sidebar-empty { font-size: 13px; color: var(--text-muted); }
+    .metric-panel { padding: 18px; border-radius: 18px; background: #ffffff; border: 1px solid var(--border-soft); box-shadow: 0 14px 30px rgba(148, 163, 184, 0.12); }
+    .metric-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
+    .metric-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; color: #0f172a; padding: 12px 14px; font: inherit; }
+    .metric-gradient-bar { position: relative; height: 12px; margin-top: 16px; border-radius: 999px; background: linear-gradient(90deg, var(--metric-low) 0%, var(--metric-mid) 50%, var(--metric-high) 100%); overflow: hidden; }
+    .metric-gradient-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #64748b; }
+    .metric-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    .metric-stat { padding: 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+    .metric-stat-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; }
+    .metric-stat-value { display: block; margin-top: 8px; font-size: 18px; font-weight: 700; color: #0f172a; }
+    .segment-list { display: flex; flex-direction: column; gap: 12px; }
+    .segment-card { width: 100%; border: 1px solid rgba(226, 232, 240, 0.95); border-radius: 16px; padding: 14px; text-align: left; background: #fff; cursor: pointer; }
+    .segment-card.is-active { border-color: rgba(15, 23, 42, 0.72); box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08); }
+    .segment-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .segment-card-time { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
+    .segment-card-score { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .segment-card-bar { height: 8px; margin-top: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .segment-card-fill { height: 100%; border-radius: inherit; }
+    .segment-card-text { margin-top: 12px; font-size: 13px; line-height: 1.55; color: #334155; }
+    .segment-card-meta { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .emotion-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #0f172a; }
+    .emotion-chip-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.8; }
+    .state-message { padding: 18px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); color: #475569; }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .session-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+      .app-nav { display: none; }
+      .session-main { min-height: 60vh; }
+      .session-sidebar-panel { height: auto; min-height: 0; }
+    }
+  </style>
+</head>
+{% set resolved_user = current_user or '' %}
+{% set resolved_session = current_session or '' %}
+{% set active_nav_icon = 'chart' %}
+{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis/' ~ (resolved_session|urlencode) %}
+<body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
+  <div class="session-layout">
+    {% include '_left_sidebar.html' %}
+    <div class="session-main">
+      <header class="session-main-header">
+        <div class="session-main-title-group">
+          <div class="session-heading">
+            <div class="session-heading-title-row">
+              <a class="back-link" href="/{{ resolved_user|urlencode }}/analysis" aria-label="Back to sessions">←</a>
+              <h1>{{ resolved_session|replace('_', ' ') }}</h1>
+              <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
+              </button>
+            </div>
+            <p class="subtle-line">Viewing PAD for <strong>{{ resolved_user }}</strong></p>
+          </div>
+        </div>
+      </header>
+      <div id="emotionContainer" class="session-content"></div>
+    </div>
+    <aside class="session-sidebar">
+      <div class="session-sidebar-panel">
+        <div class="metric-panel">
+          <label class="metric-label" for="metricSelect">Visualize</label>
+          <select id="metricSelect" class="metric-select">
+            <option value="arousal">Arousal</option>
+            <option value="dominance">Dominance</option>
+            <option value="valence">Valence</option>
+            <option value="emotion_label">Emotion Label</option>
+          </select>
+          <div class="metric-gradient-bar" aria-hidden="true"></div>
+          <div class="metric-gradient-labels">
+            <span>Low</span>
+            <span>0.5</span>
+            <span>High</span>
+          </div>
+          <div id="metricStats" class="metric-stat-grid"></div>
+        </div>
+        <p id="sessionSummary" class="session-summary"></p>
+        <h2 class="session-sidebar-title">Transcript Segments</h2>
+        <div id="segmentSidebar"></div>
+      </div>
+    </aside>
+  </div>
+  <script>
+    const emotionContainer = document.getElementById('emotionContainer');
+    const playBtn = document.getElementById('playBtn');
+    const metricSelect = document.getElementById('metricSelect');
+    const metricStats = document.getElementById('metricStats');
+    const sessionSummary = document.getElementById('sessionSummary');
+    const segmentSidebar = document.getElementById('segmentSidebar');
+    const currentUser = document.body.dataset.currentUser || '';
+    const currentSession = document.body.dataset.currentSession || '';
+
+    let sessionAudio = null;
+    let sessionPayload = null;
+    let activeChunkId = null;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function clampUnit(value) {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) {
+        return 0;
+      }
+      return Math.max(0, Math.min(numericValue, 1));
+    }
+
+    function formatTime(seconds) {
+      const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+      const minutes = Math.floor(totalSeconds / 60);
+      const remainingSeconds = totalSeconds % 60;
+      return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+    }
+
+    function formatMetricLabel(metric) {
+      const normalized = String(metric || '').trim().toLowerCase();
+      if (!normalized) {
+        return 'Metric';
+      }
+      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    }
+
+    function metricColorParts(value) {
+      const clamped = clampUnit(value);
+      return {
+        hue: 220 - (clamped * 214),
+        saturation: 78,
+        lightness: 56 - (clamped * 8),
+      };
+    }
+
+    function metricColor(value, alpha = 1) {
+      const { hue, saturation, lightness } = metricColorParts(value);
+      return `hsl(${hue} ${saturation}% ${lightness}% / ${alpha})`;
+    }
+
+    function formatEmotionLabel(label) {
+      const normalized = String(label || '').trim().toLowerCase();
+      if (!normalized) {
+        return 'Unknown';
+      }
+      const readableLabels = {
+        ang: 'Angry',
+        hap: 'Happy',
+        neu: 'Neutral',
+        sad: 'Sad',
+      };
+      return readableLabels[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, character => character.toUpperCase());
+    }
+
+    function emotionLabelColor(label) {
+      const normalized = String(label || '').trim().toLowerCase();
+      const palette = {
+        angry: '#ef4444',
+        anger: '#ef4444',
+        ang: '#ef4444',
+        sad: '#60a5fa',
+        sadness: '#60a5fa',
+        happy: '#f59e0b',
+        happiness: '#f59e0b',
+        hap: '#f59e0b',
+        neutral: '#94a3b8',
+        neu: '#94a3b8',
+        calm: '#10b981',
+        fear: '#8b5cf6',
+        fearful: '#8b5cf6',
+        surprised: '#f97316',
+        disgust: '#84cc16',
+      };
+      return palette[normalized] || '#64748b';
+    }
+
+    function renderEmotionChip(label) {
+      const color = emotionLabelColor(label);
+      return `<span class="emotion-chip" style="background: ${color}1f; color: ${color};"><span class="emotion-chip-dot"></span>${escapeHtml(formatEmotionLabel(label))}</span>`;
+    }
+
+    function chunkBackground(value, isActive) {
+      const clamped = clampUnit(value);
+      const alpha = 0.18 + (clamped * 0.42);
+      const inset = isActive ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.78)';
+      return `linear-gradient(135deg, ${inset} 0%, ${metricColor(clamped, alpha.toFixed(2))} 100%)`;
+    }
+
+    function renderPlayButtonIcon(isPlaying) {
+      playBtn.innerHTML = isPlaying
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"></path></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>';
+      playBtn.setAttribute('aria-label', isPlaying ? 'Pause audio' : 'Play audio');
+    }
+
+    function getSelectedMetric() {
+      return metricSelect.value || 'arousal';
+    }
+
+    function hasSegmentMetricValue(segment, metricName = getSelectedMetric()) {
+      if (metricName === 'emotion_label') {
+        return Boolean(String(segment?.emotion_label || '').trim());
+      }
+      return Number.isFinite(Number(segment?.[metricName]));
+    }
+
+    function getSegmentMetricValue(segment, metricName = getSelectedMetric()) {
+      if (metricName === 'emotion_label') {
+        return hasSegmentMetricValue(segment, metricName) ? 1 : null;
+      }
+      if (!hasSegmentMetricValue(segment, metricName)) {
+        return null;
+      }
+      return clampUnit(segment?.[metricName]);
+    }
+
+    function updateMetricStats() {
+      if (!sessionPayload?.segments?.length) {
+        metricStats.innerHTML = '';
+        return;
+      }
+
+      const metricName = getSelectedMetric();
+      if (metricName === 'emotion_label') {
+        const labels = sessionPayload.segments
+          .map(segment => String(segment?.emotion_label || '').trim())
+          .filter(Boolean);
+        if (!labels.length) {
+          metricStats.innerHTML = '';
+          return;
+        }
+
+        const counts = labels.reduce((accumulator, label) => {
+          accumulator[label] = (accumulator[label] || 0) + 1;
+          return accumulator;
+        }, {});
+        const topEntry = Object.entries(counts).sort((left, right) => right[1] - left[1])[0];
+
+        metricStats.innerHTML = `
+          <div class="metric-stat">
+            <span class="metric-stat-label">Mode</span>
+            <span class="metric-stat-value">Emotion</span>
+          </div>
+          <div class="metric-stat">
+            <span class="metric-stat-label">Top Label</span>
+            <span class="metric-stat-value">${escapeHtml(formatEmotionLabel(topEntry?.[0] || 'Unknown'))}</span>
+          </div>
+          <div class="metric-stat">
+            <span class="metric-stat-label">Prevalent</span>
+            <span class="metric-stat-value">${topEntry?.[1] || 0}</span>
+          </div>
+        `;
+
+        const varietyStat = document.createElement('div');
+        varietyStat.className = 'metric-stat';
+        varietyStat.innerHTML = `<span class="metric-stat-label">Unique Labels</span><span class="metric-stat-value">${Object.keys(counts).length}</span>`;
+        metricStats.appendChild(varietyStat);
+        return;
+      }
+
+      const values = sessionPayload.segments
+        .map(segment => getSegmentMetricValue(segment, metricName))
+        .filter(value => value !== null);
+      if (!values.length) {
+        metricStats.innerHTML = '';
+        return;
+      }
+      const total = values.reduce((sum, value) => sum + value, 0);
+      const average = values.length ? total / values.length : 0;
+      const peak = values.length ? Math.max(...values) : 0;
+      const low = values.length ? Math.min(...values) : 0;
+
+      metricStats.innerHTML = `
+        <div class="metric-stat">
+          <span class="metric-stat-label">Metric</span>
+          <span class="metric-stat-value">${escapeHtml(formatMetricLabel(metricName))}</span>
+        </div>
+        <div class="metric-stat">
+          <span class="metric-stat-label">Average</span>
+          <span class="metric-stat-value">${average.toFixed(2)}</span>
+        </div>
+        <div class="metric-stat">
+          <span class="metric-stat-label">Peak</span>
+          <span class="metric-stat-value">${peak.toFixed(2)}</span>
+        </div>
+      `;
+
+      const lowStat = document.createElement('div');
+      lowStat.className = 'metric-stat';
+      lowStat.innerHTML = `<span class="metric-stat-label">Low</span><span class="metric-stat-value">${low.toFixed(2)}</span>`;
+      metricStats.appendChild(lowStat);
+    }
+
+    function updateSummary() {
+      if (!sessionSummary) {
+        return;
+      }
+
+      if (!sessionPayload?.segments?.length) {
+        sessionSummary.textContent = 'No PAD data available for this session.';
+        return;
+      }
+
+      const metricName = getSelectedMetric();
+      if (metricName === 'emotion_label') {
+        const labels = sessionPayload.segments
+          .map(segment => String(segment?.emotion_label || '').trim())
+          .filter(Boolean);
+        if (!labels.length) {
+          sessionSummary.innerHTML = '<strong>Emotion labels:</strong> No saved annotations yet. Run the emotion processing script first.';
+          return;
+        }
+
+        const counts = labels.reduce((accumulator, label) => {
+          accumulator[label] = (accumulator[label] || 0) + 1;
+          return accumulator;
+        }, {});
+        const topEntry = Object.entries(counts).sort((left, right) => right[1] - left[1])[0];
+        const transcriptText = sessionPayload.segments.map(segment => String(segment?.text || '').trim()).filter(Boolean).join(' ');
+        const previewWords = transcriptText.split(/\s+/).filter(Boolean).slice(0, 26).join(' ');
+        const preview = previewWords ? `${previewWords}${transcriptText.split(/\s+/).filter(Boolean).length > 26 ? '...' : ''}` : 'No transcript preview available.';
+        sessionSummary.innerHTML = `<strong>Prevalent emotion:</strong> ${escapeHtml(formatEmotionLabel(topEntry?.[0] || 'Unknown'))}<br><strong>Preview:</strong> ${escapeHtml(preview)}`;
+        return;
+      }
+
+      const values = sessionPayload.segments
+        .map(segment => getSegmentMetricValue(segment, metricName))
+        .filter(value => value !== null);
+      if (!values.length) {
+        sessionSummary.innerHTML = `<strong>${escapeHtml(formatMetricLabel(metricName))}:</strong> No saved annotations yet. Run the emotion processing script first.`;
+        return;
+      }
+      const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+      const transcriptText = sessionPayload.segments.map(segment => String(segment?.text || '').trim()).filter(Boolean).join(' ');
+      const previewWords = transcriptText.split(/\s+/).filter(Boolean).slice(0, 26).join(' ');
+      const preview = previewWords ? `${previewWords}${transcriptText.split(/\s+/).filter(Boolean).length > 26 ? '...' : ''}` : 'No transcript preview available.';
+      sessionSummary.innerHTML = `<strong>${escapeHtml(formatMetricLabel(metricName))} average:</strong> ${average.toFixed(2)}<br><strong>Preview:</strong> ${escapeHtml(preview)}`;
+    }
+
+    function renderSidebarSegments() {
+      const segments = sessionPayload?.segments || [];
+      if (!segments.length) {
+        segmentSidebar.innerHTML = '<div class="session-sidebar-empty">No transcript segments were available for PAD analysis.</div>';
+        return;
+      }
+
+      const metricName = getSelectedMetric();
+      const list = document.createElement('div');
+      list.className = 'segment-list';
+
+      segments.forEach((segment) => {
+        const value = getSegmentMetricValue(segment, metricName);
+        const emotionLabel = segment?.emotion_label || '';
+        const displayValue = metricName === 'emotion_label'
+          ? (emotionLabel ? formatEmotionLabel(emotionLabel) : 'Not annotated')
+          : (value === null ? 'Not annotated' : value.toFixed(2));
+        const color = metricName === 'emotion_label'
+          ? emotionLabelColor(emotionLabel)
+          : (value === null ? 'rgba(148, 163, 184, 0.9)' : metricColor(value));
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'segment-card';
+        if (segment.id === activeChunkId) {
+          card.classList.add('is-active');
+        }
+        card.dataset.segmentId = String(segment.id || '');
+        card.innerHTML = `
+          <div class="segment-card-head">
+            <span class="segment-card-time">${escapeHtml(formatTime(segment.start))} - ${escapeHtml(formatTime(segment.end))}</span>
+            <span class="segment-card-score">${escapeHtml(displayValue)}</span>
+          </div>
+          <div class="segment-card-bar"><div class="segment-card-fill" style="width: ${metricName === 'emotion_label' ? (emotionLabel ? 100 : 0) : (value === null ? 0 : Math.round(value * 100))}%; background: linear-gradient(90deg, rgba(37,99,235,0.9) 0%, ${color} 100%);"></div></div>
+          <div class="segment-card-text">${escapeHtml(segment.text || '')}</div>
+          <div class="segment-card-meta">
+            ${emotionLabel ? renderEmotionChip(emotionLabel) : '<span class="emotion-chip" style="background: rgba(148,163,184,0.16); color: #64748b;"><span class="emotion-chip-dot"></span>Unknown</span>'}
+            <span class="segment-card-score"></span>
+          </div>
+        `;
+        card.addEventListener('click', () => focusSegment(segment));
+        list.appendChild(card);
+      });
+
+      segmentSidebar.innerHTML = '';
+      segmentSidebar.appendChild(list);
+    }
+
+    function renderTranscript() {
+      const transcriptRoot = document.getElementById('sessionTranscript');
+      if (!transcriptRoot) {
+        return;
+      }
+
+      const segments = sessionPayload?.segments || [];
+      if (!segments.length) {
+        transcriptRoot.innerHTML = '<div class="session-transcript-empty">Transcript unavailable for this session.</div>';
+        return;
+      }
+
+      transcriptRoot.innerHTML = '';
+      const metricName = getSelectedMetric();
+
+      segments.forEach((segment) => {
+        const value = getSegmentMetricValue(segment, metricName);
+        const emotionLabel = segment?.emotion_label || '';
+        const span = document.createElement('span');
+        span.className = 'session-chunk';
+        span.dataset.segmentId = String(segment.id || '');
+        span.style.background = metricName === 'emotion_label'
+          ? (emotionLabel
+              ? `linear-gradient(135deg, rgba(255,255,255,0.84) 0%, ${emotionLabelColor(emotionLabel)}33 100%)`
+              : 'linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(226, 232, 240, 1) 100%)')
+          : (value === null
+              ? 'linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(226, 232, 240, 1) 100%)'
+              : chunkBackground(value, segment.id === activeChunkId));
+        if (segment.id === activeChunkId) {
+          span.classList.add('is-active');
+        }
+        if (sessionAudio && Number.isFinite(Number(segment.end)) && sessionAudio.currentTime >= Number(segment.end)) {
+          span.classList.add('is-read');
+        }
+        span.textContent = `${segment.text || ''} `;
+        span.addEventListener('click', () => focusSegment(segment));
+        transcriptRoot.appendChild(span);
+      });
+    }
+
+    function renderAll() {
+      updateMetricStats();
+      updateSummary();
+      renderTranscript();
+      renderSidebarSegments();
+    }
+
+    function focusSegment(segment) {
+      if (!segment) {
+        return;
+      }
+
+      activeChunkId = segment.id || null;
+      if (sessionAudio && Number.isFinite(Number(segment.start))) {
+        sessionAudio.currentTime = Number(segment.start);
+      }
+
+      renderAll();
+    }
+
+    function syncActiveChunk() {
+      const segments = sessionPayload?.segments || [];
+      const nextActiveSegment = segments.find((segment) => {
+        const start = Number(segment.start);
+        const end = Number(segment.end);
+        return Number.isFinite(start) && Number.isFinite(end) && sessionAudio.currentTime >= start && sessionAudio.currentTime < end;
+      }) || null;
+
+      const nextActiveId = nextActiveSegment?.id || null;
+      if (nextActiveId !== activeChunkId) {
+        activeChunkId = nextActiveId;
+      }
+
+      renderAll();
+    }
+
+    async function loadEmotionSession() {
+      emotionContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="state-message">Loading PAD analysis...</div></div></div>';
+
+      const user = currentUser.trim();
+      const session = currentSession.trim();
+      if (!user || !session) {
+        emotionContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="state-message">Missing user or session.</div></div></div>';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/audio/session/${encodeURIComponent(session)}/emotion`);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to load PAD analysis.');
+        }
+
+        sessionPayload = payload;
+      } catch (error) {
+        emotionContainer.innerHTML = `<div class="transcript-scroll"><div class="transcript-content"><div class="state-message">${escapeHtml(error.message || 'Failed to load PAD analysis.')}</div></div></div>`;
+        segmentSidebar.innerHTML = '';
+        sessionSummary.textContent = '';
+        metricStats.innerHTML = '';
+        return;
+      }
+
+      emotionContainer.innerHTML = `
+        <div id="sessionTranscriptScroll" class="transcript-scroll">
+          <div class="transcript-content">
+            <div class="section-title">Transcript</div>
+            <div id="sessionTranscript" class="session-transcript"></div>
+          </div>
+        </div>
+      `;
+
+      sessionAudio = new Audio(sessionPayload.audioUrl || '');
+      sessionAudio.preload = 'metadata';
+      sessionAudio.ontimeupdate = syncActiveChunk;
+      sessionAudio.onplay = () => renderPlayButtonIcon(true);
+      sessionAudio.onpause = () => renderPlayButtonIcon(false);
+      sessionAudio.onended = () => {
+        activeChunkId = null;
+        renderPlayButtonIcon(false);
+        renderAll();
+      };
+
+      playBtn.disabled = !(sessionPayload.audioUrl || '');
+      renderPlayButtonIcon(false);
+      renderAll();
+    }
+
+    playBtn.addEventListener('click', async () => {
+      if (!sessionAudio || !(sessionPayload?.audioUrl || '')) {
+        return;
+      }
+
+      if (sessionAudio.paused) {
+        try {
+          await sessionAudio.play();
+        } catch (error) {
+          console.error('Failed to play audio', error);
+        }
+      } else {
+        sessionAudio.pause();
+      }
+    });
+
+    metricSelect.addEventListener('change', () => {
+      renderAll();
+    });
+
+    loadEmotionSession();
+  </script>
+</body>
+</html>
