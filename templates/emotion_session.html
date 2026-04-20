@@ -19,6 +19,10 @@
       --metric-mid: #f59e0b;
       --metric-high: #dc2626;
       --label-neutral: #cbd5e1;
+      --state-happy: #facc15;
+      --state-sad: #60a5fa;
+      --state-angry: #ef4444;
+      --state-neutral: #94a3b8;
     }
 
     html, body { height: 100%; overflow: hidden; }
@@ -123,6 +127,7 @@
             <option value="arousal">Arousal</option>
             <option value="dominance">Dominance</option>
             <option value="valence">Valence</option>
+            <option value="emotion_state">Emotion State</option>
             <option value="emotion_label">Emotion Label</option>
           </select>
           <div class="metric-gradient-bar" aria-hidden="true"></div>
@@ -152,6 +157,9 @@
     let sessionAudio = null;
     let sessionPayload = null;
     let activeChunkId = null;
+
+    const PAD_NEUTRAL_MIN = 0.35;
+    const PAD_NEUTRAL_MAX = 0.65;
 
     function escapeHtml(value) {
       return String(value)
@@ -213,6 +221,20 @@
       return readableLabels[normalized] || normalized.replace(/_/g, ' ').replace(/\b\w/g, character => character.toUpperCase());
     }
 
+    function formatEmotionState(state) {
+      const normalized = String(state || '').trim().toLowerCase();
+      if (!normalized) {
+        return 'Neutral';
+      }
+      const readableStates = {
+        happy: 'Happy',
+        sad: 'Sad',
+        angry: 'Angry',
+        neutral: 'Neutral',
+      };
+      return readableStates[normalized] || formatEmotionLabel(normalized);
+    }
+
     function emotionLabelColor(label) {
       const normalized = String(label || '').trim().toLowerCase();
       const palette = {
@@ -235,9 +257,32 @@
       return palette[normalized] || '#64748b';
     }
 
+    function emotionStateColor(state) {
+      const normalized = String(state || '').trim().toLowerCase();
+      const palette = {
+        happy: 'var(--state-happy)',
+        sad: 'var(--state-sad)',
+        angry: 'var(--state-angry)',
+        neutral: 'var(--state-neutral)',
+      };
+      return palette[normalized] || 'var(--state-neutral)';
+    }
+
     function renderEmotionChip(label) {
       const color = emotionLabelColor(label);
       return `<span class="emotion-chip" style="background: ${color}1f; color: ${color};"><span class="emotion-chip-dot"></span>${escapeHtml(formatEmotionLabel(label))}</span>`;
+    }
+
+    function renderEmotionStateChip(state) {
+      if (String(state || '').trim().toLowerCase() === 'neutral') {
+        return '';
+      }
+      const color = emotionStateColor(state);
+      return `<span class="emotion-chip" style="background: color-mix(in srgb, ${color} 18%, white); color: ${color};"><span class="emotion-chip-dot"></span>${escapeHtml(formatEmotionState(state))}</span>`;
+    }
+
+    function getNeutralBackground() {
+      return 'transparent';
     }
 
     function chunkBackground(value, isActive) {
@@ -258,7 +303,57 @@
       return metricSelect.value || 'arousal';
     }
 
+    function normalizeEmotionLabel(label) {
+      const normalized = String(label || '').trim().toLowerCase();
+      if (normalized === 'hap' || normalized === 'happy' || normalized === 'happiness') {
+        return 'happy';
+      }
+      if (normalized === 'sad' || normalized === 'sadness') {
+        return 'sad';
+      }
+      if (normalized === 'ang' || normalized === 'angry' || normalized === 'anger') {
+        return 'angry';
+      }
+      if (normalized === 'neu' || normalized === 'neutral') {
+        return 'neutral';
+      }
+      return normalized;
+    }
+
+    function getCombinedEmotionState(segment) {
+      const label = normalizeEmotionLabel(segment?.emotion_label);
+      const valence = clampUnit(segment?.valence);
+
+      if (label === 'happy' && valence > PAD_NEUTRAL_MAX) {
+        return 'happy';
+      }
+
+      if (label === 'sad' && valence < PAD_NEUTRAL_MIN) {
+        return 'sad';
+      }
+
+      if (label === 'angry' && valence < PAD_NEUTRAL_MIN) {
+        return 'angry';
+      }
+
+      return 'neutral';
+    }
+
+    function countBy(items) {
+      return items.reduce((accumulator, item) => {
+        accumulator[item] = (accumulator[item] || 0) + 1;
+        return accumulator;
+      }, {});
+    }
+
+    function getTopEntry(counts) {
+      return Object.entries(counts).sort((left, right) => right[1] - left[1])[0];
+    }
+
     function hasSegmentMetricValue(segment, metricName = getSelectedMetric()) {
+      if (metricName === 'emotion_state') {
+        return true;
+      }
       if (metricName === 'emotion_label') {
         return Boolean(String(segment?.emotion_label || '').trim());
       }
@@ -266,6 +361,13 @@
     }
 
     function getSegmentMetricValue(segment, metricName = getSelectedMetric()) {
+      if (metricName === 'emotion_state') {
+        const state = getCombinedEmotionState(segment);
+        if (state === 'happy') return 1;
+        if (state === 'angry') return 0.85;
+        if (state === 'sad') return 0.2;
+        return 0.5;
+      }
       if (metricName === 'emotion_label') {
         return hasSegmentMetricValue(segment, metricName) ? 1 : null;
       }
@@ -282,6 +384,35 @@
       }
 
       const metricName = getSelectedMetric();
+      if (metricName === 'emotion_state') {
+        const states = sessionPayload.segments.map(segment => getCombinedEmotionState(segment));
+        const counts = countBy(states);
+        const topEntry = getTopEntry(counts);
+
+        metricStats.innerHTML = `
+          <div class="metric-stat">
+            <span class="metric-stat-label">Mode</span>
+            <span class="metric-stat-value">State</span>
+          </div>
+          <div class="metric-stat">
+            <span class="metric-stat-label">Prevalent</span>
+            <span class="metric-stat-value">${escapeHtml(formatEmotionState(topEntry?.[0] || 'neutral'))}</span>
+          </div>
+          <div class="metric-stat">
+            <span class="metric-stat-label">Count</span>
+            <span class="metric-stat-value">${topEntry?.[1] || 0}</span>
+          </div>
+        `;
+
+        ['happy', 'sad', 'angry', 'neutral'].forEach((state) => {
+          const stat = document.createElement('div');
+          stat.className = 'metric-stat';
+          stat.innerHTML = `<span class="metric-stat-label">${escapeHtml(formatEmotionState(state))}</span><span class="metric-stat-value">${counts[state] || 0}</span>`;
+          metricStats.appendChild(stat);
+        });
+        return;
+      }
+
       if (metricName === 'emotion_label') {
         const labels = sessionPayload.segments
           .map(segment => String(segment?.emotion_label || '').trim())
@@ -363,6 +494,17 @@
       }
 
       const metricName = getSelectedMetric();
+      if (metricName === 'emotion_state') {
+        const states = sessionPayload.segments.map(segment => getCombinedEmotionState(segment));
+        const counts = countBy(states);
+        const topEntry = getTopEntry(counts);
+        const transcriptText = sessionPayload.segments.map(segment => String(segment?.text || '').trim()).filter(Boolean).join(' ');
+        const previewWords = transcriptText.split(/\s+/).filter(Boolean).slice(0, 26).join(' ');
+        const preview = previewWords ? `${previewWords}${transcriptText.split(/\s+/).filter(Boolean).length > 26 ? '...' : ''}` : 'No transcript preview available.';
+        sessionSummary.innerHTML = `<strong>Prevalent state:</strong> ${escapeHtml(formatEmotionState(topEntry?.[0] || 'neutral'))}<br><strong>Rule:</strong> label and PAD must agree; otherwise the segment is neutral.<br><strong>Preview:</strong> ${escapeHtml(preview)}`;
+        return;
+      }
+
       if (metricName === 'emotion_label') {
         const labels = sessionPayload.segments
           .map(segment => String(segment?.emotion_label || '').trim())
@@ -412,12 +554,28 @@
       segments.forEach((segment) => {
         const value = getSegmentMetricValue(segment, metricName);
         const emotionLabel = segment?.emotion_label || '';
-        const displayValue = metricName === 'emotion_label'
-          ? (emotionLabel ? formatEmotionLabel(emotionLabel) : 'Not annotated')
-          : (value === null ? 'Not annotated' : value.toFixed(2));
-        const color = metricName === 'emotion_label'
-          ? emotionLabelColor(emotionLabel)
-          : (value === null ? 'rgba(148, 163, 184, 0.9)' : metricColor(value));
+        const emotionState = getCombinedEmotionState(segment);
+        const displayValue = metricName === 'emotion_state'
+          ? formatEmotionState(emotionState)
+          : (metricName === 'emotion_label'
+              ? (emotionLabel ? formatEmotionLabel(emotionLabel) : 'Not annotated')
+              : (value === null ? 'Not annotated' : value.toFixed(2)));
+        const color = metricName === 'emotion_state'
+          ? emotionStateColor(emotionState)
+          : (metricName === 'emotion_label'
+              ? emotionLabelColor(emotionLabel)
+              : (value === null ? 'rgba(148, 163, 184, 0.9)' : metricColor(value)));
+        const fillWidth = metricName === 'emotion_state'
+          ? (emotionState === 'neutral' ? 0 : 100)
+          : (metricName === 'emotion_label' ? (emotionLabel ? 100 : 0) : (value === null ? 0 : Math.round(value * 100)));
+        const metaChip = metricName === 'emotion_state'
+          ? renderEmotionStateChip(emotionState)
+          : (emotionLabel
+              ? renderEmotionChip(emotionLabel)
+              : '<span class="emotion-chip" style="background: rgba(148,163,184,0.16); color: #64748b;"><span class="emotion-chip-dot"></span>Unknown</span>');
+        const barMarkup = metricName === 'emotion_state' && emotionState === 'neutral'
+          ? ''
+          : `<div class="segment-card-bar"><div class="segment-card-fill" style="width: ${fillWidth}%; background: linear-gradient(90deg, rgba(37,99,235,0.9) 0%, ${color} 100%);"></div></div>`;
         const card = document.createElement('button');
         card.type = 'button';
         card.className = 'segment-card';
@@ -430,10 +588,10 @@
             <span class="segment-card-time">${escapeHtml(formatTime(segment.start))} - ${escapeHtml(formatTime(segment.end))}</span>
             <span class="segment-card-score">${escapeHtml(displayValue)}</span>
           </div>
-          <div class="segment-card-bar"><div class="segment-card-fill" style="width: ${metricName === 'emotion_label' ? (emotionLabel ? 100 : 0) : (value === null ? 0 : Math.round(value * 100))}%; background: linear-gradient(90deg, rgba(37,99,235,0.9) 0%, ${color} 100%);"></div></div>
+          ${barMarkup}
           <div class="segment-card-text">${escapeHtml(segment.text || '')}</div>
           <div class="segment-card-meta">
-            ${emotionLabel ? renderEmotionChip(emotionLabel) : '<span class="emotion-chip" style="background: rgba(148,163,184,0.16); color: #64748b;"><span class="emotion-chip-dot"></span>Unknown</span>'}
+            ${metaChip}
             <span class="segment-card-score"></span>
           </div>
         `;
@@ -463,16 +621,21 @@
       segments.forEach((segment) => {
         const value = getSegmentMetricValue(segment, metricName);
         const emotionLabel = segment?.emotion_label || '';
+        const emotionState = getCombinedEmotionState(segment);
         const span = document.createElement('span');
         span.className = 'session-chunk';
         span.dataset.segmentId = String(segment.id || '');
-        span.style.background = metricName === 'emotion_label'
-          ? (emotionLabel
+        span.style.background = metricName === 'emotion_state'
+          ? (emotionState === 'neutral'
+            ? getNeutralBackground()
+            : `linear-gradient(135deg, rgba(255,255,255,0.84) 0%, color-mix(in srgb, ${emotionStateColor(emotionState)} 28%, white) 100%)`)
+          : (metricName === 'emotion_label'
+            ? (emotionLabel
               ? `linear-gradient(135deg, rgba(255,255,255,0.84) 0%, ${emotionLabelColor(emotionLabel)}33 100%)`
-              : 'linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(226, 232, 240, 1) 100%)')
-          : (value === null
-              ? 'linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(226, 232, 240, 1) 100%)'
-              : chunkBackground(value, segment.id === activeChunkId));
+              : getNeutralBackground())
+            : (value === null
+              ? getNeutralBackground()
+              : chunkBackground(value, segment.id === activeChunkId)));
         if (segment.id === activeChunkId) {
           span.classList.add('is-active');
         }
