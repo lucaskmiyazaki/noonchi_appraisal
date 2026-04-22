@@ -39,3 +39,4 @@ instance/
 Thumbs.db
 
 data/
+past sessions/

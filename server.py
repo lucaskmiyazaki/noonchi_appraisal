@@ -173,19 +173,27 @@ def summarize_audio_record(record):
 def find_latest_audio_record(session_name=""):
     requested_session = session_name.strip()
     safe_session_name = secure_filename(requested_session)
+    requested_session_folded = requested_session.casefold()
+    safe_session_name_folded = safe_session_name.casefold()
 
     for record in iter_audio_records():
         if not requested_session:
             return record
 
-        if record.get("sessionName") == requested_session:
+        record_session_name = str(record.get("sessionName", "") or "").strip()
+        record_safe_session_name = str(record.get("safeSessionName", "") or "").strip()
+
+        if record_session_name == requested_session:
             return record
 
-        if safe_session_name and record.get("safeSessionName") == safe_session_name:
+        if safe_session_name and record_safe_session_name == safe_session_name:
             return record
 
-    if requested_session:
-        return find_latest_audio_record("")
+        if requested_session_folded and record_session_name.casefold() == requested_session_folded:
+            return record
+
+        if safe_session_name_folded and record_safe_session_name.casefold() == safe_session_name_folded:
+            return record
 
     return None
 
@@ -396,11 +404,10 @@ def user_session_detail(user_name, session_name):
     )
 
 
-@app.get("/<user_name>/emotion/<session_name>")
-def user_emotion_detail(user_name, session_name):
+@app.get("/emotion/<session_name>")
+def user_emotion_detail(session_name):
     return render_template(
         "emotion_session.html",
-        current_user=user_name,
         current_session=session_name,
     )
 

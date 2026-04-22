@@ -103,12 +103,9 @@
     }
   </style>
 </head>
-{% set resolved_user = current_user or '' %}
 {% set resolved_session = current_session or '' %}
 {% set active_nav_icon = 'chart' %}
-{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
-{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis/' ~ (resolved_session|urlencode) %}
-<body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
+<body data-current-session="{{ resolved_session }}">
   <div class="session-layout">
     {% include '_left_sidebar.html' %}
     <div class="session-main">
@@ -116,13 +113,12 @@
         <div class="session-main-title-group">
           <div class="session-heading">
             <div class="session-heading-title-row">
-              <a class="back-link" href="/{{ resolved_user|urlencode }}/analysis" aria-label="Back to sessions">←</a>
               <h1>{{ resolved_session|replace('_', ' ') }}</h1>
               <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
               </button>
             </div>
-            <p class="subtle-line">Viewing PAD for <strong>{{ resolved_user }}</strong></p>
+            <p class="subtle-line">Viewing PAD </p>
           </div>
         </div>
       </header>
@@ -163,7 +159,6 @@
     const metricStats = document.getElementById('metricStats');
     const sessionSummary = document.getElementById('sessionSummary');
     const segmentSidebar = document.getElementById('segmentSidebar');
-    const currentUser = document.body.dataset.currentUser || '';
     const currentSession = document.body.dataset.currentSession || '';
 
     let sessionAudio = null;
@@ -377,6 +372,20 @@
       }
       const color = dominanceLabelColor(label);
       return `<span class="emotion-chip" style="background: color-mix(in srgb, ${color} 18%, white); color: ${color};"><span class="emotion-chip-dot"></span>${escapeHtml(formatDominanceLabel(label))}</span>`;
+    }
+
+    function formatTopEmotionEvidence(segment) {
+      const emotionLabel = String(segment?.emotion_label || '').trim();
+      if (!emotionLabel) {
+        return '';
+      }
+
+      const probability = getTopEmotionProbability(segment);
+      if (probability <= 0) {
+        return '';
+      }
+
+      return `${formatEmotionLabel(emotionLabel)} ${probability.toFixed(2)}`;
     }
 
     function getNeutralBackground() {
@@ -952,15 +961,17 @@
           fillWidth = arousalLabel === 'neutral' ? 0 : 100;
           metaChip = renderArousalLabelChip(arousalLabel);
         } else if (metricName === 'dominance_label') {
+          const topEmotionEvidence = formatTopEmotionEvidence(segment);
           displayValue = dominanceEvidence.share === null
-            ? `D ${dominanceEvidence.dominance.toFixed(2)}`
+            ? `D ${dominanceEvidence.dominance.toFixed(2)}${topEmotionEvidence ? ` | ${topEmotionEvidence}` : ''}`
             : `D ${dominanceEvidence.dominance.toFixed(2)} | ${dominanceEvidence.shareLabel} ${dominanceEvidence.share.toFixed(2)}`;
           color = dominanceLabelColor(dominanceLabel);
           fillWidth = dominanceLabel === 'neutral' ? 0 : 100;
           metaChip = renderDominanceLabelChip(dominanceLabel);
         } else if (metricName === 'valence_label') {
+          const topEmotionEvidence = formatTopEmotionEvidence(segment);
           displayValue = valenceEvidence.probability === null
-            ? `V ${valenceEvidence.valence.toFixed(2)}`
+            ? `V ${valenceEvidence.valence.toFixed(2)}${topEmotionEvidence ? ` | ${topEmotionEvidence}` : ''}`
             : `V ${valenceEvidence.valence.toFixed(2)} | ${valenceEvidence.probabilityLabel} ${valenceEvidence.probability.toFixed(2)}`;
           color = valenceLabelColor(valenceLabel);
           fillWidth = valenceLabel === 'neutral' ? 0 : 100;
@@ -1106,10 +1117,9 @@
     async function loadEmotionSession() {
       emotionContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="state-message">Loading PAD analysis...</div></div></div>';
 
-      const user = currentUser.trim();
       const session = currentSession.trim();
-      if (!user || !session) {
-        emotionContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="state-message">Missing user or session.</div></div></div>';
+      if (!session) {
+        emotionContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="state-message">Missing session.</div></div></div>';
         return;
       }
 
