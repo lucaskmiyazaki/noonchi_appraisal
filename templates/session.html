@@ -19,6 +19,8 @@
       --yellow-stroke: #9d7b27;
       --green-hl: #bdf1aa;
       --green-stroke: #317b22;
+      --blue-hl: #dbeafe;
+      --blue-stroke: #1d4ed8;
       --card-radius: 16px;
     }
 
@@ -58,6 +60,7 @@
     .session-chunk.has-reflection-tone { background: var(--pink-hl); }
     .session-chunk.has-reflection-clarity { background: var(--yellow-hl); }
     .session-chunk.has-reflection-intensity { background: var(--green-hl); }
+    .session-chunk.has-reflection-excellent-tone { background: var(--blue-hl); }
     .session-sidebar { position: relative; z-index: 1; min-width: 0; }
     .session-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; }
     .session-search-bar { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
@@ -79,6 +82,7 @@
     .session-reflection-card-tone { background: var(--pink-hl); }
     .session-reflection-card-clarity { background: var(--yellow-hl); }
     .session-reflection-card-intensity { background: var(--green-hl); }
+    .session-reflection-card-excellent-tone { background: var(--blue-hl); }
     .session-reflection-card-default { background: #e5e7eb; }
     .reflection-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
     .reflection-link-path { fill: none; stroke-width: 1.5; opacity: 0.92; }
@@ -788,6 +792,10 @@
           return 'has-reflection-tone';
         }
 
+        if (normalizedType === 'good feedback' || normalizedType === 'good concern' || normalizedType === 'good excitement') {
+          return 'has-reflection-excellent-tone';
+        }
+
         if (normalizedType === 'unclear feedback' || normalizedType === 'unclear concern') {
           return 'has-reflection-clarity';
         }
@@ -804,6 +812,7 @@
         if (highlightClass === 'has-reflection-tone') return 'session-reflection-card-tone';
         if (highlightClass === 'has-reflection-clarity') return 'session-reflection-card-clarity';
         if (highlightClass === 'has-reflection-intensity') return 'session-reflection-card-intensity';
+        if (highlightClass === 'has-reflection-excellent-tone') return 'session-reflection-card-excellent-tone';
         return 'session-reflection-card-default';
       }
 
@@ -812,12 +821,14 @@
         if (highlightClass === 'has-reflection-tone') return { color: '#ec4899', markerId: 'arrow-tone' };
         if (highlightClass === 'has-reflection-clarity') return { color: '#ca8a04', markerId: 'arrow-clarity' };
         if (highlightClass === 'has-reflection-intensity') return { color: '#16a34a', markerId: 'arrow-intensity' };
+        if (highlightClass === 'has-reflection-excellent-tone') return { color: '#1d4ed8', markerId: 'arrow-excellent-tone' };
         return { color: '#6b7280', markerId: 'arrow-default' };
       }
 
       function formatReflectionTypeLabel(reflectionType) {
         const type = String(reflectionType || '').trim();
         const normalizedType = type.toLowerCase();
+        if (normalizedType === 'good feedback' || normalizedType === 'good concern' || normalizedType === 'good excitement') return 'excellent tone';
         if (normalizedType === 'incoherent intensity') return 'elevation';
         if (normalizedType === 'incoherent tone') return 'tone difference';
         return type;
@@ -952,6 +963,9 @@
             </marker>
             <marker id="arrow-intensity" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
               <path d="M0,0 L0,6 L9,3 z" fill="#16a34a"></path>
+            </marker>
+            <marker id="arrow-excellent-tone" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#1d4ed8"></path>
             </marker>
             <marker id="arrow-default" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
               <path d="M0,0 L0,6 L9,3 z" fill="#6b7280"></path>

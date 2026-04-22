@@ -1,4 +1,5 @@
 from constants import (
+    GOAL_STATUS_ON_GOING,
     GOAL_STATUS_FAIL,
     GOAL_STATUS_SUCCESS,
     PAD_DEFAULT,
@@ -222,27 +223,31 @@ def detect_unclear_feedback(speaker_agent):
             "blocker": None,
         }
 
-    blockers_list = get_speaker_blockers(speaker_agent)
-    if not blockers_list:
-        goal, blocker = get_primary_goal_and_blocker(speaker_agent)
-        return {
-            "kind": "unclear_feedback",
-            "goal": goal,
-            "blocker": blocker,
-        }
+    return None
 
-    _, blockers_without_actionables = summarize_blockers_actionables(blockers_list)
 
-    if not blockers_without_actionables:
+def detect_good_feedback(speaker_agent):
+    looks_angry, _ = classify_emotional_profile(speaker_agent)
+    if not looks_angry:
         return None
 
-    blocker = blockers_without_actionables[0]
-    goal = find_goal_for_blocker(speaker_agent, blocker)
+    goals = get_speaker_goals(speaker_agent)
+    if not goals:
+        return None
+
+    good_feedback_goals = [
+        goal for goal in goals
+        if getattr(goal, "status", None) == GOAL_STATUS_FAIL
+    ]
+
+    if not good_feedback_goals:
+        return None
 
     return {
-        "kind": "unclear_feedback",
-        "goal": goal,
-        "blocker": blocker,
+        "kind": "good_feedback",
+        "goal": good_feedback_goals[0],
+        "goals": good_feedback_goals,
+        "blocker": None,
     }
 
 
@@ -260,28 +265,62 @@ def detect_unclear_concern(speaker_agent):
             "blockers_without_actionables": [],
         }
 
-    if all(goal_has_clear_concern_context(goal) for goal in goals):
+    return None
+
+
+def detect_good_concern(speaker_agent):
+    _, looks_concerned = classify_emotional_profile(speaker_agent)
+    if not looks_concerned:
         return None
 
-    blockers_list = get_speaker_blockers(speaker_agent)
-    _, blockers_without_actionables = summarize_blockers_actionables(blockers_list)
-    goal, blocker = find_first_unclear_concern_target(speaker_agent)
+    goals = get_speaker_goals(speaker_agent)
+    if not goals:
+        return None
 
-    if goal is None and blockers_without_actionables:
-        blocker = blockers_without_actionables[0]
-        goal = find_goal_for_blocker(speaker_agent, blocker)
+    good_concern_goals = [
+        goal for goal in goals
+        if getattr(goal, "status", None) in {GOAL_STATUS_FAIL, GOAL_STATUS_ON_GOING}
+    ]
 
-    if goal is None:
-        goal, blocker = get_primary_goal_and_blocker(speaker_agent)
-
-    if goal is None:
+    if not good_concern_goals:
         return None
 
     return {
-        "kind": "unclear_concern",
-        "goal": goal,
-        "blocker": blocker,
-        "blockers_without_actionables": blockers_without_actionables,
+        "kind": "good_concern",
+        "goal": good_concern_goals[0],
+        "goals": good_concern_goals,
+        "blocker": None,
+    }
+
+
+def detect_good_excitement(speaker_agent):
+    emotion = getattr(speaker_agent, "emotion", None)
+    if emotion is None:
+        return None
+
+    valence = getattr(emotion, "valence", PAD_DEFAULT)
+    arousal = getattr(emotion, "arousal", PAD_DEFAULT)
+
+    if valence <= PAD_NEUTRAL_MAX or arousal <= PAD_NEUTRAL_MAX:
+        return None
+
+    goals = get_speaker_goals(speaker_agent)
+    if not goals:
+        return None
+
+    good_excitement_goals = [
+        goal for goal in goals
+        if getattr(goal, "status", None) == GOAL_STATUS_SUCCESS
+    ]
+
+    if not good_excitement_goals:
+        return None
+
+    return {
+        "kind": "good_excitement",
+        "goal": good_excitement_goals[0],
+        "goals": good_excitement_goals,
+        "blocker": None,
     }
 
 

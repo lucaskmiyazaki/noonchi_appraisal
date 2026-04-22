@@ -23,6 +23,9 @@ from werkzeug.utils import secure_filename
 from reflection import ReflectionTree
 from business_rules import (
     find_speaker,
+    detect_good_concern,
+    detect_good_excitement,
+    detect_good_feedback,
     detect_tone_incoherence,
     detect_intensity_incoherence,
     detect_unclear_feedback,
@@ -450,10 +453,28 @@ def play_graph():
         "has_unclear_feedback": None,
         "issue": None,
     }
+    good_feedback_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "has_good_feedback": None,
+        "issue": None,
+    }
     unclear_concerns_check = {
         "speaker_agent_id": speaker_id,
         "speaker_found": speaker_agent is not None,
         "has_unclear_concerns": None,
+        "issue": None,
+    }
+    good_concern_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "has_good_concern": None,
+        "issue": None,
+    }
+    good_excitement_check = {
+        "speaker_agent_id": speaker_id,
+        "speaker_found": speaker_agent is not None,
+        "has_good_excitement": None,
         "issue": None,
     }
     intensity_check = {
@@ -466,25 +487,31 @@ def play_graph():
 
     if speaker_agent is not None:
         unclear_feedback_issue = detect_unclear_feedback(speaker_agent)
+        good_feedback_issue = detect_good_feedback(speaker_agent)
         unclear_concern_issue = detect_unclear_concern(speaker_agent)
+        good_concern_issue = detect_good_concern(speaker_agent)
+        good_excitement_issue = detect_good_excitement(speaker_agent)
         tone_issue = detect_tone_incoherence(speaker_agent)
         intensity_issue = detect_intensity_incoherence(speaker_agent)
 
         unclear_feedback_check["has_unclear_feedback"] = unclear_feedback_issue is not None
         unclear_feedback_check["issue"] = summarize_rule_issue(unclear_feedback_issue)
 
+        good_feedback_check["has_good_feedback"] = good_feedback_issue is not None
+        good_feedback_check["issue"] = summarize_rule_issue(good_feedback_issue)
+
         unclear_concerns_check["has_unclear_concerns"] = unclear_concern_issue is not None
         unclear_concerns_check["issue"] = summarize_rule_issue(unclear_concern_issue)
+
+        good_concern_check["has_good_concern"] = good_concern_issue is not None
+        good_concern_check["issue"] = summarize_rule_issue(good_concern_issue)
+
+        good_excitement_check["has_good_excitement"] = good_excitement_issue is not None
+        good_excitement_check["issue"] = summarize_rule_issue(good_excitement_issue)
 
         tone_check["is_tone_coherent"], tone_check["incoherent_goals"] = summarize_tone_issue(tone_issue)
 
         intensity_check["is_intensity_coherent"], intensity_check["issues"] = summarize_intensity_issue(intensity_issue)
-
-        if reflection_tree is None and tone_issue is not None:
-            reflection_tree = ReflectionTree().build_from_incoherent_tone(
-                tone_issue["goal"],
-                speaker=speaker_agent,
-            ).to_dict()
 
         if reflection_tree is None and unclear_feedback_issue is not None:
             reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(
@@ -499,9 +526,33 @@ def play_graph():
                 blockers_without_actionables=unclear_concern_issue.get("blockers_without_actionables"),
             ).to_dict()
 
+        if reflection_tree is None and tone_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_tone(
+                tone_issue["goal"],
+                speaker=speaker_agent,
+            ).to_dict()
+
         if reflection_tree is None and intensity_issue is not None:
             reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
                 intensity_issue["issue"],
+                speaker=speaker_agent,
+            ).to_dict()
+
+        if reflection_tree is None and good_feedback_issue is not None:
+            reflection_tree = ReflectionTree().build_from_good_feedback_issue(
+                good_feedback_issue,
+                speaker=speaker_agent,
+            ).to_dict()
+
+        if reflection_tree is None and good_concern_issue is not None:
+            reflection_tree = ReflectionTree().build_from_good_concern_issue(
+                good_concern_issue,
+                speaker=speaker_agent,
+            ).to_dict()
+
+        if reflection_tree is None and good_excitement_issue is not None:
+            reflection_tree = ReflectionTree().build_from_good_excitement_issue(
+                good_excitement_issue,
                 speaker=speaker_agent,
             ).to_dict()
 
@@ -566,7 +617,10 @@ def play_graph():
         "actionables": {k: repr(v) for k, v in built["actionables"].items()},
         "questions": {k: repr(v) for k, v in built["questions"].items()},
         "unclear_feedback_check": unclear_feedback_check,
+        "good_feedback_check": good_feedback_check,
         "unclear_concerns_check": unclear_concerns_check,
+        "good_concern_check": good_concern_check,
+        "good_excitement_check": good_excitement_check,
         "tone_check": tone_check,
         "intensity_check": intensity_check,
         "reflection_tree": reflection_tree,

@@ -458,6 +458,192 @@ class ReflectionTree:
         }
         return self
 
+    def build_from_good_concern_issue(self, issue, speaker=None):
+        goal = issue.get("goal")
+        goal_text = getattr(goal, "text", "this goal")
+
+        observation = ReflectionNode(
+            id="observation",
+            text=(
+                f"Good job expressing concern in your voice tone! It shows that you care about {goal_text}."
+            ),
+            options=[{"label": "Continue", "next": "clarity_question"}],
+            node_type="audio",
+        )
+
+        clarity_question = ReflectionNode(
+            id="clarity_question",
+            text=(
+                "When sharing concerns, did you clearly expressed the points of risk and steps for mitigation?"
+            ),
+            options=[
+                {"label": "Yes", "value": "yes", "next": "good_job_message"},
+                {"label": "No", "value": "no", "next": "points_journal"},
+            ],
+            node_type="question",
+        )
+
+        good_job_message = ReflectionNode(
+            id="good_job_message",
+            text="Good Job!",
+            options=[],
+            node_type="message",
+        )
+
+        points_journal = ReflectionNode(
+            id="points_journal",
+            text="What do you think those points were?",
+            options=[],
+            node_type="journaling",
+        )
+
+        self.tree_id = "good_concern"
+        self.reflection_type = "good concern"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "clarity_question": clarity_question,
+            "good_job_message": good_job_message,
+            "points_journal": points_journal,
+        }
+        return self
+
+    def build_from_good_feedback_issue(self, issue, speaker=None):
+        goal = issue.get("goal")
+        goal_text = getattr(goal, "text", "this goal")
+
+        observation = ReflectionNode(
+            id="observation",
+            text=(
+                f"Good job keeping a firm tone when talking about {goal_text}. It communicates urgency and the need for change."
+            ),
+            options=[{"label": "Continue", "next": "mistakes_question"}],
+            node_type="audio",
+        )
+
+        mistakes_question = ReflectionNode(
+            id="mistakes_question",
+            text="Do you think there were also mistakes on your side?",
+            options=[
+                {"label": "No", "value": "no", "next": "actionable_question"},
+                {"label": "Yes", "value": "yes", "next": "clarity_question"},
+            ],
+            node_type="question",
+        )
+
+        actionable_question = ReflectionNode(
+            id="actionable_question",
+            text=(
+                "When providing feedback, do you think you suggested specific and actionable points of improvement?"
+            ),
+            options=[
+                {"label": "Yes", "value": "yes", "next": "good_job_message"},
+                {"label": "No", "value": "no", "next": "points_journal"},
+            ],
+            node_type="question",
+        )
+
+        good_job_message = ReflectionNode(
+            id="good_job_message",
+            text="Good job!",
+            options=[],
+            node_type="message",
+        )
+
+        points_journal = ReflectionNode(
+            id="points_journal",
+            text="What do you think those points might be?",
+            options=[],
+            node_type="journaling",
+        )
+
+        clarity_question = ReflectionNode(
+            id="clarity_question",
+            text="Do you think you would have been more clear if you had expressed regret instead?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "practice_question"},
+                {"label": "No", "value": "no", "next": "why_question"},
+            ],
+            node_type="question",
+        )
+
+        practice_question = ReflectionNode(
+            id="practice_question",
+            text="Would you like to practice your tone?",
+            options=[],
+            node_type="practice",
+        )
+
+        why_question = ReflectionNode(
+            id="why_question",
+            text="Why?",
+            options=[],
+            node_type="journaling",
+        )
+
+        self.tree_id = "good_feedback"
+        self.reflection_type = "good feedback"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "mistakes_question": mistakes_question,
+            "actionable_question": actionable_question,
+            "good_job_message": good_job_message,
+            "points_journal": points_journal,
+            "clarity_question": clarity_question,
+            "practice_question": practice_question,
+            "why_question": why_question,
+        }
+        return self
+
+    def build_from_good_excitement_issue(self, issue, speaker=None):
+        goal = issue.get("goal")
+        goal_text = getattr(goal, "text", "this goal")
+
+        observation = ReflectionNode(
+            id="observation",
+            text=(
+                f"Good job showing excitement. It helps others feel the positive impact of {goal_text}."
+            ),
+            options=[{"label": "Continue", "next": "acknowledgement_question"}],
+            node_type="audio",
+        )
+
+        acknowledgement_question = ReflectionNode(
+            id="acknowledgement_question",
+            text="Did you acknowledge or celebrate specific actions others did well?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "good_job_message"},
+                {"label": "No", "value": "no", "next": "acknowledgement_journal"},
+            ],
+            node_type="question",
+        )
+
+        good_job_message = ReflectionNode(
+            id="good_job_message",
+            text="Good job!",
+            options=[],
+            node_type="message",
+        )
+
+        acknowledgement_journal = ReflectionNode(
+            id="acknowledgement_journal",
+            text="Why? What specific things you could have acknowledged?",
+            options=[],
+            node_type="journaling",
+        )
+
+        self.tree_id = "good_excitement"
+        self.reflection_type = "good excitement"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "acknowledgement_question": acknowledgement_question,
+            "good_job_message": good_job_message,
+            "acknowledgement_journal": acknowledgement_journal,
+        }
+        return self
+
     def build_from_incoherent_intensity_issue(self, issue, speaker=None):
         """
         Builds reflection tree for intensity mismatches.
