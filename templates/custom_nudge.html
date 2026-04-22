@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Custom Nudge</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root {
+      --bg-main: #f3f6fa;
+      --sidebar-bg: #e5ebf4;
+      --text-dark: #111827;
+      --text-muted: #64748b;
+      --panel-bg: rgba(255, 255, 255, 0.82);
+      --canvas-bg: linear-gradient(135deg, rgba(189, 219, 246, 0.92) 0%, rgba(228, 238, 248, 0.9) 52%, rgba(247, 247, 247, 0.98) 100%);
+      --border-soft: rgba(226, 232, 240, 0.92);
+      --agent: #cfe5ff;
+      --agent-accent: #2563eb;
+      --state: #fff09d;
+      --state-accent: #a16207;
+      --action: #ffd7e9;
+      --action-accent: #db2777;
+      --nudge: #97ff61;
+      --nudge-accent: #16a34a;
+      --card-radius: 18px;
+    }
+
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-dark);
+    }
+
+    .custom-layout {
+      display: grid;
+      grid-template-columns: 80px minmax(0, 1fr);
+      gap: 16px;
+      height: 100vh;
+      width: 100vw;
+      padding: 16px;
+    }
+
+    .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
+    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
+    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
+    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+
+    .custom-main {
+      min-width: 0;
+      border-radius: 22px;
+      background: var(--canvas-bg);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      overflow: hidden;
+    }
+
+    .editor-shell {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 28px 16px;
+    }
+
+    .editor-title-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .editor-back {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #1f2937;
+      text-decoration: none;
+      font-size: 20px;
+    }
+
+    .editor-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .editor-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .editor-btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.88);
+      color: #111827;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 10px 20px rgba(148, 163, 184, 0.12);
+      cursor: pointer;
+    }
+
+    .editor-btn.is-primary {
+      background: #111827;
+      color: #fff;
+    }
+
+    .editor-canvas-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      margin: 0 18px 18px 18px;
+      border-radius: 24px;
+      overflow: hidden;
+    }
+
+    .editor-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .editor-canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 640px;
+      overflow: hidden;
+    }
+
+    .editor-links {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .editor-link-path {
+      fill: none;
+      stroke: rgba(30, 41, 59, 0.45);
+      stroke-width: 2;
+    }
+
+    .editor-link-preview {
+      fill: none;
+      stroke: rgba(37, 99, 235, 0.5);
+      stroke-width: 2;
+      stroke-dasharray: 6 6;
+    }
+
+    .editor-node {
+      position: absolute;
+      width: 204px;
+      border-radius: 14px;
+      box-shadow: 0 18px 30px rgba(148, 163, 184, 0.16);
+      overflow: visible;
+      user-select: none;
+    }
+
+    .editor-node.agent { --node-bg: var(--agent); --node-accent: var(--agent-accent); }
+    .editor-node.state { --node-bg: var(--state); --node-accent: var(--state-accent); }
+    .editor-node.action { --node-bg: var(--action); --node-accent: var(--action-accent); }
+    .editor-node.nudge { --node-bg: var(--nudge); --node-accent: var(--nudge-accent); }
+
+    .editor-node-shell {
+      border-radius: 14px;
+      background: var(--node-bg);
+      border: 1px solid rgba(255,255,255,0.8);
+      overflow: hidden;
+    }
+
+    .editor-node-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px 8px;
+      cursor: grab;
+    }
+
+    .editor-node-header:active { cursor: grabbing; }
+
+    .editor-node-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--node-accent);
+    }
+
+    .editor-node-subtitle {
+      margin: 3px 0 0;
+      font-size: 11px;
+      color: rgba(15, 23, 42, 0.78);
+      line-height: 1.25;
+    }
+
+    .editor-node-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .editor-node-menu,
+    .editor-node-delete {
+      width: 20px;
+      height: 20px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.72);
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .editor-node-field {
+      margin: 0 6px 6px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.95);
+      border: 2px solid rgba(255,255,255,0.92);
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6px 14px;
+      font-size: 18px;
+      color: #111827;
+      outline: none;
+    }
+
+    .editor-node-field:empty::before {
+      content: attr(data-placeholder);
+      color: rgba(107, 114, 128, 0.8);
+    }
+
+    .editor-port {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--node-accent);
+      border: 2px solid currentColor;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      cursor: crosshair;
+      z-index: 2;
+    }
+
+    .editor-node:hover .editor-port,
+    .editor-port.is-active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .editor-port.top { top: -11px; left: 50%; transform: translateX(-50%) scale(0.7); }
+    .editor-port.right { right: -11px; top: 50%; transform: translateY(-50%) scale(0.7); }
+    .editor-port.bottom { bottom: -11px; left: 50%; transform: translateX(-50%) scale(0.7); }
+    .editor-port.left { left: -11px; top: 50%; transform: translateY(-50%) scale(0.7); }
+    .editor-node:hover .editor-port.top, .editor-port.top.is-active { transform: translateX(-50%) scale(1); }
+    .editor-node:hover .editor-port.right, .editor-port.right.is-active { transform: translateY(-50%) scale(1); }
+    .editor-node:hover .editor-port.bottom, .editor-port.bottom.is-active { transform: translateX(-50%) scale(1); }
+    .editor-node:hover .editor-port.left, .editor-port.left.is-active { transform: translateY(-50%) scale(1); }
+
+    .editor-node.is-connection-target .editor-node-shell {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.24);
+    }
+
+    .custom-sidebar {
+      background: rgba(255,255,255,0.8);
+      border-left: 1px solid var(--border-soft);
+      padding: 18px 12px 18px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .custom-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.96);
+      padding: 10px 12px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .custom-search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font: inherit;
+      color: #111827;
+    }
+
+    .custom-nav-list,
+    .custom-palette {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .custom-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #1f2937;
+      background: transparent;
+    }
+
+    .custom-nav-item.is-active { background: rgba(17, 24, 39, 0.12); }
+    .custom-nav-label { font-weight: 600; }
+    .custom-nav-detail { color: #94a3b8; }
+    .custom-section-title { margin: 8px 4px 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; }
+
+    .custom-palette-card {
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 12px 20px rgba(148, 163, 184, 0.1);
+      cursor: grab;
+    }
+
+    .custom-palette-card:active { cursor: grabbing; }
+    .custom-palette-shell { padding-bottom: 4px; }
+    .custom-palette-card.agent .custom-palette-shell { background: var(--agent); }
+    .custom-palette-card.state .custom-palette-shell { background: var(--state); }
+    .custom-palette-card.action .custom-palette-shell { background: var(--action); }
+    .custom-palette-card.nudge .custom-palette-shell { background: var(--nudge); }
+    .custom-palette-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; padding: 10px 12px 8px; }
+    .custom-palette-title { margin: 0; font-size: 12px; font-weight: 700; }
+    .custom-palette-subtitle { margin: 3px 0 0; font-size: 11px; color: rgba(15, 23, 42, 0.78); }
+    .custom-palette-field { margin: 0 6px 6px; border-radius: 12px; background: rgba(255,255,255,0.95); min-height: 48px; display:flex; align-items:center; justify-content:center; color: rgba(107,114,128,0.85); font-size: 18px; }
+
+    .custom-help {
+      margin-top: auto;
+      padding: 14px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(226, 232, 240, 0.94);
+      font-size: 12px;
+      line-height: 1.5;
+      color: #475569;
+    }
+
+    @media (max-width: 1100px) {
+      .custom-main { grid-template-columns: 1fr; }
+      .custom-sidebar { border-left: 0; border-top: 1px solid var(--border-soft); }
+    }
+
+    @media (max-width: 820px) {
+      body { overflow: auto; }
+      .custom-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+      .app-nav { display: none; }
+      .editor-header { padding: 18px; }
+      .editor-canvas-wrap { min-height: 60vh; margin: 0 12px 12px; }
+      .editor-actions { gap: 8px; }
+      .editor-btn { padding: 9px 12px; }
+    }
+  </style>
+</head>
+{% set resolved_user = current_user or '' %}
+{% set active_nav_icon = 'regulation' %}
+{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
+{% set nudges_nav_href = '/' ~ (resolved_user|urlencode) ~ '/nudges' %}
+<body data-current-user="{{ resolved_user }}">
+  <div class="custom-layout">
+    {% include '_left_sidebar.html' %}
+    <main class="custom-main">
+      <section class="editor-shell">
+        <header class="editor-header">
+          <div class="editor-title-row">
+            <a class="editor-back" href="/{{ resolved_user|urlencode }}/nudges" aria-label="Back to nudge settings">←</a>
+            <h1 class="editor-title">Untitled Nudge</h1>
+          </div>
+          <div class="editor-actions">
+            <button class="editor-btn" type="button">Test</button>
+            <button class="editor-btn is-primary" type="button">Save</button>
+          </div>
+        </header>
+
+        <div class="editor-canvas-wrap">
+          <div class="editor-grid" aria-hidden="true"></div>
+          <div id="editorCanvas" class="editor-canvas">
+            <svg id="editorLinks" class="editor-links" aria-hidden="true">
+              <defs>
+                <marker id="customArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L0,6 L9,3 z" fill="rgba(30, 41, 59, 0.6)"></path>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <aside class="custom-sidebar">
+        <label class="custom-search" aria-label="Search custom nudge blocks">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input type="text" placeholder="Search" />
+        </label>
+
+        <div class="custom-nav-list" aria-hidden="true">
+          <div class="custom-nav-item"><span class="custom-nav-label">All Nudges</span><span class="custom-nav-detail">Detail</span></div>
+          <div class="custom-nav-item"><span class="custom-nav-label">Favorite Nudges</span><span class="custom-nav-detail">Detail</span></div>
+          <div class="custom-nav-item is-active"><span class="custom-nav-label">Create New</span><span class="custom-nav-detail">Detail</span></div>
+          <div class="custom-nav-item"><span class="custom-nav-label">Recommendations</span><span class="custom-nav-detail">Detail</span></div>
+        </div>
+
+        <div class="custom-section-title">Blocks</div>
+        <div id="palette" class="custom-palette">
+          <div class="custom-palette-card agent" draggable="true" data-palette-type="agent">
+            <div class="custom-palette-shell">
+              <div class="custom-palette-head">
+                <div>
+                  <p class="custom-palette-title">Agent (P)</p>
+                  <p class="custom-palette-subtitle">Person affecting the nudge</p>
+                </div>
+                <span>···</span>
+              </div>
+              <div class="custom-palette-field">Agent</div>
+            </div>
+          </div>
+          <div class="custom-palette-card state" draggable="true" data-palette-type="state">
+            <div class="custom-palette-shell">
+              <div class="custom-palette-head">
+                <div>
+                  <p class="custom-palette-title">State (S)</p>
+                  <p class="custom-palette-subtitle">Emotions or state of mind</p>
+                </div>
+                <span>···</span>
+              </div>
+              <div class="custom-palette-field">State</div>
+            </div>
+          </div>
+          <div class="custom-palette-card action" draggable="true" data-palette-type="action">
+            <div class="custom-palette-shell">
+              <div class="custom-palette-head">
+                <div>
+                  <p class="custom-palette-title">Action (A)</p>
+                  <p class="custom-palette-subtitle">Type of intervention</p>
+                </div>
+                <span>···</span>
+              </div>
+              <div class="custom-palette-field">Action</div>
+            </div>
+          </div>
+          <div class="custom-palette-card nudge" draggable="true" data-palette-type="nudge">
+            <div class="custom-palette-shell">
+              <div class="custom-palette-head">
+                <div>
+                  <p class="custom-palette-title">Nudge (N)</p>
+                  <p class="custom-palette-subtitle">Type of feedback</p>
+                </div>
+                <span>···</span>
+              </div>
+              <div class="custom-palette-field">Nudge</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="custom-help">Drag a block from the right panel into the canvas. Drag cards by their header, click the × to delete, and hover a card to pull a connection from any + handle to another block.</div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('editorCanvas');
+    const links = document.getElementById('editorLinks');
+    const palette = document.getElementById('palette');
+    const nodes = new Map();
+    const edges = [];
+    let nodeCounter = 0;
+    let activeDrag = null;
+    let activeConnection = null;
+
+    const NODE_META = {
+      agent: { title: 'Agent', badge: 'P', subtitle: 'Person affecting the nudge', placeholder: 'Self' },
+      state: { title: 'State', badge: 'S', subtitle: 'Emotions or state of mind', placeholder: '|Custom state' },
+      action: { title: 'Action', badge: 'A', subtitle: 'Type of intervention', placeholder: '|Custom action' },
+      nudge: { title: 'Nudge', badge: 'N', subtitle: 'Type of feedback', placeholder: 'Buzz' },
+    };
+
+    function createNode(type, x, y, value = '') {
+      nodeCounter += 1;
+      const meta = NODE_META[type];
+      const id = `node-${nodeCounter}`;
+      const node = document.createElement('div');
+      node.className = `editor-node ${type}`;
+      node.dataset.id = id;
+      node.dataset.type = type;
+      node.style.left = `${x}px`;
+      node.style.top = `${y}px`;
+      node.innerHTML = `
+        <div class="editor-port top" data-side="top">+</div>
+        <div class="editor-port right" data-side="right">+</div>
+        <div class="editor-port bottom" data-side="bottom">+</div>
+        <div class="editor-port left" data-side="left">+</div>
+        <div class="editor-node-shell">
+          <div class="editor-node-header">
+            <div>
+              <p class="editor-node-title">${meta.title} (${meta.badge}${type === 'state' ? nodeCounter : ''})</p>
+              <p class="editor-node-subtitle">${meta.subtitle}</p>
+            </div>
+            <div class="editor-node-actions">
+              <button class="editor-node-menu" type="button" aria-label="Block menu">···</button>
+              <button class="editor-node-delete" type="button" aria-label="Delete block">×</button>
+            </div>
+          </div>
+          <div class="editor-node-field" contenteditable="true" spellcheck="false" data-placeholder="${meta.placeholder}">${value}</div>
+        </div>
+      `;
+
+      const header = node.querySelector('.editor-node-header');
+      const deleteButton = node.querySelector('.editor-node-delete');
+      deleteButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        deleteNode(id);
+      });
+
+      header.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('.editor-node-delete') || event.target.closest('.editor-node-menu')) {
+          return;
+        }
+        beginNodeDrag(event, node);
+      });
+
+      node.querySelectorAll('.editor-port').forEach((port) => {
+        port.addEventListener('pointerdown', (event) => {
+          event.stopPropagation();
+          beginConnection(event, node, port.dataset.side || 'right', port);
+        });
+      });
+
+      canvas.appendChild(node);
+      nodes.set(id, node);
+      redrawEdges();
+      return node;
+    }
+
+    function deleteNode(id) {
+      const node = nodes.get(id);
+      if (!node) return;
+      for (let index = edges.length - 1; index >= 0; index -= 1) {
+        if (edges[index].fromId === id || edges[index].toId === id) {
+          edges.splice(index, 1);
+        }
+      }
+      node.remove();
+      nodes.delete(id);
+      redrawEdges();
+    }
+
+    function getCanvasPoint(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(rect.width, clientX - rect.left)),
+        y: Math.max(0, Math.min(rect.height, clientY - rect.top)),
+      };
+    }
+
+    function beginNodeDrag(event, node) {
+      const rect = node.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      activeDrag = {
+        node,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        canvasRect,
+      };
+      node.style.zIndex = String(Date.now());
+      window.addEventListener('pointermove', onNodeDrag);
+      window.addEventListener('pointerup', endNodeDrag, { once: true });
+    }
+
+    function onNodeDrag(event) {
+      if (!activeDrag) return;
+      const { node, offsetX, offsetY, canvasRect } = activeDrag;
+      const maxX = canvasRect.width - node.offsetWidth;
+      const maxY = canvasRect.height - node.offsetHeight;
+      const nextX = Math.max(0, Math.min(maxX, event.clientX - canvasRect.left - offsetX));
+      const nextY = Math.max(0, Math.min(maxY, event.clientY - canvasRect.top - offsetY));
+      node.style.left = `${nextX}px`;
+      node.style.top = `${nextY}px`;
+      redrawEdges();
+    }
+
+    function endNodeDrag() {
+      window.removeEventListener('pointermove', onNodeDrag);
+      activeDrag = null;
+    }
+
+    function getPortPoint(node, side) {
+      const rect = node.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      if (side === 'top') return { x: rect.left - canvasRect.left + rect.width / 2, y: rect.top - canvasRect.top };
+      if (side === 'bottom') return { x: rect.left - canvasRect.left + rect.width / 2, y: rect.bottom - canvasRect.top };
+      if (side === 'left') return { x: rect.left - canvasRect.left, y: rect.top - canvasRect.top + rect.height / 2 };
+      return { x: rect.right - canvasRect.left, y: rect.top - canvasRect.top + rect.height / 2 };
+    }
+
+    function buildPath(from, to) {
+      const delta = Math.max(60, Math.abs(to.x - from.x) * 0.45);
+      return `M ${from.x} ${from.y} C ${from.x + delta} ${from.y}, ${to.x - delta} ${to.y}, ${to.x} ${to.y}`;
+    }
+
+    function redrawEdges() {
+      const previewPath = activeConnection ? activeConnection.previewPath : null;
+      links.querySelectorAll('.editor-link-path').forEach((path) => path.remove());
+
+      edges.forEach((edge) => {
+        const fromNode = nodes.get(edge.fromId);
+        const toNode = nodes.get(edge.toId);
+        if (!fromNode || !toNode) return;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'editor-link-path');
+        path.setAttribute('marker-end', 'url(#customArrow)');
+        path.setAttribute('d', buildPath(getPortPoint(fromNode, edge.fromSide), getPortPoint(toNode, edge.toSide)));
+        links.appendChild(path);
+      });
+
+      if (previewPath) {
+        links.appendChild(previewPath);
+      }
+    }
+
+    function clearConnectionTargets() {
+      nodes.forEach((node) => node.classList.remove('is-connection-target'));
+      canvas.querySelectorAll('.editor-port.is-active').forEach((port) => port.classList.remove('is-active'));
+    }
+
+    function beginConnection(event, node, side, port) {
+      const previewPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      previewPath.setAttribute('class', 'editor-link-preview');
+      activeConnection = {
+        fromId: node.dataset.id,
+        fromSide: side,
+        previewPath,
+      };
+      port.classList.add('is-active');
+      redrawEdges();
+      window.addEventListener('pointermove', onConnectionDrag);
+      window.addEventListener('pointerup', endConnectionDrag, { once: true });
+      onConnectionDrag(event);
+    }
+
+    function onConnectionDrag(event) {
+      if (!activeConnection) return;
+      const fromNode = nodes.get(activeConnection.fromId);
+      if (!fromNode) return;
+      clearConnectionTargets();
+      const start = getPortPoint(fromNode, activeConnection.fromSide);
+      const point = getCanvasPoint(event.clientX, event.clientY);
+      activeConnection.previewPath.setAttribute('d', buildPath(start, point));
+
+      const targetPort = document.elementFromPoint(event.clientX, event.clientY)?.closest('.editor-port');
+      const targetNode = targetPort?.closest('.editor-node');
+      if (targetNode && targetNode.dataset.id !== activeConnection.fromId) {
+        targetNode.classList.add('is-connection-target');
+        targetPort.classList.add('is-active');
+      }
+      redrawEdges();
+    }
+
+    function endConnectionDrag(event) {
+      window.removeEventListener('pointermove', onConnectionDrag);
+      if (!activeConnection) return;
+      const targetPort = document.elementFromPoint(event.clientX, event.clientY)?.closest('.editor-port');
+      const targetNode = targetPort?.closest('.editor-node');
+      if (targetNode && targetNode.dataset.id !== activeConnection.fromId) {
+        edges.push({
+          fromId: activeConnection.fromId,
+          fromSide: activeConnection.fromSide,
+          toId: targetNode.dataset.id,
+          toSide: targetPort.dataset.side || 'left',
+        });
+      }
+      activeConnection.previewPath.remove();
+      activeConnection = null;
+      clearConnectionTargets();
+      redrawEdges();
+    }
+
+    function clampPosition(x, y) {
+      return {
+        x: Math.max(0, Math.min(canvas.clientWidth - 204, x)),
+        y: Math.max(0, Math.min(canvas.clientHeight - 110, y)),
+      };
+    }
+
+    palette.querySelectorAll('[data-palette-type]').forEach((item) => {
+      item.addEventListener('dragstart', (event) => {
+        event.dataTransfer?.setData('text/plain', item.dataset.paletteType || '');
+      });
+
+      item.addEventListener('click', () => {
+        const type = item.dataset.paletteType || 'state';
+        const position = clampPosition(60 + (nodeCounter % 4) * 120, 80 + (nodeCounter % 3) * 120);
+        const node = createNode(type, position.x, position.y, '');
+        node.querySelector('.editor-node-field')?.focus();
+      });
+    });
+
+    canvas.addEventListener('dragover', (event) => {
+      event.preventDefault();
+    });
+
+    canvas.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const type = event.dataTransfer?.getData('text/plain');
+      if (!type || !NODE_META[type]) return;
+      const point = getCanvasPoint(event.clientX, event.clientY);
+      const position = clampPosition(point.x - 100, point.y - 40);
+      const node = createNode(type, position.x, position.y, '');
+      node.querySelector('.editor-node-field')?.focus();
+    });
+
+    createNode('agent', 78, 78, 'Self');
+    createNode('state', 280, 220, 'Confused');
+    createNode('state', 28, 220, '');
+    createNode('action', 620, 220, '');
+    createNode('nudge', 280, 368, 'Buzz');
+  </script>
+</body>
+</html>

@@ -430,7 +430,7 @@
             </div>
           </article>
 
-          <article class="nudge-card is-custom" aria-hidden="true">
+          <article id="createCustomNudgeCard" class="nudge-card is-custom" role="button" tabindex="0" aria-label="Create custom nudge">
             <div class="nudge-custom-inner">
               <div class="nudge-custom-plus"></div>
               <h2 class="nudge-custom-title">Create Custom Nudge</h2>
@@ -441,8 +441,18 @@
     </main>
   </div>
   <script>
+    const currentUser = document.body.dataset.currentUser || '';
     const toggleButtons = Array.from(document.querySelectorAll('.nudge-toggle'));
     const sensitivityGroups = Array.from(document.querySelectorAll('.nudge-levels'));
+    const createCustomNudgeCard = document.getElementById('createCustomNudgeCard');
+
+    function openCustomNudgeEditor() {
+      const user = currentUser.trim();
+      if (!user) {
+        return;
+      }
+      window.location.href = `/${encodeURIComponent(user)}/nudges/custom`;
+    }
 
     toggleButtons.forEach((button) => {
       button.addEventListener('click', () => {
@@ -461,6 +471,14 @@
           });
         });
       });
+    });
+
+    createCustomNudgeCard?.addEventListener('click', openCustomNudgeEditor);
+    createCustomNudgeCard?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openCustomNudgeEditor();
+      }
     });
   </script>
 </body>
