@@ -531,8 +531,13 @@
       });
     }
 
-    function speakNodeText(text, container = activeReflectionState?.currentEntryElement || activeReflectionState?.bodyElement) {
+    function speakNodeText(text, container = activeReflectionState?.currentEntryElement || activeReflectionState?.bodyElement, options = {}) {
+      const { onEnd = null } = options;
+
       if (!speechSupported || !text || !container) {
+        if (typeof onEnd === 'function') {
+          onEnd();
+        }
         return;
       }
 
@@ -550,9 +555,15 @@
       utterance.onend = () => {
         updateReadAlong(container, text.length, true);
         activeUtterance = null;
+        if (typeof onEnd === 'function') {
+          onEnd();
+        }
       };
       utterance.onerror = () => {
         activeUtterance = null;
+        if (typeof onEnd === 'function') {
+          onEnd();
+        }
       };
 
       activeUtterance = utterance;
@@ -617,12 +628,16 @@
       bodyElement.appendChild(entryElement);
       activeReflectionState.currentEntryElement = entryElement;
 
+      let playButton = null;
+      let progressBar = null;
+      let progressHandle = null;
+
       if (isAudioNode) {
-        const playButton = entryElement.querySelector('.reflection-audio-play');
+        playButton = entryElement.querySelector('.reflection-audio-play');
         const skipButton = entryElement.querySelector('.reflection-audio-skip');
         const audioBar = entryElement.querySelector('.reflection-audio-bar');
-        const progressBar = entryElement.querySelector('.reflection-audio-progress');
-        const progressHandle = entryElement.querySelector('.reflection-audio-handle');
+        progressBar = entryElement.querySelector('.reflection-audio-progress');
+        progressHandle = entryElement.querySelector('.reflection-audio-handle');
         if (playButton && progressBar && progressHandle && audioBar) {
           playButton.addEventListener('click', () => {
             playReflectionSegment(reflection, nextNodeId, playButton, progressBar, progressHandle);
@@ -707,7 +722,11 @@
       }
 
       updateReadAlong(entryElement, 0, false);
-      speakNodeText(nodeText, entryElement);
+      speakNodeText(nodeText, entryElement, {
+        onEnd: isAudioNode && playButton && progressBar && progressHandle
+          ? () => playReflectionSegment(reflection, nextNodeId, playButton, progressBar, progressHandle)
+          : null,
+      });
       scheduleReflectionLinkDraw();
     }
 
