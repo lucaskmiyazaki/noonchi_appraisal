@@ -20,7 +20,7 @@ export function createBlockerNode({ x = 360, y = 240, linkedFromId = null, _id =
   agentBtn.onclick = () => {
     const left = parseFloat(node.style.left) || x;
     const top = parseFloat(node.style.top) || y;
-    createAgentNode({ x: left + 320, y: top + 20, role: 'listener', linkedFromId: id });
+    createAgentNode({ x: left + 320, y: top + 20, role: 'participants', linkedFromId: id });
   };
 
   const followupBtn = document.createElement('button');

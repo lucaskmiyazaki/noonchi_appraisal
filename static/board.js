@@ -9,6 +9,15 @@ import { createBlockerNode } from './nodes/blocker.js';
 import { createFollowupNode } from './nodes/followup.js';
 import { createReflectionNode } from './nodes/reflection.js';
 
+function normalizeAgentRole(role, fallback = 'participants') {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (normalized === 'listener') return 'participants';
+  if (normalized === 'passive') return 'external';
+  if (['wearer', 'participants', 'external'].includes(normalized)) return normalized;
+  return fallback;
+}
+
 export const boards = [];
 export let activeBoardId = null;
 let boardCounter = 0;
@@ -181,6 +190,7 @@ export function createReflectionBoard(tree, metadata = {}) {
     kind: 'reflection',
     graph: buildReflectionGraph(tree),
     metadata: {
+      wearerName: metadata.wearerName || '',
       sessionName: metadata.sessionName || '',
       startMs: Number.isFinite(Number(metadata.startMs)) ? Number(metadata.startMs) : null,
       endMs: Number.isFinite(Number(metadata.endMs)) ? Number(metadata.endMs) : null,
@@ -233,7 +243,7 @@ export function loadGraph(graph) {
     if (!isNaN(num)) setCounterFloor(num);
 
     const args = { x: saved.x || 0, y: saved.y || 0, _id: saved.id };
-    if (saved.type === 'agent') args.role = saved.badge || 'speaker';
+    if (saved.type === 'agent') args.role = normalizeAgentRole(saved.badge, 'wearer');
     if (saved.type === 'followup') args.mode = saved.badge || 'actionable';
     if (saved.type === 'reflection') {
       args.title = saved.title;

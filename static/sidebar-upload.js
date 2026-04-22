@@ -358,6 +358,7 @@ async function loadReflectionTabsForAudio(audioId, sessionName) {
       ? data.reflections
           .map((reflection) => ({
             tree: reflection.tree,
+            wearerName: reflection.wearer_agent || '',
             sessionName: data.session || sessionName,
             startMs: Number(reflection.startms),
             endMs: Number(reflection.endms),

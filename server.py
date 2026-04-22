@@ -22,7 +22,9 @@ from werkzeug.utils import secure_filename
 
 from reflection import ReflectionTree
 from business_rules import (
-    find_speaker,
+    detect_participant_unclear_feedback,
+    detect_participant_unclear_concern,
+    find_wearer,
     detect_good_concern,
     detect_good_excitement,
     detect_good_feedback,
@@ -45,7 +47,7 @@ DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 REFLECTION_DB_FIELDNAMES = [
-    "speaker_agent",
+    "wearer_agent",
     "session_name",
     "reflection_tree_file",
     "startms",
@@ -243,6 +245,7 @@ def build_reflection_response_row(row, reflection_file):
 
     return {
         "reflection_tree_file": reflection_file,
+        "wearer_agent": row.get("wearer_agent", ""),
         "startms": row.get("startms", ""),
         "endms": row.get("endms", ""),
         "practice": row.get("practice", "null"),
@@ -438,61 +441,65 @@ def play_graph():
 
     built = ReflectionTree().build_objects_from_graph(payload)
 
-    # Find speaker and evaluate tone/intensity coherence via business rules.
-    speaker_id, speaker_agent = find_speaker(built["agents"])
+    # Find wearer and evaluate tone/intensity coherence via business rules.
+    wearer_id, wearer_agent = find_wearer(built["agents"])
 
     tone_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "is_tone_coherent": None,
         "incoherent_goals": [],
     }
     unclear_feedback_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "has_unclear_feedback": None,
         "issue": None,
     }
     good_feedback_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "has_good_feedback": None,
         "issue": None,
     }
     unclear_concerns_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "has_unclear_concerns": None,
         "issue": None,
     }
     good_concern_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "has_good_concern": None,
         "issue": None,
     }
     good_excitement_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "has_good_excitement": None,
         "issue": None,
     }
     intensity_check = {
-        "speaker_agent_id": speaker_id,
-        "speaker_found": speaker_agent is not None,
+        "wearer_agent_id": wearer_id,
+        "wearer_found": wearer_agent is not None,
         "is_intensity_coherent": None,
         "issues": [],
     }
     reflection_tree = None
+    participant_unclear_feedback_issue = None
+    participant_unclear_concern_issue = None
 
-    if speaker_agent is not None:
-        unclear_feedback_issue = detect_unclear_feedback(speaker_agent)
-        good_feedback_issue = detect_good_feedback(speaker_agent)
-        unclear_concern_issue = detect_unclear_concern(speaker_agent)
-        good_concern_issue = detect_good_concern(speaker_agent)
-        good_excitement_issue = detect_good_excitement(speaker_agent)
-        tone_issue = detect_tone_incoherence(speaker_agent)
-        intensity_issue = detect_intensity_incoherence(speaker_agent)
+    if wearer_agent is not None:
+        participant_unclear_feedback_issue = detect_participant_unclear_feedback(built["agents"])
+        participant_unclear_concern_issue = detect_participant_unclear_concern(built["agents"])
+        unclear_feedback_issue = detect_unclear_feedback(wearer_agent)
+        good_feedback_issue = detect_good_feedback(wearer_agent)
+        unclear_concern_issue = detect_unclear_concern(wearer_agent)
+        good_concern_issue = detect_good_concern(wearer_agent)
+        good_excitement_issue = detect_good_excitement(wearer_agent)
+        tone_issue = detect_tone_incoherence(wearer_agent)
+        intensity_issue = detect_intensity_incoherence(wearer_agent)
 
         unclear_feedback_check["has_unclear_feedback"] = unclear_feedback_issue is not None
         unclear_feedback_check["issue"] = summarize_rule_issue(unclear_feedback_issue)
@@ -516,45 +523,57 @@ def play_graph():
         if reflection_tree is None and unclear_feedback_issue is not None:
             reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(
                 unclear_feedback_issue,
-                speaker=speaker_agent,
+                wearer=wearer_agent,
             ).to_dict()
 
         if reflection_tree is None and unclear_concern_issue is not None:
             reflection_tree = ReflectionTree().build_from_unclear_concerns_issue(
                 unclear_concern_issue,
-                speaker=speaker_agent,
+                wearer=wearer_agent,
                 blockers_without_actionables=unclear_concern_issue.get("blockers_without_actionables"),
             ).to_dict()
 
         if reflection_tree is None and tone_issue is not None:
             reflection_tree = ReflectionTree().build_from_incoherent_tone(
                 tone_issue["goal"],
-                speaker=speaker_agent,
+                wearer=wearer_agent,
             ).to_dict()
 
         if reflection_tree is None and intensity_issue is not None:
             reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(
                 intensity_issue["issue"],
-                speaker=speaker_agent,
+                wearer=wearer_agent,
             ).to_dict()
 
         if reflection_tree is None and good_feedback_issue is not None:
             reflection_tree = ReflectionTree().build_from_good_feedback_issue(
                 good_feedback_issue,
-                speaker=speaker_agent,
+                wearer=wearer_agent,
             ).to_dict()
 
         if reflection_tree is None and good_concern_issue is not None:
             reflection_tree = ReflectionTree().build_from_good_concern_issue(
                 good_concern_issue,
-                speaker=speaker_agent,
+                wearer=wearer_agent,
             ).to_dict()
 
         if reflection_tree is None and good_excitement_issue is not None:
             reflection_tree = ReflectionTree().build_from_good_excitement_issue(
                 good_excitement_issue,
-                speaker=speaker_agent,
+                wearer=wearer_agent,
             ).to_dict()
+
+    if reflection_tree is None and participant_unclear_feedback_issue is not None:
+        reflection_tree = ReflectionTree().build_from_participant_unclear_feedback_issue(
+            participant_unclear_feedback_issue,
+            agent=participant_unclear_feedback_issue.get("agent"),
+        ).to_dict()
+
+    if reflection_tree is None and participant_unclear_concern_issue is not None:
+        reflection_tree = ReflectionTree().build_from_participant_unclear_concern_issue(
+            participant_unclear_concern_issue,
+            agent=participant_unclear_concern_issue.get("agent"),
+        ).to_dict()
 
     print("\n=== GRAPH CREATED ===")
     for k, v in built["agents"].items():
@@ -590,16 +609,15 @@ def play_graph():
         reflection_path = DATA_DIR / reflection_filename
         reflection_path.write_text(json.dumps(reflection_tree, indent=2))
 
-        speaker_agent_name = None
-        if speaker_agent is not None:
-            # Try to get a readable name, fallback to id
-            speaker_agent_name = getattr(speaker_agent, 'name', None) or getattr(speaker_agent, 'role', None) or speaker_id
+        wearer_agent_name = None
+        if wearer_agent is not None:
+            wearer_agent_name = getattr(wearer_agent, 'name', None) or getattr(wearer_agent, 'role', None) or wearer_id
         else:
-            speaker_agent_name = speaker_id
+            wearer_agent_name = wearer_id
         latest_audio_record = find_latest_audio_record(reflection_tree.get("session_name", ""))
         rows, fieldnames = load_reflection_db_rows()
         rows.append({
-            "speaker_agent": speaker_agent_name,
+            "wearer_agent": wearer_agent_name,
             "session_name": reflection_tree.get("session_name", ""),
             "reflection_tree_file": str(reflection_path.name),
             "startms": reflection_tree.get("startMs", ""),
@@ -611,6 +629,7 @@ def play_graph():
 
     return jsonify({
         "message": "ok",
+        "wearer_agent": wearer_agent_name,
         "agents": {k: repr(v) for k, v in built["agents"].items()},
         "goals": {k: repr(v) for k, v in built["goals"].items()},
         "blockers": {k: repr(v) for k, v in built["blockers"].items()},
@@ -918,7 +937,7 @@ def list_reflections_for_user(user):
     rows, _ = load_reflection_db_rows()
     for row in rows:
         session = row.get("session_name", "")
-        if row.get("speaker_agent", "").lower() == user.lower() and session:
+        if row.get("wearer_agent", "").lower() == user.lower() and session:
             session_names.add(session)
     return jsonify({"user": user, "session_names": sorted(session_names)})
 
@@ -929,7 +948,7 @@ def list_reflection_files_for_user_session(user, session):
     results = []
     rows, _ = load_reflection_db_rows()
     for row in rows:
-        if row.get("speaker_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
+        if row.get("wearer_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
             results.append({
                 "reflection_tree_file": row.get("reflection_tree_file", ""),
                 "startms": row.get("startms", ""),

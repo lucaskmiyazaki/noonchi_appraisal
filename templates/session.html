@@ -21,6 +21,8 @@
       --green-stroke: #317b22;
       --blue-hl: #dbeafe;
       --blue-stroke: #1d4ed8;
+      --orange-hl: #ffd9b3;
+      --orange-stroke: #c86a1d;
       --card-radius: 16px;
     }
 
@@ -61,6 +63,7 @@
     .session-chunk.has-reflection-clarity { background: var(--yellow-hl); }
     .session-chunk.has-reflection-intensity { background: var(--green-hl); }
     .session-chunk.has-reflection-excellent-tone { background: var(--blue-hl); }
+    .session-chunk.has-reflection-clarification { background: var(--orange-hl); }
     .session-sidebar { position: relative; z-index: 1; min-width: 0; }
     .session-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; }
     .session-search-bar { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
@@ -83,6 +86,7 @@
     .session-reflection-card-clarity { background: var(--yellow-hl); }
     .session-reflection-card-intensity { background: var(--green-hl); }
     .session-reflection-card-excellent-tone { background: var(--blue-hl); }
+    .session-reflection-card-clarification { background: var(--orange-hl); }
     .session-reflection-card-default { background: #e5e7eb; }
     .reflection-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
     .reflection-link-path { fill: none; stroke-width: 1.5; opacity: 0.92; }
@@ -785,8 +789,17 @@
       const reflectionData = await reflectionsResponse.json();
       const reflections = reflectionData.reflections || [];
 
-      function getReflectionHighlightClass(reflectionType) {
-        const normalizedType = String(reflectionType || '').trim().toLowerCase();
+      function isParticipantClarificationReflection(reflection) {
+        const treeId = String(reflection?.tree_id || '').trim().toLowerCase();
+        return treeId === 'participant_unclear_concern' || treeId === 'participant_unclear_feedback';
+      }
+
+      function getReflectionHighlightClass(reflection) {
+        if (isParticipantClarificationReflection(reflection)) {
+          return 'has-reflection-clarification';
+        }
+
+        const normalizedType = String(reflection?.reflectionType || '').trim().toLowerCase();
 
         if (normalizedType === 'incoherent tone') {
           return 'has-reflection-tone';
@@ -807,26 +820,30 @@
         return '';
       }
 
-      function getReflectionCardClass(reflectionType) {
-        const highlightClass = getReflectionHighlightClass(reflectionType);
+      function getReflectionCardClass(reflection) {
+        const highlightClass = getReflectionHighlightClass(reflection);
         if (highlightClass === 'has-reflection-tone') return 'session-reflection-card-tone';
         if (highlightClass === 'has-reflection-clarity') return 'session-reflection-card-clarity';
         if (highlightClass === 'has-reflection-intensity') return 'session-reflection-card-intensity';
         if (highlightClass === 'has-reflection-excellent-tone') return 'session-reflection-card-excellent-tone';
+        if (highlightClass === 'has-reflection-clarification') return 'session-reflection-card-clarification';
         return 'session-reflection-card-default';
       }
 
-      function getReflectionStroke(reflectionType) {
-        const highlightClass = getReflectionHighlightClass(reflectionType);
+      function getReflectionStroke(reflection) {
+        const highlightClass = getReflectionHighlightClass(reflection);
         if (highlightClass === 'has-reflection-tone') return { color: '#ec4899', markerId: 'arrow-tone' };
         if (highlightClass === 'has-reflection-clarity') return { color: '#ca8a04', markerId: 'arrow-clarity' };
         if (highlightClass === 'has-reflection-intensity') return { color: '#16a34a', markerId: 'arrow-intensity' };
         if (highlightClass === 'has-reflection-excellent-tone') return { color: '#1d4ed8', markerId: 'arrow-excellent-tone' };
+        if (highlightClass === 'has-reflection-clarification') return { color: '#c86a1d', markerId: 'arrow-clarification' };
         return { color: '#6b7280', markerId: 'arrow-default' };
       }
 
-      function formatReflectionTypeLabel(reflectionType) {
-        const type = String(reflectionType || '').trim();
+      function formatReflectionTypeLabel(reflection) {
+        if (isParticipantClarificationReflection(reflection)) return 'Need for clarification';
+
+        const type = String(reflection?.reflectionType || '').trim();
         const normalizedType = type.toLowerCase();
         if (normalizedType === 'good feedback' || normalizedType === 'good concern' || normalizedType === 'good excitement') return 'excellent tone';
         if (normalizedType === 'incoherent intensity') return 'elevation';
@@ -961,6 +978,9 @@
             <marker id="arrow-clarity" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
               <path d="M0,0 L0,6 L9,3 z" fill="#ca8a04"></path>
             </marker>
+            <marker id="arrow-clarification" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#c86a1d"></path>
+            </marker>
             <marker id="arrow-intensity" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
               <path d="M0,0 L0,6 L9,3 z" fill="#16a34a"></path>
             </marker>
@@ -986,7 +1006,7 @@
             return;
           }
 
-          const stroke = getReflectionStroke(reflection.reflectionType);
+          const stroke = getReflectionStroke(reflection);
           const cardRect = cardNode.getBoundingClientRect();
           const targetX = cardRect.left - layoutRect.left;
           const targetY = cardRect.top - layoutRect.top + (cardRect.height / 2);
@@ -1036,7 +1056,7 @@
 
         sortedReflections.forEach((reflection, index) => {
           const item = document.createElement('div');
-          item.className = `session-reflection-item ${getReflectionCardClass(reflection.reflectionType)}`;
+          item.className = `session-reflection-item ${getReflectionCardClass(reflection)}`;
 
           const card = document.createElement('button');
           card.type = 'button';
@@ -1046,7 +1066,7 @@
 
           const title = document.createElement('span');
           title.className = 'session-reflection-card-title';
-          title.textContent = formatReflectionTypeLabel(reflection.reflectionType) || `reflection ${index + 1}`;
+          title.textContent = formatReflectionTypeLabel(reflection) || `reflection ${index + 1}`;
 
           const meta = document.createElement('span');
           meta.className = 'session-reflection-card-meta';
@@ -1141,7 +1161,7 @@
         transcriptSegments.forEach((chunk) => {
           const span = document.createElement('span');
           const reflection = findReflectionForChunk(chunk);
-          const reflectionClass = getReflectionHighlightClass(reflection?.reflectionType);
+          const reflectionClass = getReflectionHighlightClass(reflection);
           const chunkStart = Number(chunk.start);
           const chunkEnd = Number(chunk.end);
           const isRead = Number.isFinite(chunkEnd) && audio.currentTime >= chunkEnd;

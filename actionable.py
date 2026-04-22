@@ -1,3 +1,18 @@
+def _agent_label(agent):
+    if agent is None:
+        return "None"
+
+    name = getattr(agent, "name", "")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+
+    role = getattr(agent, "role", "")
+    if isinstance(role, str) and role.strip():
+        return role.strip().capitalize()
+
+    return "Agent"
+
+
 class Actionable:
     def __init__(self, owner=None, target=None, text=""):
         self.owner = owner    # Agent responsible for action
@@ -14,12 +29,6 @@ class Actionable:
         self.text = text
 
     def __repr__(self):
-        owner = (
-            "None" if self.owner is None
-            else ("Speaker" if self.owner.is_speaker else "Listener")
-        )
-        target = (
-            "None" if self.target is None
-            else ("Speaker" if self.target.is_speaker else "Listener")
-        )
+        owner = _agent_label(self.owner)
+        target = _agent_label(self.target)
         return f"Actionable(owner={owner}, target={target}, text='{self.text}')"

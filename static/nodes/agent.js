@@ -41,9 +41,18 @@ function nameFromPad(v, a, d) {
   return dState === 'high' ? 'disappointed' : 'sad';
 }
 
-export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromId = null, _id = null } = {}) {
+function normalizeAgentRole(role, fallback = 'participants') {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (normalized === 'listener') return 'participants';
+  if (normalized === 'passive') return 'external';
+  if (['wearer', 'participants', 'external'].includes(normalized)) return normalized;
+  return fallback;
+}
+
+export function createAgentNode({ x = 80, y = 100, role = 'wearer', linkedFromId = null, _id = null } = {}) {
   const id = _id || nextId('agent');
-  const node = createNodeBase({ id, type: 'agent', title: 'Agent', x, y, badge: role });
+  const node = createNodeBase({ id, type: 'agent', title: 'Agent', x, y, badge: normalizeAgentRole(role, 'wearer') });
   const body = node.querySelector('.node-body');
 
   body.appendChild(createField('Participant name', '<input type="text" placeholder="Type participant name">'));
@@ -141,7 +150,7 @@ export function createAgentNode({ x = 80, y = 100, role = 'speaker', linkedFromI
 export function getAgentData(node) {
   const nameInput = node.querySelector('input[type="text"]');
   const sliders = node.querySelectorAll('.slider-row input');
-  const role = node.querySelector('.small-tag')?.textContent.trim() || 'listener';
+  const role = normalizeAgentRole(node.querySelector('.small-tag')?.textContent.trim(), 'participants');
 
   return {
     name: nameInput?.value || '',

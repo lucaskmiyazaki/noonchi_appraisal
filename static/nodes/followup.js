@@ -19,7 +19,7 @@ export function createFollowupNode({ x = 500, y = 320, linkedFromId = null, mode
   agentBtn.onclick = () => {
     const left = parseFloat(node.style.left) || x;
     const top = parseFloat(node.style.top) || y;
-    createAgentNode({ x: left + 320, y: top + 20, role: 'listener', linkedFromId: id });
+    createAgentNode({ x: left + 320, y: top + 20, role: 'participants', linkedFromId: id });
   };
 
   buttonRow.appendChild(agentBtn);

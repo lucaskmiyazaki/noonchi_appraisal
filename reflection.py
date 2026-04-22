@@ -3,6 +3,7 @@ from agent import Agent
 from blocker import Blocker
 from constants import DEFAULT_PAD, GOAL_STATUS_ON_GOING
 from constants import GOAL_STATUS_SUCCESS, GOAL_STATUS_FAIL
+from constants import ROLE_PARTICIPANTS, ROLE_WEARER, normalize_role
 from emotion import Emotion
 from goal import Goal
 from question import Question
@@ -42,11 +43,11 @@ class ReflectionTree:
             },
         }
 
-    def _voice_tone_text(self, speaker):
-        if speaker is None or not getattr(speaker, "emotion", None):
+    def _voice_tone_text(self, wearer):
+        if wearer is None or not getattr(wearer, "emotion", None):
             return "unknown"
 
-        emotion = speaker.emotion
+        emotion = wearer.emotion
         return (
             f"{emotion.name} "
             f"(V={emotion.valence:.2f}, A={emotion.arousal:.2f}, D={emotion.dominance:.2f})"
@@ -62,6 +63,12 @@ class ReflectionTree:
         if isinstance(role, str) and role.strip():
             return role.strip()
         return fallback
+
+    def _agent_possessive_label(self, agent, fallback="your colleague"):
+        label = self._agent_label(agent, fallback=fallback)
+        if label.endswith("s"):
+            return f"{label}'"
+        return f"{label}'s"
 
     def build_adjacency(self, edges):
         outgoing = {}
@@ -103,12 +110,11 @@ class ReflectionTree:
                     dominance=float(data.get("dominance", DEFAULT_PAD[2])),
                 )
 
-                role = data.get("role", "listener")
+                role = normalize_role(data.get("role"), default=ROLE_PARTICIPANTS)
 
-                agent = Agent(emotion=emotion)
-                agent.role = role
+                agent = Agent(role=role, emotion=emotion)
                 agent.name = data.get("name", "")
-                agent.is_speaker = role == "speaker"
+                agent.is_wearer = role == ROLE_WEARER
 
                 agents[node_id] = agent
 
@@ -188,19 +194,19 @@ class ReflectionTree:
             actionable.target = targets[0] if targets else None
 
         for question_id, question in questions.items():
-            speakers = []
+            askers = []
             targets = []
 
             for parent_id in incoming.get(question_id, []):
                 if parent_id in agents:
-                    speakers.append(agents[parent_id])
+                    askers.append(agents[parent_id])
 
             for child_id in outgoing.get(question_id, []):
                 if child_id in agents:
                     targets.append(agents[child_id])
 
-            question.speakers = speakers
-            question.speaker = speakers[0] if speakers else None
+            question.askers = askers
+            question.asker = askers[0] if askers else None
             question.targets = targets
             question.target = targets[0] if targets else None
 
@@ -224,9 +230,9 @@ class ReflectionTree:
             "root_agents": root_agents,
         }
 
-    def build_from_unclear_feedback_issue(self, issue, speaker=None):
+    def build_from_unclear_feedback_issue(self, issue, wearer=None):
         """
-        Builds reflection tree for unclear feedback when speaker sounds angry.
+        Builds reflection tree for unclear feedback when wearer sounds angry.
 
         Branches:
         - responsible agent unclear
@@ -386,9 +392,9 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_unclear_concerns_issue(self, issue, speaker=None, blockers_without_actionables=None):
+    def build_from_unclear_concerns_issue(self, issue, wearer=None, blockers_without_actionables=None):
         """
-        Builds reflection tree for unclear concerns when speaker sounds concerned.
+        Builds reflection tree for unclear concerns when wearer sounds concerned.
 
         Branches:
         - concerns unclear
@@ -458,7 +464,99 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_good_concern_issue(self, issue, speaker=None):
+    def build_from_participant_unclear_concern_issue(self, issue, agent=None):
+        participant = agent or issue.get("agent")
+        participant_label = self._agent_possessive_label(participant, fallback="your colleague")
+
+        observation = ReflectionNode(
+            id="observation",
+            text=f"{participant_label.capitalize()} voice suggests concern.",
+            options=[{"label": "Continue", "next": "clarity_question"}],
+            node_type="audio",
+        )
+
+        clarity_question = ReflectionNode(
+            id="clarity_question",
+            text="Is it clear for you what they are concerned about and what you can do to mitigate this concern?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "mitigation_journal"},
+                {"label": "No", "value": "no", "next": "ask_followup"},
+            ],
+            node_type="question",
+        )
+
+        mitigation_journal = ReflectionNode(
+            id="mitigation_journal",
+            text="Can you list the points of concern and actionable steps for mitigation?",
+            options=[],
+            node_type="journaling",
+        )
+
+        ask_followup = ReflectionNode(
+            id="ask_followup",
+            text="You might want to ask them what their concerns are and what you can do to mitigate them.",
+            options=[],
+            node_type="journaling",
+        )
+
+        self.tree_id = "participant_unclear_concern"
+        self.reflection_type = "participant unclear concern"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "clarity_question": clarity_question,
+            "mitigation_journal": mitigation_journal,
+            "ask_followup": ask_followup,
+        }
+        return self
+
+    def build_from_participant_unclear_feedback_issue(self, issue, agent=None):
+        participant = agent or issue.get("agent")
+        participant_label = self._agent_possessive_label(participant, fallback="your colleague")
+
+        observation = ReflectionNode(
+            id="observation",
+            text=f"{participant_label.capitalize()} voice suggests they are upset.",
+            options=[{"label": "Continue", "next": "clarity_question"}],
+            node_type="audio",
+        )
+
+        clarity_question = ReflectionNode(
+            id="clarity_question",
+            text="Is it clear for you what they are upset about and what you can do to improve?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "improvement_journal"},
+                {"label": "No", "value": "no", "next": "ask_followup"},
+            ],
+            node_type="question",
+        )
+
+        improvement_journal = ReflectionNode(
+            id="improvement_journal",
+            text="Can you list all their feedback and actionable steps for you to improve?",
+            options=[],
+            node_type="journaling",
+        )
+
+        ask_followup = ReflectionNode(
+            id="ask_followup",
+            text="You might want to ask them what the problems are and actionable steps for improvement.",
+            options=[],
+            node_type="journaling",
+        )
+
+        self.tree_id = "participant_unclear_feedback"
+        self.reflection_type = "participant unclear feedback"
+        self.start_node = "observation"
+        self.nodes = {
+            "observation": observation,
+            "clarity_question": clarity_question,
+            "improvement_journal": improvement_journal,
+            "ask_followup": ask_followup,
+        }
+        return self
+
+    def build_from_good_concern_issue(self, issue, wearer=None):
         goal = issue.get("goal")
         goal_text = getattr(goal, "text", "this goal")
 
@@ -508,7 +606,7 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_good_feedback_issue(self, issue, speaker=None):
+    def build_from_good_feedback_issue(self, issue, wearer=None):
         goal = issue.get("goal")
         goal_text = getattr(goal, "text", "this goal")
 
@@ -596,7 +694,7 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_good_excitement_issue(self, issue, speaker=None):
+    def build_from_good_excitement_issue(self, issue, wearer=None):
         goal = issue.get("goal")
         goal_text = getattr(goal, "text", "this goal")
 
@@ -644,7 +742,7 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_incoherent_intensity_issue(self, issue, speaker=None):
+    def build_from_incoherent_intensity_issue(self, issue, wearer=None):
         """
         Builds reflection tree for intensity mismatches.
 
@@ -751,10 +849,10 @@ class ReflectionTree:
         }
         return self
 
-    def build_from_incoherent_tone(self, goal, speaker=None):
+    def build_from_incoherent_tone(self, goal, wearer=None):
         """
         Builds a reflection tree for:
-        Positive outcome, negative tone, speaker
+        Positive outcome, negative tone, wearer
 
         Expected logic:
         Observation:
@@ -846,7 +944,7 @@ class ReflectionTree:
                 node_type="journaling",
             )
 
-            self.tree_id = "positive_outcome_negative_tone_speaker"
+            self.tree_id = "positive_outcome_negative_tone_wearer"
             self.reflection_type = "incoherent tone"
             self.start_node = "observation"
             self.nodes = {

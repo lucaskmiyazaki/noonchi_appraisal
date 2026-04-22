@@ -32,12 +32,28 @@ GOAL_STATUSES = {
     GOAL_STATUS_FAIL,
 }
 
-ROLE_SPEAKER = "speaker"
-ROLE_LISTENER = "listener"
-ROLE_PASSIVE = "passive"
+ROLE_WEARER = "wearer"
+ROLE_PARTICIPANTS = "participants"
+ROLE_EXTERNAL = "external"
 
 ROLES = {
-    ROLE_SPEAKER,
-    ROLE_LISTENER,
-    ROLE_PASSIVE,
+    ROLE_WEARER,
+    ROLE_PARTICIPANTS,
+    ROLE_EXTERNAL,
 }
+
+LEGACY_ROLE_ALIASES = {
+    "listener": ROLE_PARTICIPANTS,
+    "passive": ROLE_EXTERNAL,
+}
+
+
+def normalize_role(role, default=ROLE_PARTICIPANTS):
+    if role is None:
+        return default
+
+    normalized = str(role).strip().lower()
+    if not normalized:
+        return default
+
+    return LEGACY_ROLE_ALIASES.get(normalized, normalized)

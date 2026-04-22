@@ -8,6 +8,7 @@ import { clearSelectedTranscriptSegments, getSelectedTimeRange } from './sidebar
 
 const toolbarActions = document.getElementById('toolbarActions');
 const reflectionMeta = document.getElementById('reflectionMeta');
+const reflectionWearerName = document.getElementById('reflectionWearerName');
 const reflectionSessionName = document.getElementById('reflectionSessionName');
 const reflectionStartTime = document.getElementById('reflectionStartTime');
 const reflectionEndTime = document.getElementById('reflectionEndTime');
@@ -56,6 +57,7 @@ function syncToolbarState() {
 
   if (isReflectionBoard) {
     const metadata = board?.metadata || {};
+    if (reflectionWearerName) reflectionWearerName.textContent = metadata.wearerName || '-';
     if (reflectionSessionName) reflectionSessionName.textContent = metadata.sessionName || '-';
     if (reflectionStartTime) reflectionStartTime.textContent = formatReflectionTime(metadata.startMs);
     if (reflectionEndTime) reflectionEndTime.textContent = formatReflectionTime(metadata.endMs);
@@ -77,7 +79,7 @@ addAgentBtn.onclick = () => {
   createAgentNode({
     x: 80 + Math.random() * 120,
     y: 120 + Math.random() * 80,
-    role: 'speaker',
+    role: 'wearer',
   });
 };
 
@@ -128,6 +130,7 @@ playBtn.onclick = async () => {
     if (result?.reflection_tree) {
       createReflectionTab(result.reflection_tree, {
         ...(timeRange || {}),
+        wearerName: result.wearer_agent || '',
         reflectionFile: result.reflection_tree_file || '',
       });
       clearSelectedTranscriptSegments();

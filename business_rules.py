@@ -7,37 +7,45 @@ from constants import (
     PAD_LOW_AROUSAL_THRESHOLD,
     PAD_NEUTRAL_MAX,
     PAD_NEUTRAL_MIN,
+    ROLE_PARTICIPANTS,
+    ROLE_WEARER,
 )
 
 
-def find_speaker(agents):
+def find_wearer(agents):
     for agent_id, agent in agents.items():
-        if getattr(agent, "role", "") == "speaker":
+        name = getattr(agent, "name", "")
+        has_name = isinstance(name, str) and bool(name.strip())
+        if getattr(agent, "role", "") == ROLE_WEARER and has_name:
             return agent_id, agent
     return None, None
 
 
-def get_speaker_goals(speaker_agent):
-    return list(getattr(speaker_agent, "goals", []))
+def get_agent_goals(agent):
+    return list(getattr(agent, "goals", []))
 
 
-def get_speaker_blockers(speaker_agent):
+def get_wearer_goals(wearer_agent):
+    return get_agent_goals(wearer_agent)
+
+
+def get_wearer_blockers(wearer_agent):
     blockers = []
 
-    for goal in get_speaker_goals(speaker_agent):
+    for goal in get_wearer_goals(wearer_agent):
         blockers.extend(getattr(goal, "blockers", []))
 
     return blockers
 
 
-def detect_tone_incoherence(speaker_agent):
-    emotion = getattr(speaker_agent, "emotion", None)
+def detect_tone_incoherence(wearer_agent):
+    emotion = getattr(wearer_agent, "emotion", None)
     if emotion is None:
         return None
 
     incoherent_goals = []
 
-    for goal in get_speaker_goals(speaker_agent):
+    for goal in get_wearer_goals(wearer_agent):
         if goal.status == GOAL_STATUS_SUCCESS and emotion.valence < PAD_NEUTRAL_MIN:
             incoherent_goals.append(goal)
         elif goal.status == GOAL_STATUS_FAIL and emotion.valence > PAD_NEUTRAL_MAX:
@@ -53,15 +61,15 @@ def detect_tone_incoherence(speaker_agent):
     }
 
 
-def detect_intensity_incoherence(speaker_agent):
-    emotion = getattr(speaker_agent, "emotion", None)
+def detect_intensity_incoherence(wearer_agent):
+    emotion = getattr(wearer_agent, "emotion", None)
     if emotion is None:
         return None
 
     arousal = emotion.arousal
     issues = []
 
-    for goal in get_speaker_goals(speaker_agent):
+    for goal in get_wearer_goals(wearer_agent):
         lower_threshold = getattr(goal, "lower_arousal_threshold", PAD_LOW_AROUSAL_THRESHOLD)
         goal_upper_threshold = getattr(goal, "upper_arousal_threshold", PAD_HIGH_AROUSAL_THRESHOLD)
 
@@ -92,7 +100,7 @@ def detect_intensity_incoherence(speaker_agent):
             is_other_blame = (
                 blocker is not None
                 and blocker_responsible_agent is not None
-                and blocker_responsible_agent is not speaker_agent
+                and blocker_responsible_agent is not wearer_agent
             )
 
             kind = (
@@ -153,14 +161,23 @@ def blocker_is_clear_for_concern(blocker):
 
 
 def goal_has_clear_concern_context(goal):
+    goal_text = getattr(goal, "text", "")
+    has_goal_text = isinstance(goal_text, str) and bool(goal_text.strip())
+    if not has_goal_text:
+        return False
+
     blockers = list(getattr(goal, "blockers", []))
     if goal_has_actionable(goal):
         return True
     return bool(blockers) and all(blocker_is_clear_for_concern(blocker) for blocker in blockers)
 
 
-def find_first_unclear_concern_target(speaker_agent):
-    for goal in get_speaker_goals(speaker_agent):
+def find_first_unclear_concern_target(agent):
+    for goal in get_agent_goals(agent):
+        goal_text = getattr(goal, "text", "")
+        if not isinstance(goal_text, str) or not goal_text.strip():
+            return goal, None
+
         if goal_has_actionable(goal):
             continue
 
@@ -189,15 +206,15 @@ def summarize_blockers_actionables(blockers):
     return all_blockers_have_actionable, blockers_without_actionables
 
 
-def find_goal_for_blocker(speaker_agent, blocker):
-    for goal in get_speaker_goals(speaker_agent):
+def find_goal_for_blocker(wearer_agent, blocker):
+    for goal in get_wearer_goals(wearer_agent):
         if blocker is None or blocker in getattr(goal, "blockers", []):
             return goal
     return None
 
 
-def get_primary_goal_and_blocker(speaker_agent):
-    goals = get_speaker_goals(speaker_agent)
+def get_primary_goal_and_blocker(wearer_agent):
+    goals = get_wearer_goals(wearer_agent)
     if not goals:
         return None, None
 
@@ -210,28 +227,61 @@ def get_primary_goal_and_blocker(speaker_agent):
     return primary_goal, primary_blocker
 
 
-def detect_unclear_feedback(speaker_agent):
-    looks_angry, _ = classify_emotional_profile(speaker_agent)
+def detect_unclear_feedback(wearer_agent):
+    looks_angry, _ = classify_emotional_profile(wearer_agent)
     if not looks_angry:
         return None
 
-    goals = get_speaker_goals(speaker_agent)
+    goals = get_wearer_goals(wearer_agent)
     if not goals:
         return {
             "kind": "unclear_feedback",
             "goal": None,
             "blocker": None,
+            "blockers_without_actionables": [],
+        }
+
+    goal, blocker = find_first_unclear_concern_target(wearer_agent)
+    if goal is None and blocker is None:
+        return None
+
+    blockers_without_actionables = []
+    if blocker is not None and not blocker_has_actionable(blocker):
+        blockers_without_actionables.append(blocker)
+
+    return {
+        "kind": "unclear_feedback",
+        "goal": goal,
+        "blocker": blocker,
+        "blockers_without_actionables": blockers_without_actionables,
+    }
+
+
+def detect_participant_unclear_feedback(agents):
+    for agent_id, agent in agents.items():
+        if getattr(agent, "role", "") != ROLE_PARTICIPANTS:
+            continue
+
+        issue = detect_unclear_feedback(agent)
+        if issue is None:
+            continue
+
+        return {
+            **issue,
+            "kind": "participant_unclear_feedback",
+            "agent": agent,
+            "agent_id": agent_id,
         }
 
     return None
 
 
-def detect_good_feedback(speaker_agent):
-    looks_angry, _ = classify_emotional_profile(speaker_agent)
+def detect_good_feedback(wearer_agent):
+    looks_angry, _ = classify_emotional_profile(wearer_agent)
     if not looks_angry:
         return None
 
-    goals = get_speaker_goals(speaker_agent)
+    goals = get_wearer_goals(wearer_agent)
     if not goals:
         return None
 
@@ -251,12 +301,12 @@ def detect_good_feedback(speaker_agent):
     }
 
 
-def detect_unclear_concern(speaker_agent):
-    _, looks_concerned = classify_emotional_profile(speaker_agent)
+def detect_unclear_concern(wearer_agent):
+    _, looks_concerned = classify_emotional_profile(wearer_agent)
     if not looks_concerned:
         return None
 
-    goals = get_speaker_goals(speaker_agent)
+    goals = get_agent_goals(wearer_agent)
     if not goals:
         return {
             "kind": "unclear_concern",
@@ -265,15 +315,47 @@ def detect_unclear_concern(speaker_agent):
             "blockers_without_actionables": [],
         }
 
+    goal, blocker = find_first_unclear_concern_target(wearer_agent)
+    if goal is None and blocker is None:
+        return None
+
+    blockers_without_actionables = []
+    if blocker is not None and not blocker_has_actionable(blocker):
+        blockers_without_actionables.append(blocker)
+
+    return {
+        "kind": "unclear_concern",
+        "goal": goal,
+        "blocker": blocker,
+        "blockers_without_actionables": blockers_without_actionables,
+    }
+
+
+def detect_participant_unclear_concern(agents):
+    for agent_id, agent in agents.items():
+        if getattr(agent, "role", "") != ROLE_PARTICIPANTS:
+            continue
+
+        issue = detect_unclear_concern(agent)
+        if issue is None:
+            continue
+
+        return {
+            **issue,
+            "kind": "participant_unclear_concern",
+            "agent": agent,
+            "agent_id": agent_id,
+        }
+
     return None
 
 
-def detect_good_concern(speaker_agent):
-    _, looks_concerned = classify_emotional_profile(speaker_agent)
+def detect_good_concern(wearer_agent):
+    _, looks_concerned = classify_emotional_profile(wearer_agent)
     if not looks_concerned:
         return None
 
-    goals = get_speaker_goals(speaker_agent)
+    goals = get_wearer_goals(wearer_agent)
     if not goals:
         return None
 
@@ -293,8 +375,8 @@ def detect_good_concern(speaker_agent):
     }
 
 
-def detect_good_excitement(speaker_agent):
-    emotion = getattr(speaker_agent, "emotion", None)
+def detect_good_excitement(wearer_agent):
+    emotion = getattr(wearer_agent, "emotion", None)
     if emotion is None:
         return None
 
@@ -304,7 +386,7 @@ def detect_good_excitement(speaker_agent):
     if valence <= PAD_NEUTRAL_MAX or arousal <= PAD_NEUTRAL_MAX:
         return None
 
-    goals = get_speaker_goals(speaker_agent)
+    goals = get_wearer_goals(wearer_agent)
     if not goals:
         return None
 
@@ -368,8 +450,8 @@ def summarize_intensity_issue(intensity_issue):
     ]
 
 
-def classify_emotional_profile(speaker_agent):
-    emotion = getattr(speaker_agent, "emotion", None)
+def classify_emotional_profile(wearer_agent):
+    emotion = getattr(wearer_agent, "emotion", None)
     if emotion is None:
         return False, False
 

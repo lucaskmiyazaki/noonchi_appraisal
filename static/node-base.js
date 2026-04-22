@@ -35,7 +35,7 @@ export function createNodeBase({ id, type, title, x, y, badge }) {
   const tag = node.querySelector('.small-tag');
 
   if (type === 'agent') {
-    const values = ['speaker', 'listener', 'passive'];
+    const values = ['wearer', 'participants', 'external'];
     const advance = (e) => {
       e.stopPropagation();
       const current = tag.textContent.trim();
