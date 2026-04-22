@@ -72,11 +72,6 @@
     .dashboard-bar.c { height: 60px; }
     .dashboard-bar.d { height: 34px; }
     .dashboard-chart-axis { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 11px; color: #64748b; }
-    .dashboard-add-card { display: flex; align-items: center; justify-content: center; min-height: 184px; border-radius: 20px; background: rgba(241, 245, 249, 0.75); box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9); }
-    .dashboard-plus { position: relative; width: 64px; height: 64px; }
-    .dashboard-plus::before, .dashboard-plus::after { content: ''; position: absolute; inset: 0; margin: auto; background: #1f2937; border-radius: 999px; }
-    .dashboard-plus::before { width: 52px; height: 2px; }
-    .dashboard-plus::after { width: 2px; height: 52px; }
 
     @media (max-width: 1080px) {
       .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -145,25 +140,29 @@
             </div>
           </section>
 
-          <section class="dashboard-card">
+          <section id="nudgeSettingsCard" class="dashboard-card is-link">
             <h2>Vibration Alerts on SmartWatch</h2>
             <div class="dashboard-card-body">
               <div id="nudgeCount" class="dashboard-nudge-count">0</div>
               <div class="dashboard-nudge-list">
                 <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
-                  <span>Elevation</span>
-                  <span class="dashboard-switch is-off"></span>
-                </button>
-                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
                   <span>Tone Difference</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
                 <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
-                  <span>Unclear Feedback</span>
+                  <span>Elevation</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
                 <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
-                  <span>Unclear Concern</span>
+                  <span>Unclear Intent</span>
+                  <span class="dashboard-switch is-off"></span>
+                </button>
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                  <span>Excellent Tone</span>
+                  <span class="dashboard-switch is-off"></span>
+                </button>
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                  <span>Need for Clarification</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
               </div>
@@ -188,10 +187,6 @@
             <h2>Journaling (WIP)</h2>
             <div class="dashboard-card-body"></div>
           </section>
-
-          <section class="dashboard-add-card" aria-hidden="true">
-            <div class="dashboard-plus"></div>
-          </section>
         </div>
       </div>
     </main>
@@ -209,6 +204,7 @@
     const upcomingAttendees = document.getElementById('upcomingAttendees');
     const upcomingOpen = document.getElementById('upcomingOpen');
     const nudgeCount = document.getElementById('nudgeCount');
+    const nudgeSettingsCard = document.getElementById('nudgeSettingsCard');
     const nudgeToggleButtons = Array.from(document.querySelectorAll('[data-nudge-toggle]'));
     const emotionToday = document.getElementById('emotionToday');
     const practiceToneCard = document.getElementById('practiceToneCard');
@@ -252,6 +248,18 @@
         return;
       }
       window.location.href = `/${encodeURIComponent(user)}/analysis`;
+    });
+
+    nudgeSettingsCard?.addEventListener('click', (event) => {
+      if (event.target.closest('[data-nudge-toggle]')) {
+        return;
+      }
+
+      const user = currentUser.trim();
+      if (!user) {
+        return;
+      }
+      window.location.href = `/${encodeURIComponent(user)}/nudges`;
     });
 
     nudgeToggleButtons.forEach((button) => {

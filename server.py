@@ -425,6 +425,10 @@ def user_practice(user_name):
 def user_analysis(user_name):
     return render_template("analysis.html", current_user=user_name)
 
+@app.get("/<user_name>/nudges")
+def user_nudges(user_name):
+    return render_template("nudge_settings.html", current_user=user_name)
+
 @app.get("/<user_name>")
 def user_sessions(user_name):
     return render_template("dashboard.html", current_user=user_name)

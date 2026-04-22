@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nudge Settings</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root {
+      --bg-main: #f3f6fa;
+      --panel-bg: rgba(255, 255, 255, 0.84);
+      --sidebar-bg: #e5ebf4;
+      --text-dark: #111827;
+      --text-muted: #64748b;
+      --border-soft: rgba(226, 232, 240, 0.92);
+      --chip-bg: #eef2f7;
+      --chip-active-bg: #111827;
+      --chip-active-text: #ffffff;
+      --card-radius: 22px;
+      --pink-hl: #fde0eb;
+      --yellow-hl: #fef2b6;
+      --green-hl: #bdf1aa;
+      --blue-hl: #dbeafe;
+      --orange-hl: #ffd9b3;
+      --neutral-hl: #f1f5f9;
+    }
+
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-dark);
+    }
+
+    .nudge-layout {
+      display: grid;
+      grid-template-columns: 80px minmax(0, 1fr);
+      gap: 16px;
+      height: 100vh;
+      width: 100vw;
+      padding: 16px;
+    }
+
+    .app-nav {
+      background: var(--sidebar-bg);
+      border-radius: 0 24px 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0;
+      z-index: 3;
+    }
+
+    .app-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      font-weight: 700;
+      margin-bottom: auto;
+      text-decoration: none;
+    }
+
+    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .app-nav-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background: transparent;
+      font-size: 18px;
+      text-decoration: none;
+    }
+
+    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
+    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+
+    .nudge-main {
+      min-width: 0;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(189, 219, 246, 0.9) 0%, rgba(228, 238, 248, 0.88) 52%, rgba(247, 247, 247, 0.96) 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      overflow-y: auto;
+    }
+
+    .nudge-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px 28px 36px;
+    }
+
+    .nudge-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .nudge-title {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .nudge-subtitle {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: #334155;
+      max-width: 520px;
+    }
+
+    .nudge-search-btn {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--text-dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 20px rgba(148, 163, 184, 0.14);
+    }
+
+    .nudge-search-btn svg { width: 18px; height: 18px; stroke: currentColor; }
+
+    .nudge-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px;
+    }
+
+    .nudge-card {
+      min-height: 188px;
+      border-radius: var(--card-radius);
+      background: var(--panel-bg);
+      box-shadow: 0 18px 40px rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(255,255,255,0.7);
+      padding: 22px 22px 20px;
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nudge-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 6px;
+      background: var(--accent, #111827);
+      opacity: 0.96;
+    }
+
+    .nudge-card-header {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      padding-left: 6px;
+    }
+
+    .nudge-card-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .nudge-card-copy {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      max-width: 320px;
+    }
+
+    .nudge-toggle {
+      width: 42px;
+      height: 24px;
+      border-radius: 999px;
+      border: 2px solid #111827;
+      background: #111827;
+      position: relative;
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+
+    .nudge-toggle::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .nudge-toggle.is-off {
+      background: transparent;
+    }
+
+    .nudge-toggle.is-off::after {
+      right: auto;
+      left: 1px;
+    }
+
+    .nudge-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 24px;
+      padding-left: 6px;
+    }
+
+    .nudge-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .nudge-levels {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .nudge-chip {
+      border: 0;
+      border-radius: 12px;
+      min-height: 34px;
+      background: var(--chip-bg);
+      color: #3f3f46;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+    }
+
+    .nudge-chip.is-active {
+      background: var(--chip-active-bg);
+      color: var(--chip-active-text);
+      box-shadow: 0 10px 16px rgba(15, 23, 42, 0.16);
+    }
+
+    .nudge-card.is-custom {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.62);
+      box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.94);
+    }
+
+    .nudge-card.is-custom::before {
+      display: none;
+    }
+
+    .nudge-custom-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      color: #1f2937;
+      text-align: center;
+    }
+
+    .nudge-custom-plus {
+      position: relative;
+      width: 56px;
+      height: 56px;
+    }
+
+    .nudge-custom-plus::before,
+    .nudge-custom-plus::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      background: #111827;
+      border-radius: 999px;
+    }
+
+    .nudge-custom-plus::before { width: 40px; height: 2px; }
+    .nudge-custom-plus::after { width: 2px; height: 40px; }
+
+    .nudge-custom-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    @media (max-width: 980px) {
+      .nudge-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      body { overflow: auto; }
+      .nudge-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+      .app-nav { display: none; }
+      .nudge-inner { padding: 24px 18px 34px; }
+      .nudge-header { align-items: start; }
+      .nudge-title { font-size: 30px; }
+    }
+  </style>
+</head>
+{% set resolved_user = current_user or '' %}
+{% set active_nav_icon = 'regulation' %}
+{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
+{% set nudges_nav_href = '/' ~ (resolved_user|urlencode) ~ '/nudges' %}
+<body data-current-user="{{ resolved_user }}">
+  <div class="nudge-layout">
+    {% include '_left_sidebar.html' %}
+
+    <main class="nudge-main">
+      <div class="nudge-inner">
+        <header class="nudge-header">
+          <div>
+            <h1 class="nudge-title">Nudge Settings</h1>
+            <p class="nudge-subtitle">Tune which smartwatch nudges stay active during meetings and how sensitive each one should be.</p>
+          </div>
+          <button class="nudge-search-btn" type="button" aria-label="Search nudge settings">
+            <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </button>
+        </header>
+
+        <section class="nudge-grid" aria-label="Nudge settings">
+          <article class="nudge-card" style="--accent: #b52a65; --accent-soft: var(--pink-hl);">
+            <div class="nudge-card-header">
+              <div>
+                <h2 class="nudge-card-title">Tone Difference</h2>
+                <p class="nudge-card-copy">Get notified when your tone lands sharper or harsher than the context suggests.</p>
+              </div>
+              <button class="nudge-toggle" type="button" aria-label="Toggle Tone Difference" aria-pressed="true"></button>
+            </div>
+            <div class="nudge-card-body">
+              <div class="nudge-label">Sensitivity</div>
+              <div class="nudge-levels">
+                <button class="nudge-chip" type="button">Low</button>
+                <button class="nudge-chip is-active" type="button">Medium</button>
+                <button class="nudge-chip" type="button">High</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="nudge-card" style="--accent: #317b22; --accent-soft: var(--green-hl);">
+            <div class="nudge-card-header">
+              <div>
+                <h2 class="nudge-card-title">Elevation</h2>
+                <p class="nudge-card-copy">Get notified when your emotional intensity rises enough to affect how your message lands.</p>
+              </div>
+              <button class="nudge-toggle" type="button" aria-label="Toggle Elevation" aria-pressed="true"></button>
+            </div>
+            <div class="nudge-card-body">
+              <div class="nudge-label">Sensitivity</div>
+              <div class="nudge-levels">
+                <button class="nudge-chip" type="button">Low</button>
+                <button class="nudge-chip" type="button">Medium</button>
+                <button class="nudge-chip is-active" type="button">High</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="nudge-card" style="--accent: #9d7b27; --accent-soft: var(--yellow-hl);">
+            <div class="nudge-card-header">
+              <div>
+                <h2 class="nudge-card-title">Unclear Intent</h2>
+                <p class="nudge-card-copy">Get notified when your reaction shows friction but your intended goal or next step is missing.</p>
+              </div>
+              <button class="nudge-toggle is-off" type="button" aria-label="Toggle Unclear Intent" aria-pressed="false"></button>
+            </div>
+            <div class="nudge-card-body">
+              <div class="nudge-label">Sensitivity</div>
+              <div class="nudge-levels">
+                <button class="nudge-chip is-active" type="button">Low</button>
+                <button class="nudge-chip" type="button">Medium</button>
+                <button class="nudge-chip" type="button">High</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="nudge-card" style="--accent: #1d4ed8; --accent-soft: var(--blue-hl);">
+            <div class="nudge-card-header">
+              <div>
+                <h2 class="nudge-card-title">Excellent Tone</h2>
+                <p class="nudge-card-copy">Get notified when your tone lands especially well so you can recognize and repeat it.</p>
+              </div>
+              <button class="nudge-toggle is-off" type="button" aria-label="Toggle Excellent Tone" aria-pressed="false"></button>
+            </div>
+            <div class="nudge-card-body">
+              <div class="nudge-label">Sensitivity</div>
+              <div class="nudge-levels">
+                <button class="nudge-chip" type="button">Low</button>
+                <button class="nudge-chip is-active" type="button">Medium</button>
+                <button class="nudge-chip" type="button">High</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="nudge-card" style="--accent: #c86a1d; --accent-soft: var(--orange-hl);">
+            <div class="nudge-card-header">
+              <div>
+                <h2 class="nudge-card-title">Need for Clarification</h2>
+                <p class="nudge-card-copy">Get notified when a participant sounds concerned or upset and it is not yet clear what needs clarification.</p>
+              </div>
+              <button class="nudge-toggle" type="button" aria-label="Toggle Need for Clarification" aria-pressed="true"></button>
+            </div>
+            <div class="nudge-card-body">
+              <div class="nudge-label">Sensitivity</div>
+              <div class="nudge-levels">
+                <button class="nudge-chip" type="button">Low</button>
+                <button class="nudge-chip is-active" type="button">Medium</button>
+                <button class="nudge-chip" type="button">High</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="nudge-card is-custom" aria-hidden="true">
+            <div class="nudge-custom-inner">
+              <div class="nudge-custom-plus"></div>
+              <h2 class="nudge-custom-title">Create Custom Nudge</h2>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    const toggleButtons = Array.from(document.querySelectorAll('.nudge-toggle'));
+    const sensitivityGroups = Array.from(document.querySelectorAll('.nudge-levels'));
+
+    toggleButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const nextPressed = button.getAttribute('aria-pressed') !== 'true';
+        button.setAttribute('aria-pressed', String(nextPressed));
+        button.classList.toggle('is-off', !nextPressed);
+      });
+    });
+
+    sensitivityGroups.forEach((group) => {
+      const chips = Array.from(group.querySelectorAll('.nudge-chip'));
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chips.forEach((candidate) => {
+            candidate.classList.toggle('is-active', candidate === chip);
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>
