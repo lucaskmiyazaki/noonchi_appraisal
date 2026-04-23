@@ -263,6 +263,99 @@
       color: rgba(107, 114, 128, 0.8);
     }
 
+    .editor-node-select {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #111827;
+      font: inherit;
+      font-size: 16px;
+      line-height: 1.35;
+      text-align: center;
+      text-align-last: center;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .editor-node-state-tools {
+      padding: 2px 8px 10px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .editor-node-state-tools.is-open {
+      display: flex;
+    }
+
+    .editor-node-state-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .editor-node-state-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(51, 65, 85, 0.78);
+    }
+
+    .editor-node-emotions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .editor-node-emotion-chip {
+      border: 0;
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: rgba(255, 255, 255, 0.88);
+      color: #334155;
+      font: inherit;
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .editor-node-emotion-chip.is-positive { color: #166534; }
+    .editor-node-emotion-chip.is-negative { color: #9f1239; }
+    .editor-node-emotion-chip.is-active {
+      background: #111827;
+      color: #fff;
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.16);
+    }
+
+    .editor-node-pad {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .editor-node-pad-row {
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr) 36px;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #334155;
+    }
+
+    .editor-node-pad-row input[type="range"] {
+      width: 100%;
+      accent-color: #111827;
+      margin: 0;
+    }
+
+    .editor-node-pad-row output {
+      font-variant-numeric: tabular-nums;
+      color: #475569;
+      text-align: right;
+    }
+
     .editor-port {
       position: absolute;
       width: 22px;
@@ -457,43 +550,43 @@
             <div class="custom-palette-shell">
               <div class="custom-palette-head">
                 <div>
-                  <p class="custom-palette-title">Agent (P)</p>
-                  <p class="custom-palette-subtitle">Person affecting the nudge</p>
+                  <p class="custom-palette-title">Speaker</p>
+                  <p class="custom-palette-subtitle">Person speaking in the situation</p>
                 </div>
                 <span>···</span>
               </div>
-              <div class="custom-palette-field">Agent</div>
+              <div class="custom-palette-field">Speaker</div>
             </div>
           </div>
           <div class="custom-palette-card state" draggable="true" data-palette-type="state">
             <div class="custom-palette-shell">
               <div class="custom-palette-head">
                 <div>
-                  <p class="custom-palette-title">State (S)</p>
-                  <p class="custom-palette-subtitle">Emotions or state of mind</p>
+                  <p class="custom-palette-title">Voice Tone</p>
+                  <p class="custom-palette-subtitle">Emotions and vocal tone</p>
                 </div>
                 <span>···</span>
               </div>
-              <div class="custom-palette-field">State</div>
+              <div class="custom-palette-field">Voice Tone</div>
             </div>
           </div>
           <div class="custom-palette-card action" draggable="true" data-palette-type="action">
             <div class="custom-palette-shell">
               <div class="custom-palette-head">
                 <div>
-                  <p class="custom-palette-title">Action (A)</p>
+                  <p class="custom-palette-title">Situation</p>
                   <p class="custom-palette-subtitle">Type of intervention</p>
                 </div>
                 <span>···</span>
               </div>
-              <div class="custom-palette-field">Action</div>
+              <div class="custom-palette-field">Situation</div>
             </div>
           </div>
           <div class="custom-palette-card nudge" draggable="true" data-palette-type="nudge">
             <div class="custom-palette-shell">
               <div class="custom-palette-head">
                 <div>
-                  <p class="custom-palette-title">Nudge (N)</p>
+                  <p class="custom-palette-title">Nudge</p>
                   <p class="custom-palette-subtitle">Type of feedback</p>
                 </div>
                 <span>···</span>
@@ -519,11 +612,256 @@
     let activeConnection = null;
 
     const NODE_META = {
-      agent: { title: 'Agent', badge: 'P', subtitle: 'Person affecting the nudge', placeholder: 'Self' },
-      state: { title: 'State', badge: 'S', subtitle: 'Emotions or state of mind', placeholder: '|Custom state' },
-      action: { title: 'Action', badge: 'A', subtitle: 'Type of intervention', placeholder: '|Custom action' },
+      agent: { title: 'Speaker', badge: 'P', subtitle: 'Person speaking in the situation', placeholder: 'Me' },
+      state: { title: 'Voice Tone', badge: 'S', subtitle: 'Emotions and vocal tone', placeholder: 'Voice Tone' },
+      action: { title: 'Situation', badge: 'A', subtitle: 'Situation that triggers the nudge', placeholder: 'Situation' },
       nudge: { title: 'Nudge', badge: 'N', subtitle: 'Type of feedback', placeholder: 'Buzz' },
     };
+
+    const AGENT_VALUES = ['Me', 'Others'];
+    const SITUATION_VALUES = [
+      'Presenting an idea',
+      'Responding to a new idea',
+      'Providing feedback for improvement',
+      'Negotiating',
+      'Making a request',
+      'Apologizing',
+    ];
+    const PAD_NEUTRAL_MIN = 0.35;
+    const PAD_NEUTRAL_MAX = 0.65;
+    const PAD_DEFAULT = 0.5;
+    const PAD_LOW_DEFAULT = 0.25;
+    const PAD_HIGH_DEFAULT = 0.75;
+    const STATE_EMOTIONS = {
+      excited:      { valence: PAD_HIGH_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+      surprised:    { valence: PAD_HIGH_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_LOW_DEFAULT },
+      enjoyment:    { valence: PAD_HIGH_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+      relaxed:      { valence: PAD_HIGH_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_LOW_DEFAULT },
+      firm:         { valence: PAD_LOW_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+      concern:      { valence: PAD_LOW_DEFAULT, arousal: PAD_HIGH_DEFAULT, dominance: PAD_LOW_DEFAULT },
+      disappointed: { valence: PAD_LOW_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_HIGH_DEFAULT },
+      regret:       { valence: PAD_LOW_DEFAULT, arousal: PAD_LOW_DEFAULT, dominance: PAD_LOW_DEFAULT },
+    };
+
+    function classifyPadAxis(value) {
+      if (value < PAD_NEUTRAL_MIN) return 'low';
+      if (value > PAD_NEUTRAL_MAX) return 'high';
+      return 'neutral';
+    }
+
+    function emotionNameFromPad(valence, arousal, dominance) {
+      const valenceState = classifyPadAxis(valence);
+      const arousalState = classifyPadAxis(arousal);
+      const dominanceState = classifyPadAxis(dominance);
+
+      if ([valenceState, arousalState, dominanceState].includes('neutral')) return null;
+      if (valenceState === 'high') {
+        if (arousalState === 'high') return dominanceState === 'high' ? 'excited' : 'surprised';
+        return dominanceState === 'high' ? 'enjoyment' : 'relaxed';
+      }
+
+      if (arousalState === 'high') return dominanceState === 'high' ? 'firm' : 'concern';
+      return dominanceState === 'high' ? 'disappointed' : 'regret';
+    }
+
+    function titleCase(value) {
+      const text = String(value || '').trim();
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+    }
+
+    function configureStateNode(node, value = '') {
+      const field = node.querySelector('.editor-node-field');
+      if (!field) {
+        return;
+      }
+
+      field.textContent = value || '';
+
+      const tools = document.createElement('div');
+      tools.className = 'editor-node-state-tools';
+      tools.innerHTML = `
+        <div class="editor-node-state-group">
+          <div class="editor-node-state-label">Voice Tone</div>
+          <div class="editor-node-emotions"></div>
+        </div>
+        <div class="editor-node-state-group">
+          <div class="editor-node-state-label">VAD</div>
+          <div class="editor-node-pad">
+            <label class="editor-node-pad-row">V<input type="range" min="0" max="1" step="0.01" value="${PAD_DEFAULT}"><output>${PAD_DEFAULT.toFixed(2)}</output></label>
+            <label class="editor-node-pad-row">A<input type="range" min="0" max="1" step="0.01" value="${PAD_DEFAULT}"><output>${PAD_DEFAULT.toFixed(2)}</output></label>
+            <label class="editor-node-pad-row">D<input type="range" min="0" max="1" step="0.01" value="${PAD_DEFAULT}"><output>${PAD_DEFAULT.toFixed(2)}</output></label>
+          </div>
+        </div>
+      `;
+
+      node.querySelector('.editor-node-shell')?.appendChild(tools);
+
+      const chipsWrap = tools.querySelector('.editor-node-emotions');
+      const sliders = Array.from(tools.querySelectorAll('input[type="range"]'));
+      const outputs = Array.from(tools.querySelectorAll('output'));
+      const chips = {};
+
+      const openTools = () => tools.classList.add('is-open');
+      const closeTools = () => tools.classList.remove('is-open');
+
+      field.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openTools();
+      });
+
+      field.addEventListener('focus', openTools);
+
+      document.addEventListener('pointerdown', (event) => {
+        if (!node.contains(event.target)) {
+          closeTools();
+        }
+      });
+
+      function syncOutputs() {
+        sliders.forEach((slider, index) => {
+          if (outputs[index]) {
+            outputs[index].value = Number(slider.value).toFixed(2);
+            outputs[index].textContent = Number(slider.value).toFixed(2);
+          }
+        });
+      }
+
+      function setActiveEmotion(name) {
+        Object.entries(chips).forEach(([emotion, chip]) => {
+          chip.classList.toggle('is-active', emotion === name);
+        });
+        if (name) {
+          field.textContent = titleCase(name);
+        }
+      }
+
+      function syncEmotionFromPad() {
+        syncOutputs();
+        const emotionName = emotionNameFromPad(
+          Number(sliders[0]?.value || PAD_DEFAULT),
+          Number(sliders[1]?.value || PAD_DEFAULT),
+          Number(sliders[2]?.value || PAD_DEFAULT),
+        );
+        setActiveEmotion(emotionName);
+      }
+
+      Object.entries(STATE_EMOTIONS).forEach(([name, pad]) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = `editor-node-emotion-chip ${pad.valence >= PAD_DEFAULT ? 'is-positive' : 'is-negative'}`;
+        chip.textContent = titleCase(name);
+        chip.addEventListener('click', (event) => {
+          event.stopPropagation();
+          openTools();
+          sliders[0].value = String(pad.valence);
+          sliders[1].value = String(pad.arousal);
+          sliders[2].value = String(pad.dominance);
+          syncOutputs();
+          setActiveEmotion(name);
+        });
+        chips[name] = chip;
+        chipsWrap?.appendChild(chip);
+      });
+
+      sliders.forEach((slider) => {
+        slider.addEventListener('input', () => {
+          openTools();
+          syncEmotionFromPad();
+        });
+      });
+
+      if (value) {
+        const normalized = String(value).trim().toLowerCase() === 'sad' ? 'regret' : String(value).trim().toLowerCase();
+        if (STATE_EMOTIONS[normalized]) {
+          const pad = STATE_EMOTIONS[normalized];
+          sliders[0].value = String(pad.valence);
+          sliders[1].value = String(pad.arousal);
+          sliders[2].value = String(pad.dominance);
+          syncOutputs();
+          setActiveEmotion(normalized);
+          return;
+        }
+      }
+
+      syncOutputs();
+      setActiveEmotion(null);
+    }
+
+    function configureNodeField(node, type, value = '') {
+      const field = node.querySelector('.editor-node-field');
+      if (!field) {
+        return;
+      }
+
+      if (type === 'agent') {
+        const normalizedValue = AGENT_VALUES.find((option) => option.toLowerCase() === String(value || '').trim().toLowerCase()) || AGENT_VALUES[0];
+        field.textContent = normalizedValue;
+        field.setAttribute('contenteditable', 'false');
+        field.setAttribute('tabindex', '0');
+        field.setAttribute('role', 'button');
+        field.setAttribute('aria-label', 'Toggle speaker between me and others');
+        field.style.cursor = 'pointer';
+
+        const advanceValue = () => {
+          const currentIndex = AGENT_VALUES.indexOf(field.textContent.trim());
+          const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % AGENT_VALUES.length;
+          field.textContent = AGENT_VALUES[nextIndex];
+        };
+
+        field.addEventListener('click', (event) => {
+          event.stopPropagation();
+          advanceValue();
+        });
+
+        field.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+            advanceValue();
+          }
+        });
+        return;
+      }
+
+      if (type === 'state') {
+        configureStateNode(node, value);
+        return;
+      }
+
+      if (type === 'action') {
+        const normalizedValue = SITUATION_VALUES.find((option) => option.toLowerCase() === String(value || '').trim().toLowerCase()) || SITUATION_VALUES[0];
+        field.setAttribute('contenteditable', 'false');
+        field.removeAttribute('tabindex');
+        field.removeAttribute('role');
+        field.removeAttribute('aria-label');
+        field.style.cursor = 'default';
+        field.innerHTML = '';
+
+        const select = document.createElement('select');
+        select.className = 'editor-node-select';
+        select.setAttribute('aria-label', 'Select situation');
+
+        SITUATION_VALUES.forEach((option) => {
+          const optionElement = document.createElement('option');
+          optionElement.value = option;
+          optionElement.textContent = option;
+          select.appendChild(optionElement);
+        });
+
+        select.value = normalizedValue;
+        select.addEventListener('pointerdown', (event) => event.stopPropagation());
+        select.addEventListener('click', (event) => event.stopPropagation());
+        field.appendChild(select);
+        return;
+      }
+
+      field.setAttribute('contenteditable', 'true');
+      field.removeAttribute('tabindex');
+      field.removeAttribute('role');
+      field.removeAttribute('aria-label');
+      field.style.cursor = 'text';
+      field.textContent = value;
+    }
 
     function createNode(type, x, y, value = '') {
       nodeCounter += 1;
@@ -543,7 +881,7 @@
         <div class="editor-node-shell">
           <div class="editor-node-header">
             <div>
-              <p class="editor-node-title">${meta.title} (${meta.badge}${type === 'state' ? nodeCounter : ''})</p>
+              <p class="editor-node-title">${meta.title}</p>
               <p class="editor-node-subtitle">${meta.subtitle}</p>
             </div>
             <div class="editor-node-actions">
@@ -554,6 +892,8 @@
           <div class="editor-node-field" contenteditable="true" spellcheck="false" data-placeholder="${meta.placeholder}">${value}</div>
         </div>
       `;
+
+      configureNodeField(node, type, value);
 
       const header = node.querySelector('.editor-node-header');
       const deleteButton = node.querySelector('.editor-node-delete');
@@ -741,7 +1081,9 @@
         const type = item.dataset.paletteType || 'state';
         const position = clampPosition(60 + (nodeCounter % 4) * 120, 80 + (nodeCounter % 3) * 120);
         const node = createNode(type, position.x, position.y, '');
-        node.querySelector('.editor-node-field')?.focus();
+        if (type !== 'agent') {
+          node.querySelector('.editor-node-field')?.focus();
+        }
       });
     });
 
@@ -756,14 +1098,22 @@
       const point = getCanvasPoint(event.clientX, event.clientY);
       const position = clampPosition(point.x - 100, point.y - 40);
       const node = createNode(type, position.x, position.y, '');
-      node.querySelector('.editor-node-field')?.focus();
+      if (type !== 'agent') {
+        node.querySelector('.editor-node-field')?.focus();
+      }
     });
 
-    createNode('agent', 78, 78, 'Self');
-    createNode('state', 280, 220, 'Confused');
-    createNode('state', 28, 220, '');
-    createNode('action', 620, 220, '');
-    createNode('nudge', 280, 368, 'Buzz');
+    const speakerNode = createNode('agent', 64, 208, 'Me');
+    const toneNode = createNode('state', 304, 208, 'Firm');
+    const situationNode = createNode('action', 544, 208, 'Apologizing');
+    const nudgeNode = createNode('nudge', 784, 208, 'Buzz');
+
+    edges.push(
+      { fromId: speakerNode.dataset.id, fromSide: 'right', toId: toneNode.dataset.id, toSide: 'left' },
+      { fromId: toneNode.dataset.id, fromSide: 'right', toId: situationNode.dataset.id, toSide: 'left' },
+      { fromId: situationNode.dataset.id, fromSide: 'right', toId: nudgeNode.dataset.id, toSide: 'left' },
+    );
+    redrawEdges();
   </script>
 </body>
 </html>
