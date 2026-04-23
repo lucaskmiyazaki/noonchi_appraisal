@@ -57,6 +57,7 @@ REFLECTION_DB_FIELDNAMES = [
 ]
 
 NGROK_API_URL = "http://127.0.0.1:4040/api/tunnels"
+NGROK_URL = (os.environ.get("NGROK_URL") or "https://noonchi.ngrok.io").strip()
 NGROK_PROCESS = None
 
 AUDIO_ALLOWED_EXTENSIONS = {
@@ -327,8 +328,12 @@ def start_ngrok(port: int = 5001):
         print("ngrok is not installed or not available on PATH. Skipping tunnel startup.")
         return
 
+    ngrok_command = [ngrok_path, "http", str(port), "--scheme=http,https"]
+    if NGROK_URL:
+        ngrok_command.extend(["--url", NGROK_URL])
+
     NGROK_PROCESS = subprocess.Popen(
-        [ngrok_path, "http", str(port), "--scheme=http,https"],
+        ngrok_command,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
     )
