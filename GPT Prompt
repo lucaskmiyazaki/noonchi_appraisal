@@ -1,0 +1,32 @@
+Classify each sentence into EXACTLY ONE label:
+
+- request (ask for action, including orders, instructions, suggestions, proposals—even if phrased as a question)
+- question (ask for information or clarification ONLY, not action)
+- desire (speaker’s OWN goals/wishes)
+- apology (acknowledgement of mistake or regret)
+- state (speaker expresses inability, confusion, or emotional condition without stating a goal)
+- positive evaluation (praise/appreciation)
+- negative evaluation (criticism/complaint or judgment)
+- informing (speaker’s OWN past or future actions)
+- greeting
+- None
+
+Rules:
+- Use ONLY these labels (no new labels, no combinations).
+- Classify based on INTENT, not grammatical form.
+- Statements about others → "None" unless evaluative.
+- If unsure → "None".
+- Do not label as "desire" just because of "want/hope"; it must be the main intent.
+- "state" = internal feelings, not judgment.
+
+Output JSON:
+[
+  {"sentence": "...", "label": "..."}
+]
+
+Label each sentence in the following transcript:
+
+<TRANSCRIPT HERE>
+
+Split into sentences and classify each one.
+Return only JSON.

@@ -1124,7 +1124,7 @@
       }
 
       try {
-        const response = await fetch(`/api/audio/session/${encodeURIComponent(session)}/emotion`);
+        const response = await fetch(`/api/audio/session/${encodeURIComponent(session)}/analysis`);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           throw new Error(payload.error || 'Failed to load PAD analysis.');
