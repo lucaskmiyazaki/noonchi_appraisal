@@ -580,11 +580,8 @@ def play_graph():
     if not isinstance(nodes, list) or not isinstance(edges, list):
         return jsonify({"error": "nodes and edges must be lists"}), 400
 
-    # --- Prepare intent file info ---
     timestamp = datetime.now(timezone.utc).isoformat()
     safe_ts = timestamp.replace(":", "-").replace("+", "Z")
-    intent_filename = f"intent_{safe_ts}.json"
-    intent_path = DATA_DIR / intent_filename
 
     built = ReflectionTree().build_objects_from_graph(payload)
 
@@ -738,9 +735,6 @@ def play_graph():
 
     wearer_agent_name = None
     if reflection_tree:
-        # Only create intent file if reflection is created
-        intent_path.write_text(json.dumps(payload, indent=2))
-
         reflection_tree["timestamp"] = timestamp
         reflection_tree["startMs"] = payload.get("startMs")
         reflection_tree["endMs"] = payload.get("endMs")
@@ -765,13 +759,6 @@ def play_graph():
         latest_audio_record = find_latest_audio_record(reflection_tree.get("session_name", ""))
         rows, fieldnames = load_reflection_db_rows()
 
-        # --- Ensure intent_filename column exists ---
-        if "intent_filename" not in fieldnames:
-            fieldnames.append("intent_filename")
-            for row in rows:
-                if "intent_filename" not in row:
-                    row["intent_filename"] = ""
-
         rows.append({
             "wearer_agent": wearer_agent_name,
             "session_name": reflection_tree.get("session_name", ""),
@@ -780,7 +767,7 @@ def play_graph():
             "endms": reflection_tree.get("endMs", ""),
             "practice": "null",
             "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
-            "intent_filename": str(intent_path.name),
+            "intent_filename": "",
         })
         write_reflection_db_rows(rows, fieldnames)
 
@@ -801,7 +788,6 @@ def play_graph():
         "intensity_check": intensity_check,
         "reflection_tree": reflection_tree,
         "reflection_tree_file": reflection_filename,
-        "intent_filename": str(intent_path.name),
     })
 
 

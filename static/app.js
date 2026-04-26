@@ -5,7 +5,7 @@ import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
 import { getActiveBoard } from './board.js';
 import { initTabs, createReflectionTab, syncIntentTabs } from './tabs.js';
-import { clearSelectedTranscriptSegments, getSelectedTimeRange } from './sidebar-upload.js';
+import { clearSelectedTranscriptSegments, getSelectedTimeRange, getSessionName } from './sidebar-upload.js';
 
 const toolbarActions = document.getElementById('toolbarActions');
 const reflectionMeta = document.getElementById('reflectionMeta');
@@ -148,7 +148,7 @@ saveIntentBtn.onclick = async () => {
   const board = getActiveBoard();
   if (!board) return;
   const intentData = board.graph;
-  const sessionName = window.currentSessionName || 'Water Project';
+  const sessionName = getSessionName();
   const wearerAgent = board.metadata?.wearerName || '';
   const intentFile = `intent_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
 
