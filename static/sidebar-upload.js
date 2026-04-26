@@ -3,6 +3,7 @@ const sidebarUploadBtn = document.getElementById("sidebarUploadBtn");
 const sidebarBackBtn = document.getElementById("sidebarBackBtn");
 const sidebarPlayBtn = document.getElementById("sidebarPlayBtn");
 const sidebarClearBtn = document.getElementById("sidebarClearBtn");
+const generateReflectionBtn = document.getElementById("generateReflectionBtn");
 const transcriptStatus = document.getElementById("transcriptStatus");
 const transcriptFileName = document.getElementById("transcriptFileName");
 const sessionList = document.getElementById("sessionList");
@@ -99,6 +100,19 @@ function setSidebarView(view) {
   if (sidebarClearBtn) {
     sidebarClearBtn.hidden = view !== "transcript";
   }
+
+  syncGenerateReflectionBtn();
+}
+
+async function syncGenerateReflectionBtn() {
+  if (!generateReflectionBtn) return;
+  if (sidebarView !== 'transcript') {
+    generateReflectionBtn.hidden = true;
+    return;
+  }
+  const { getActiveBoard } = await import('./board.js');
+  const board = getActiveBoard();
+  generateReflectionBtn.hidden = board?.kind !== 'intent';
 }
 
 function formatSessionTimestamp(value) {
@@ -250,51 +264,49 @@ function renderTranscript() {
 
 
     box.addEventListener("click", () => {
-      segment.selected = !segment.selected;
-      audioPlayer.currentTime = Number(segment.start) || 0;
-      activeChunkId = segment.id;
-      renderTranscript();
-      dispatchGraphPlayState();
+      import('./board.js').then(({ getActiveBoard, loadGraph }) => {
+        const board = getActiveBoard();
+        const isIntentBoard = board?.kind === 'intent';
 
-      // --- Show intent diagram for this transcript segment if intent board is active ---
-      try {
-        import('./board.js').then(({ getActiveBoard, loadGraph }) => {
-          const board = getActiveBoard();
-          if (!(board && board.kind === 'intent' && board.metadata && board.metadata.intentFile)) {
-            return;
-          }
-          let diagrams = null;
-          if (board.metadata && board.metadata.intentData && Array.isArray(board.metadata.intentData.diagrams)) {
-            diagrams = board.metadata.intentData.diagrams;
-          } else if (window.lastIntentDiagrams && Array.isArray(window.lastIntentDiagrams)) {
-            diagrams = window.lastIntentDiagrams;
-          }
-          if (!diagrams && board.graph && Array.isArray(board.graph.diagrams)) {
-            diagrams = board.graph.diagrams;
-          }
-          if (!diagrams) {
-            return;
-          }
-          // Compare all times in seconds for floating-point accuracy
-          const segStartSec = Number(segment.start);
-          const found = diagrams.find(
-            (d) => {
-              const dStart = Number(d.startms);
-              const dEnd = Number(d.endms);
-              return (
-                segStartSec === dStart ||
-                (segStartSec >= dStart && segStartSec < dEnd)
-              );
-            }
-          );
-          if (found) {
-            loadGraph(found);
-          } else {
-          }
+        // On intent boards, only one segment can be selected at a time
+        if (isIntentBoard) {
+          audioData.transcript.forEach((s) => { s.selected = false; });
+          segment.selected = true;
+        } else {
+          segment.selected = !segment.selected;
+        }
+
+        audioPlayer.currentTime = Number(segment.start) || 0;
+        activeChunkId = segment.id;
+        renderTranscript();
+        dispatchGraphPlayState();
+
+        // Show matching intent diagram for this segment
+        if (!isIntentBoard || !board.metadata?.intentFile) return;
+
+        let diagrams = null;
+        if (Array.isArray(board.metadata?.intentData?.diagrams)) {
+          diagrams = board.metadata.intentData.diagrams;
+        } else if (Array.isArray(window.lastIntentDiagrams)) {
+          diagrams = window.lastIntentDiagrams;
+        } else if (Array.isArray(board.graph?.diagrams)) {
+          diagrams = board.graph.diagrams;
+        }
+        if (!diagrams) return;
+
+        const segStartSec = Number(segment.start);
+        const found = diagrams.find((d) => {
+          const dStart = Number(d.startms);
+          const dEnd = Number(d.endms);
+          return segStartSec === dStart || (segStartSec >= dStart && segStartSec < dEnd);
         });
-      } catch (err) {
-        console.error('[Transcript Click] Error:', err);
-      }
+        if (found) {
+          loadGraph(found);
+          // Update board metadata so Save Intent patches the correct diagram
+          board.metadata.diagramStartMs = found.startms ?? null;
+          board.metadata.diagramEndMs = found.endms ?? null;
+        }
+      }).catch((err) => console.error('[Transcript Click] Error:', err));
     });
 
     transcriptList.appendChild(box);
@@ -489,6 +501,42 @@ sidebarPlayBtn?.addEventListener("click", async () => {
 sidebarClearBtn?.addEventListener("click", () => {
   audioPlayer.pause();
   clearLoadedAudio();
+});
+
+generateReflectionBtn?.addEventListener("click", async () => {
+  const { getActiveBoard } = await import('./board.js');
+  const { syncReflectionTabs: syncTabs } = await import('./tabs.js');
+  const board = getActiveBoard();
+  const intentFile = board?.metadata?.intentFile;
+  if (!intentFile) {
+    setTranscriptStatus('No intent board active.');
+    return;
+  }
+  generateReflectionBtn.disabled = true;
+  setTranscriptStatus('Generating reflections...');
+  try {
+    const response = await fetch(`/api/audio/intent/${encodeURIComponent(intentFile)}/generate_reflections`, {
+      method: 'POST',
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate reflections.');
+    }
+    setTranscriptStatus(`Generated ${data.generated} reflection(s).`);
+    // Reload reflection tabs for the current session
+    if (audioData?.id) {
+      await loadReflectionTabsForAudio(audioData.id, audioData.sessionName);
+    }
+  } catch (err) {
+    console.error(err);
+    setTranscriptStatus(err.message || 'Failed to generate reflections.');
+  } finally {
+    generateReflectionBtn.disabled = false;
+  }
+});
+
+window.addEventListener("board:changed", () => {
+  syncGenerateReflectionBtn();
 });
 
 audioPlayer.addEventListener("play", () => {

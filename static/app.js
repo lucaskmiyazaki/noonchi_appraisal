@@ -179,6 +179,23 @@ saveIntentBtn.onclick = async () => {
     }
     const result = await response.json();
     if (response.ok) {
+      // Re-fetch the updated intent JSON and refresh board metadata
+      const savedFile = result.intent_file || existingFile;
+      if (savedFile) {
+        try {
+          const refreshRes = await fetch(`/api/audio/intent/${encodeURIComponent(savedFile)}`);
+          const refreshData = await refreshRes.json();
+          if (refreshRes.ok && refreshData.data) {
+            board.metadata.intentData = refreshData.data;
+            board.metadata.intentFile = savedFile;
+            if (Array.isArray(refreshData.data.diagrams)) {
+              window.lastIntentDiagrams = refreshData.data.diagrams;
+            }
+          }
+        } catch (refreshErr) {
+          console.error('Failed to refresh intent data:', refreshErr);
+        }
+      }
       window.alert('Intent saved successfully!');
     } else {
       window.alert(result.error || 'Failed to save intent.');

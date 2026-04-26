@@ -541,6 +541,24 @@ def update_intent(intent_filename):
     return jsonify({"message": "Intent updated.", "intent_file": safe_filename})
 
 
+@app.get("/api/audio/intent/<intent_filename>")
+def get_intent(intent_filename):
+    safe_filename = secure_filename(intent_filename or "")
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid intent filename."}), 400
+
+    intent_path = DATA_DIR / safe_filename
+    if not intent_path.exists():
+        return jsonify({"error": "Intent file not found."}), 404
+
+    try:
+        intent_data = json.loads(intent_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        return jsonify({"error": f"Failed to read intent file: {e}"}), 500
+
+    return jsonify({"intent_file": safe_filename, "data": intent_data})
+
+
 @app.get("/api/audio/session/<session_name>/analysis")
 def get_session_analysis(session_name):
     try:
@@ -613,6 +631,134 @@ def user_custom_nudge(user_name):
 @app.get("/<user_name>")
 def user_sessions(user_name):
     return render_template("dashboard.html", current_user=user_name)
+
+def evaluate_diagram_for_reflection(diagram, session_name="", wearer_agent_override=None):
+    """Evaluate one intent diagram and return a reflection_tree dict or None."""
+    built = ReflectionTree().build_objects_from_graph(diagram)
+    wearer_id, wearer_agent = find_wearer(built["agents"])
+    if wearer_agent_override and wearer_agent is None:
+        wearer_agent = wearer_agent_override
+
+    reflection_tree = None
+    participant_unclear_feedback_issue = detect_participant_unclear_feedback(built["agents"])
+    participant_unclear_concern_issue = detect_participant_unclear_concern(built["agents"])
+
+    if wearer_agent is not None:
+        unclear_feedback_issue = detect_unclear_feedback(wearer_agent)
+        good_feedback_issue = detect_good_feedback(wearer_agent)
+        unclear_concern_issue = detect_unclear_concern(wearer_agent)
+        good_concern_issue = detect_good_concern(wearer_agent)
+        good_excitement_issue = detect_good_excitement(wearer_agent)
+        tone_issue = detect_tone_incoherence(wearer_agent)
+        intensity_issue = detect_intensity_incoherence(wearer_agent)
+
+        if reflection_tree is None and unclear_feedback_issue is not None:
+            reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(unclear_feedback_issue, wearer=wearer_agent).to_dict()
+        if reflection_tree is None and unclear_concern_issue is not None:
+            reflection_tree = ReflectionTree().build_from_unclear_concerns_issue(
+                unclear_concern_issue, wearer=wearer_agent,
+                blockers_without_actionables=unclear_concern_issue.get("blockers_without_actionables"),
+            ).to_dict()
+        if reflection_tree is None and tone_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_tone(tone_issue["goal"], wearer=wearer_agent).to_dict()
+        if reflection_tree is None and intensity_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(intensity_issue["issue"], wearer=wearer_agent).to_dict()
+        if reflection_tree is None and good_feedback_issue is not None:
+            reflection_tree = ReflectionTree().build_from_good_feedback_issue(good_feedback_issue, wearer=wearer_agent).to_dict()
+        if reflection_tree is None and good_concern_issue is not None:
+            reflection_tree = ReflectionTree().build_from_good_concern_issue(good_concern_issue, wearer=wearer_agent).to_dict()
+        if reflection_tree is None and good_excitement_issue is not None:
+            reflection_tree = ReflectionTree().build_from_good_excitement_issue(good_excitement_issue, wearer=wearer_agent).to_dict()
+
+    if reflection_tree is None and participant_unclear_feedback_issue is not None:
+        reflection_tree = ReflectionTree().build_from_participant_unclear_feedback_issue(
+            participant_unclear_feedback_issue, agent=participant_unclear_feedback_issue.get("agent"),
+        ).to_dict()
+    if reflection_tree is None and participant_unclear_concern_issue is not None:
+        reflection_tree = ReflectionTree().build_from_participant_unclear_concern_issue(
+            participant_unclear_concern_issue, agent=participant_unclear_concern_issue.get("agent"),
+        ).to_dict()
+
+    return reflection_tree, wearer_id, wearer_agent
+
+
+@app.post("/api/audio/intent/<intent_filename>/generate_reflections")
+def generate_reflections_from_intent(intent_filename):
+    safe_filename = secure_filename(intent_filename or "")
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid intent filename."}), 400
+
+    intent_path = DATA_DIR / safe_filename
+    if not intent_path.exists():
+        return jsonify({"error": "Intent file not found."}), 404
+
+    try:
+        intent_data = json.loads(intent_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        return jsonify({"error": f"Failed to read intent file: {e}"}), 500
+
+    diagrams = intent_data.get("diagrams", [])
+    session_name = intent_data.get("sessionName", "")
+    results = []
+
+    rows, fieldnames = load_reflection_db_rows()
+    if "intent_filename" not in fieldnames:
+        fieldnames.append("intent_filename")
+        for row in rows:
+            if "intent_filename" not in row:
+                row["intent_filename"] = ""
+
+    latest_audio_record = find_latest_audio_record(session_name)
+
+    for diagram in diagrams:
+        reflection_tree, wearer_id, wearer_agent = evaluate_diagram_for_reflection(diagram, session_name)
+        if reflection_tree is None:
+            continue
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        safe_ts = timestamp.replace(":", "-").replace("+", "Z")
+
+        reflection_tree["timestamp"] = timestamp
+        reflection_tree["startMs"] = diagram.get("startms")
+        reflection_tree["endMs"] = diagram.get("endms")
+        reflection_tree["session_name"] = session_name
+
+        start_node_id = reflection_tree.get("start_node")
+        first_node = reflection_tree.get("nodes", {}).get(start_node_id, {}) if start_node_id else {}
+        first_message = first_node.get("text")
+        if first_message:
+            post_tip_to_bangle(first_message)
+
+        reflection_filename = f"reflection_{safe_ts}.json"
+        reflection_path = DATA_DIR / reflection_filename
+        reflection_path.write_text(json.dumps(reflection_tree, indent=2), encoding="utf-8")
+
+        wearer_agent_name = (
+            getattr(wearer_agent, 'name', None) or getattr(wearer_agent, 'role', None) or wearer_id
+            if wearer_agent is not None else wearer_id
+        )
+        rows.append({
+            "wearer_agent": wearer_agent_name,
+            "session_name": session_name,
+            "reflection_tree_file": reflection_filename,
+            "startms": reflection_tree.get("startMs", ""),
+            "endms": reflection_tree.get("endMs", ""),
+            "practice": "null",
+            "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
+            "intent_filename": "",
+        })
+
+        results.append({
+            "reflection_tree": reflection_tree,
+            "reflection_tree_file": reflection_filename,
+            "wearer_agent": wearer_agent_name,
+            "startms": diagram.get("startms"),
+            "endms": diagram.get("endms"),
+        })
+
+    write_reflection_db_rows(rows, fieldnames)
+    return jsonify({"generated": len(results), "reflections": results})
+
 
 @app.post("/play_graph")
 def play_graph():
