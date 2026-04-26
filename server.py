@@ -408,6 +408,8 @@ def build_session_analysis_payload(session_name=""):
             "emotion_probabilities": chunk.get("emotion_probabilities") or [],
             "intent_label": chunk.get("intent_label"),
             "goal_blocker_label": chunk.get("goal_blocker_label"),
+            "goal_clarity": chunk.get("goal_clarity"),
+            "rephrased_goal": chunk.get("rephrased_goal"),
         })
 
     return {

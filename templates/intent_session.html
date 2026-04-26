@@ -84,6 +84,7 @@
           <select id="vizTypeSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
             <option value="intent">Intent</option>
             <option value="goal_blocker">Goal/Blocker</option>
+            <option value="clarity">Goal Clarity</option>
           </select>
           <span id="intentFilterBox">
             <label for="intentFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Intent Filter:</label>
@@ -101,6 +102,7 @@
       </header>
       <div id="intentContainer" class="session-content"></div>
       <div id="goalBlockerContainer" class="session-content" style="display:none;"></div>
+      <div id="clarityContainer" class="session-content" style="display:none;"></div>
     </div>
     <aside class="session-sidebar">
       <div class="session-sidebar-panel">
@@ -149,7 +151,7 @@
       const goalBlockerContainer = document.getElementById('goalBlockerContainer');
       container.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Loading intent analysis...</div></div></div>';
       goalBlockerContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Loading goal/blocker analysis...</div></div></div>';
-      // Use current session from Jinja variable
+      const clarityContainer = document.getElementById('clarityContainer');
       const session = "{{ current_session|e }}";
       if (!session) {
         container.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Missing session.</div></div></div>';
@@ -163,6 +165,45 @@
           throw new Error(payload.error || 'Failed to load intent analysis.');
         }
         const segments = payload.segments || [];
+
+        // --- CLARITY LABEL VISUALIZATION ---
+        clarityContainer.innerHTML = `
+          <div class="transcript-scroll">
+            <div class="transcript-content">
+              <div class="section-title">Goal Clarity Transcript</div>
+              <div id="clarityTranscript" class="session-transcript"></div>
+            </div>
+          </div>
+        `;
+        const clarityRoot = document.getElementById('clarityTranscript');
+        function clarityLabelColor(clarity) {
+          // Map clarity to color: clear=green, unclear=red, no goal/none/empty=gray
+          if (!clarity || clarity === 'none' || clarity.trim() === '' || clarity.toLowerCase() === 'no goal') return '#cbd5e1';
+          if (clarity.toLowerCase() === 'clear') return '#2ca02c';
+          if (clarity.toLowerCase() === 'unclear') return '#d62728';
+          return '#cbd5e1';
+        }
+
+        function renderClarity() {
+          clarityRoot.innerHTML = '';
+          segments.forEach((segment) => {
+            const span = document.createElement('span');
+            span.className = 'session-chunk';
+            const clarity = segment.goal_clarity;
+            span.style.background = clarityLabelColor(clarity) + '33';
+            span.style.borderBottom = clarity && clarity !== 'none' ? `2.5px solid ${clarityLabelColor(clarity)}` : 'none';
+            span.textContent = `${segment.text || ''} `;
+            if (segment.rephrased_goal && segment.rephrased_goal !== 'none') {
+              span.title = `Rephrased goal: ${segment.rephrased_goal}`;
+              span.style.cursor = 'help';
+            } else if (clarity && clarity !== 'none') {
+              span.title = `Clarity: ${clarity}`;
+            }
+            clarityRoot.appendChild(span);
+          });
+        }
+
+        renderClarity();
         // --- INTENT LABEL VISUALIZATION ---
         container.innerHTML = `
           <div class="transcript-scroll">
@@ -340,17 +381,27 @@
       if (vizTypeSelect.value === 'intent') {
         intentContainer.style.display = '';
         goalBlockerContainer.style.display = 'none';
+        clarityContainer.style.display = 'none';
         intentSidebarSection.style.display = '';
         goalBlockerSidebarSection.style.display = 'none';
         intentFilterBox.style.display = '';
         goalBlockerFilterBox.style.display = 'none';
-      } else {
+      } else if (vizTypeSelect.value === 'goal_blocker') {
         intentContainer.style.display = 'none';
         goalBlockerContainer.style.display = '';
+        clarityContainer.style.display = 'none';
         intentSidebarSection.style.display = 'none';
         goalBlockerSidebarSection.style.display = '';
         intentFilterBox.style.display = 'none';
         goalBlockerFilterBox.style.display = '';
+      } else if (vizTypeSelect.value === 'clarity') {
+        intentContainer.style.display = 'none';
+        goalBlockerContainer.style.display = 'none';
+        clarityContainer.style.display = '';
+        intentSidebarSection.style.display = 'none';
+        goalBlockerSidebarSection.style.display = 'none';
+        intentFilterBox.style.display = 'none';
+        goalBlockerFilterBox.style.display = 'none';
       }
     };
     loadIntentSession();

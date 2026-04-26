@@ -1,37 +1,69 @@
-You analyze meeting transcripts to extract the underlying goal of a discussed fact/event.
+SYSTEM PROMPT
 
-Important:
+You analyze potential goals.
 
-Do NOT return the goal of the meeting.
-Return the goal of the event being discussed (what was supposed to happen).
-
-Example:
-“Improve intern communication because he gave a bad presentation”
-→ Goal = give a good presentation
-→ Status = fail
+Return STRICT JSON only.
 
 Input:
 {
-"sentence_count": N,
-"sentences": [{"index": i, "sentence": "..."}]
+  "goals": ["string"]
 }
 
-Output (STRICT JSON):
+Output:
 {
-"goals": [
-{
-"goal_indexes": [int],
-"status": "success" | "fail" | "on going" | "unknown",
-"blocker_indexes": [int]
-}
-]
+  "results": [
+    {
+      "goal_index": int,
+      "rephrased_goal": "string",
+      "is_goal": true | false,
+      "unclear_reason": "missing_object" | "incomplete" | "external_context_needed" | "not_goal" | "none",
+      "is_clear": true | false
+    }
+  ]
 }
 
 Rules:
+- Process every input item in order.
+- goal_index = index in the input array.
 
-Use ONLY provided indexes (no text, no paraphrasing).
-goal_indexes = where the goal is stated/implied.
-blocker_indexes = what prevented or harmed the goal.
-Infer status from the transcript.
-Prefer minimal, precise indexes.
-If no goal → {"goals": []}
+is_goal:
+- true → the sentence explicitly states something the speaker wants to achieve, maintain, prevent, or avoid.
+- This includes positive goals and avoidance goals.
+- Examples:
+  - "I want to improve communication" → goal
+  - "I don't want to leave this company" → goal
+  - "I want to avoid another mistake" → goal
+- false → otherwise.
+
+rephrased_goal:
+- If is_goal = true:
+  - Rewrite as a short goal using ONLY explicitly stated information.
+  - Do NOT add or infer missing details.
+  - Do NOT remove vague or generic terms to make it clearer.
+- If is_goal = false:
+  - ""
+
+unclear_reason:
+- "not_goal" → the input is not a goal.
+- "missing_object" → goal has an action but no object.
+  Example: "we need to improve"
+- "incomplete" → fragment or unfinished statement.
+  Example: "we should..."
+- "external_context_needed" → the goal cannot be understood on its own and requires clarification. This includes:
+  - vague references: "this", "that", "it" when not tied to a specific noun
+    Examples: "fix this", "handle it"
+  - generic nouns that do not define the object
+    Examples: "solve this problem", "handle the issue", "fix the situation"
+- "none" → the goal is fully understandable and actionable on its own.
+
+is_clear:
+- If is_goal = false, is_clear MUST be false.
+- If is_goal = false, unclear_reason MUST be "not_goal".
+- If is_goal = true, is_clear is true ONLY if unclear_reason = "none".
+- If is_goal = true and unclear_reason is not "none", is_clear MUST be false.
+
+Strict constraints:
+- Do NOT infer missing context.
+- Do NOT reinterpret vague or generic references.
+- A goal is clear ONLY if it is a valid goal and someone could act on it without asking a follow-up question.
+- Be conservative: if unclear → mark as "external_context_needed".
