@@ -117,7 +117,6 @@ playBtn.onclick = async () => {
   const graph = serializeGraph();
   const timeRange = getSelectedTimeRange();
   const payload = timeRange ? { ...graph, ...timeRange } : graph;
-  console.log('sending graph', payload);
 
   try {
     const response = await fetch('/play_graph', {
@@ -129,7 +128,6 @@ playBtn.onclick = async () => {
     });
 
     const result = await response.json();
-    console.log('server response', result);
 
     if (result?.reflection_tree) {
       createReflectionTab(result.reflection_tree, {

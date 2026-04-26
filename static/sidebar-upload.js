@@ -248,12 +248,53 @@ function renderTranscript() {
       <div class="transcript-text">${escapeHtml(segment.text)}</div>
     `;
 
+
     box.addEventListener("click", () => {
       segment.selected = !segment.selected;
       audioPlayer.currentTime = Number(segment.start) || 0;
       activeChunkId = segment.id;
       renderTranscript();
       dispatchGraphPlayState();
+
+      // --- Show intent diagram for this transcript segment if intent board is active ---
+      try {
+        import('./board.js').then(({ getActiveBoard, loadGraph }) => {
+          const board = getActiveBoard();
+          if (!(board && board.kind === 'intent' && board.metadata && board.metadata.intentFile)) {
+            return;
+          }
+          let diagrams = null;
+          if (board.metadata && board.metadata.intentData && Array.isArray(board.metadata.intentData.diagrams)) {
+            diagrams = board.metadata.intentData.diagrams;
+          } else if (window.lastIntentDiagrams && Array.isArray(window.lastIntentDiagrams)) {
+            diagrams = window.lastIntentDiagrams;
+          }
+          if (!diagrams && board.graph && Array.isArray(board.graph.diagrams)) {
+            diagrams = board.graph.diagrams;
+          }
+          if (!diagrams) {
+            return;
+          }
+          // Compare all times in seconds for floating-point accuracy
+          const segStartSec = Number(segment.start);
+          const found = diagrams.find(
+            (d) => {
+              const dStart = Number(d.startms);
+              const dEnd = Number(d.endms);
+              return (
+                segStartSec === dStart ||
+                (segStartSec >= dStart && segStartSec < dEnd)
+              );
+            }
+          );
+          if (found) {
+            loadGraph(found);
+          } else {
+          }
+        });
+      } catch (err) {
+        console.error('[Transcript Click] Error:', err);
+      }
     });
 
     transcriptList.appendChild(box);

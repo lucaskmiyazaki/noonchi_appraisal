@@ -25,7 +25,7 @@ let reflectionCounter = 0;
 export function createIntentBoard(intent, metadata = {}) {
   boardCounter += 1;
   const id = `board-${boardCounter}`;
-  // Only use the first diagram for display
+  // Only use the first diagram for display, but keep all diagrams in metadata for later switching
   let graph = { nodes: [], edges: [] };
   if (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0) {
     graph = intent.diagrams[0];
@@ -38,9 +38,14 @@ export function createIntentBoard(intent, metadata = {}) {
     metadata: {
       sessionName: metadata.sessionName || '',
       intentFile: metadata.intentFile || '',
+      intentData: intent || null,
     },
   };
   boards.push(board);
+  // Store diagrams globally for fallback (optional, for dynamic import)
+  if (intent && Array.isArray(intent.diagrams)) {
+    window.lastIntentDiagrams = intent.diagrams;
+  }
   return board;
 }
 
