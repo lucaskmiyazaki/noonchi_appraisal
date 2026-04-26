@@ -39,6 +39,12 @@ export function createIntentBoard(intent, metadata = {}) {
       sessionName: metadata.sessionName || '',
       intentFile: metadata.intentFile || '',
       intentData: intent || null,
+      diagramStartMs: (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0)
+        ? intent.diagrams[0].startms ?? null
+        : null,
+      diagramEndMs: (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0)
+        ? intent.diagrams[0].endms ?? null
+        : null,
     },
   };
   boards.push(board);

@@ -496,6 +496,51 @@ def save_intent():
 
     return jsonify({"message": "Intent saved.", "intent_file": intent_file})
 
+@app.put("/api/audio/intent/<intent_filename>")
+def update_intent(intent_filename):
+    safe_filename = secure_filename(intent_filename or "")
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid intent filename."}), 400
+
+    intent_path = DATA_DIR / safe_filename
+    if not intent_path.exists():
+        return jsonify({"error": "Intent file not found."}), 404
+
+    payload = request.get_json() or {}
+    diagram_data = payload.get("diagram_data")
+    startms = payload.get("startms")
+    if diagram_data is None:
+        return jsonify({"error": "Missing diagram_data."}), 400
+
+    try:
+        full = json.loads(intent_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        return jsonify({"error": f"Failed to read intent file: {e}"}), 500
+
+    diagrams = full.get("diagrams", [])
+    matched = False
+    if startms is not None:
+        for i, d in enumerate(diagrams):
+            if d.get("startms") == startms:
+                diagrams[i] = {**d, "nodes": diagram_data.get("nodes", []), "edges": diagram_data.get("edges", [])}
+                matched = True
+                break
+    if not matched:
+        # Fallback: patch the first diagram
+        if diagrams:
+            diagrams[0] = {**diagrams[0], "nodes": diagram_data.get("nodes", []), "edges": diagram_data.get("edges", [])}
+        else:
+            diagrams.append(diagram_data)
+    full["diagrams"] = diagrams
+
+    try:
+        intent_path.write_text(json.dumps(full, indent=2), encoding="utf-8")
+    except Exception as e:
+        return jsonify({"error": f"Failed to update intent file: {e}"}), 500
+
+    return jsonify({"message": "Intent updated.", "intent_file": safe_filename})
+
+
 @app.get("/api/audio/session/<session_name>/analysis")
 def get_session_analysis(session_name):
     try:

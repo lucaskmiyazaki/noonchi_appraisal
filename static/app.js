@@ -26,7 +26,7 @@ initTabs();
 
 function isGraphBoardActive() {
   const board = getActiveBoard();
-  return !board || board.kind === 'graph';
+  return !board || board.kind === 'graph' || board.kind === 'intent';
 }
 
 function formatReflectionTime(value) {
@@ -53,7 +53,7 @@ function syncToolbarState() {
   addBlockerBtn.disabled = !enabled;
   addFollowupBtn.disabled = !enabled;
   playBtn.disabled = !enabled;
-  playBtn.hidden = !enabled || !graphPlayState.hasSession || !graphPlayState.hasSelection;
+  playBtn.hidden = !enabled || board?.kind === 'intent' || !graphPlayState.hasSession || !graphPlayState.hasSelection;
 
   const isReflectionBoard = board?.kind === 'reflection';
   if (toolbarActions) toolbarActions.hidden = isReflectionBoard;
@@ -144,26 +144,39 @@ playBtn.onclick = async () => {
 
 // --- Save Intent Button Logic ---
 saveIntentBtn.onclick = async () => {
-  if (!isGraphBoardActive()) return;
   const board = getActiveBoard();
-  if (!board) return;
-  const intentData = board.graph;
+  if (!board || (board.kind !== 'graph' && board.kind !== 'intent')) return;
+  const intentData = serializeGraph();
   const sessionName = getSessionName();
   const wearerAgent = board.metadata?.wearerName || '';
-  const intentFile = `intent_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  const existingFile = board.metadata?.intentFile || '';
 
-  // Save intent JSON to backend
   try {
-    const response = await fetch('/api/audio/session/save_intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_name: sessionName,
-        wearer_agent: wearerAgent,
-        intent_file: intentFile,
-        intent_data: intentData
-      })
-    });
+    let response;
+    if (existingFile) {
+      // Overwrite only the matching diagram in the existing intent file
+      response = await fetch(`/api/audio/intent/${encodeURIComponent(existingFile)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          diagram_data: intentData,
+          startms: board.metadata?.diagramStartMs ?? null,
+        }),
+      });
+    } else {
+      // Create new intent file
+      const intentFile = `intent_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      response = await fetch('/api/audio/session/save_intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_name: sessionName,
+          wearer_agent: wearerAgent,
+          intent_file: intentFile,
+          intent_data: intentData,
+        }),
+      });
+    }
     const result = await response.json();
     if (response.ok) {
       window.alert('Intent saved successfully!');
