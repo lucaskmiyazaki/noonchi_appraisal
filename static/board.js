@@ -25,11 +25,16 @@ let reflectionCounter = 0;
 export function createIntentBoard(intent, metadata = {}) {
   boardCounter += 1;
   const id = `board-${boardCounter}`;
+  // Only use the first diagram for display
+  let graph = { nodes: [], edges: [] };
+  if (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0) {
+    graph = intent.diagrams[0];
+  }
   const board = {
     id,
     name: metadata.name || metadata.sessionName || 'Intent',
     kind: 'intent',
-    graph: intent, // intent is expected to be {diagrams: [...]}
+    graph,
     metadata: {
       sessionName: metadata.sessionName || '',
       intentFile: metadata.intentFile || '',
