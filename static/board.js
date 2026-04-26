@@ -22,6 +22,22 @@ export const boards = [];
 export let activeBoardId = null;
 let boardCounter = 0;
 let reflectionCounter = 0;
+export function createIntentBoard(intent, metadata = {}) {
+  boardCounter += 1;
+  const id = `board-${boardCounter}`;
+  const board = {
+    id,
+    name: metadata.name || metadata.sessionName || 'Intent',
+    kind: 'intent',
+    graph: intent, // intent is expected to be {diagrams: [...]}
+    metadata: {
+      sessionName: metadata.sessionName || '',
+      intentFile: metadata.intentFile || '',
+    },
+  };
+  boards.push(board);
+  return board;
+}
 
 const factories = {
   agent: createAgentNode,

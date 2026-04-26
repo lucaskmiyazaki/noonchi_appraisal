@@ -3,7 +3,7 @@ import { createAgentNode, createGoalNode, createBlockerNode, createFollowupNode 
 import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
 import { getActiveBoard } from './board.js';
-import { initTabs, createReflectionTab } from './tabs.js';
+import { initTabs, createReflectionTab, syncIntentTabs } from './tabs.js';
 import { clearSelectedTranscriptSegments, getSelectedTimeRange } from './sidebar-upload.js';
 
 const toolbarActions = document.getElementById('toolbarActions');
@@ -18,7 +18,22 @@ let graphPlayState = {
   hasSelection: false,
 };
 
+
 initTabs();
+
+// --- Load intent tabs for a session (example: on page load or session select) ---
+// Replace 'Water Project' with dynamic session name as needed
+const sessionName = window.currentSessionName || 'Water Project';
+fetch(`/api/audio/session/${encodeURIComponent(sessionName)}/intents`)
+  .then((res) => res.json())
+  .then((payload) => {
+    if (payload && Array.isArray(payload.intents)) {
+      syncIntentTabs(payload.intents);
+    }
+  })
+  .catch((err) => {
+    console.error('Failed to load intent tabs', err);
+  });
 
 function isGraphBoardActive() {
   const board = getActiveBoard();

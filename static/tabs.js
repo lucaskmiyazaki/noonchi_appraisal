@@ -1,5 +1,5 @@
 import { tabBar, addTabBtn } from './state.js';
-import { boards, activeBoardId, createBoard, createReflectionBoard, setActiveBoard, getActiveBoard, removeBoard } from './board.js';
+import { boards, activeBoardId, createBoard, createReflectionBoard, createIntentBoard, setActiveBoard, getActiveBoard, removeBoard } from './board.js';
 
 function syncReflectionBoardNames() {
   let reflectionIndex = 0;
@@ -35,6 +35,7 @@ async function deleteReflectionBoard(board) {
   }
 }
 
+
 function renderTabs() {
   syncReflectionBoardNames();
   tabBar.innerHTML = '';
@@ -46,6 +47,7 @@ function renderTabs() {
     btn.type = 'button';
     btn.className = 'tab-button' + (board.id === activeBoardId ? ' active' : '');
     if (board.kind === 'reflection') btn.classList.add('reflection');
+    if (board.kind === 'intent') btn.classList.add('intent');
     btn.textContent = board.name;
     btn.onclick = () => {
       setActiveBoard(board.id);
@@ -69,6 +71,33 @@ function renderTabs() {
 
     tabBar.appendChild(tab);
   });
+}
+// --- Intent Tab Support ---
+export function createIntentTab(intent, metadata = {}) {
+  const board = createIntentBoard(intent, metadata);
+  setActiveBoard(board.id);
+  renderTabs();
+}
+
+export function syncIntentTabs(intents) {
+  const activeBoard = getActiveBoard();
+  const fallbackGraphBoard = boards.find((board) => board.kind === 'graph');
+  const nextActiveGraphBoard = activeBoard?.kind === 'graph' ? activeBoard : fallbackGraphBoard;
+
+  const graphBoards = boards.filter((board) => board.kind !== 'intent');
+  boards.splice(0, boards.length, ...graphBoards);
+
+  intents.forEach((intent, index) => {
+    if (!intent?.data) return;
+    const board = createIntentBoard(intent.data, intent);
+    board.name = `Intent ${index + 1}`;
+  });
+
+  if (nextActiveGraphBoard) {
+    setActiveBoard(nextActiveGraphBoard.id);
+  }
+
+  renderTabs();
 }
 
 export function initTabs() {

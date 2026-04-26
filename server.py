@@ -927,6 +927,40 @@ def list_session_reflection_trees(session_name):
     return jsonify({"session": session_name, "reflections": reflections})
 
 
+# --- NEW: Endpoint for intent files for a session ---
+@app.get("/api/audio/session/<session_name>/intents")
+def list_session_intent_files(session_name):
+    intents = []
+    rows, _ = load_reflection_db_rows()
+    for row in rows:
+        if row.get("session_name", "") != session_name:
+            continue
+
+        intent_file = row.get("intent_filename", "")
+        if not intent_file:
+            continue
+
+        intent_path = DATA_DIR / intent_file
+        if not intent_path.exists() or intent_path.suffix != ".json":
+            continue
+        try:
+            intent_data = json.loads(intent_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        intents.append({
+            "intent_file": intent_file,
+            "wearer_agent": row.get("wearer_agent", ""),
+            "startms": row.get("startms", ""),
+            "endms": row.get("endms", ""),
+            "audio_filename": row.get("audio_filename", ""),
+            "data": intent_data,
+        })
+
+    intents.sort(key=lambda item: float(item.get("startms") or 0))
+    return jsonify({"session": session_name, "intents": intents})
+
+
 @app.get("/api/audio/session/<session_name>/emotion")
 def get_session_emotion(session_name):
     try:
