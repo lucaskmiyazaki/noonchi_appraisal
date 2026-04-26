@@ -7,6 +7,7 @@ export const addGoalBtn = document.getElementById('addGoalBtn');
 export const addBlockerBtn = document.getElementById('addBlockerBtn');
 export const addFollowupBtn = document.getElementById('addFollowupBtn');
 export const playBtn = document.getElementById('playBtn');
+export const saveIntentBtn = document.getElementById('saveIntentBtn');
 
 export const nodes = new Map();
 export const edges = [];

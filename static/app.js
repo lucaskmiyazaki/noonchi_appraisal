@@ -1,4 +1,5 @@
 import { addAgentBtn, addGoalBtn, addBlockerBtn, addFollowupBtn, playBtn } from './state.js';
+import { saveIntentBtn } from './state.js';
 import { createAgentNode, createGoalNode, createBlockerNode, createFollowupNode } from './nodes.js';
 import { updateAllEdges } from './edges.js';
 import { serializeGraph } from './serialize.js';
@@ -152,6 +153,40 @@ playBtn.onclick = async () => {
     }
   } catch (error) {
     console.error('failed to send graph', error);
+  }
+};
+
+// --- Save Intent Button Logic ---
+saveIntentBtn.onclick = async () => {
+  if (!isGraphBoardActive()) return;
+  const board = getActiveBoard();
+  if (!board) return;
+  const intentData = board.graph;
+  const sessionName = window.currentSessionName || 'Water Project';
+  const wearerAgent = board.metadata?.wearerName || '';
+  const intentFile = `intent_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+
+  // Save intent JSON to backend
+  try {
+    const response = await fetch('/api/audio/session/save_intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_name: sessionName,
+        wearer_agent: wearerAgent,
+        intent_file: intentFile,
+        intent_data: intentData
+      })
+    });
+    const result = await response.json();
+    if (response.ok) {
+      window.alert('Intent saved successfully!');
+    } else {
+      window.alert(result.error || 'Failed to save intent.');
+    }
+  } catch (error) {
+    window.alert('Failed to save intent.');
+    console.error(error);
   }
 };
 

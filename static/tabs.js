@@ -10,22 +10,40 @@ function syncReflectionBoardNames() {
   });
 }
 
+async function deleteIntentBoard(board) {
+  const intentFile = board?.metadata?.intentFile;
+  if (!intentFile) {
+    return;
+  }
+  try {
+    const response = await fetch(`/api/audio/intent/${encodeURIComponent(intentFile)}`, {
+      method: 'DELETE',
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || 'Failed to delete intent.');
+    }
+    removeBoard(board.id);
+    renderTabs();
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || 'Failed to delete intent.');
+  }
+}
+
 async function deleteReflectionBoard(board) {
   const reflectionFile = board?.metadata?.reflectionFile;
   if (!reflectionFile) {
     return;
   }
-
   try {
     const response = await fetch(`/api/audio/reflection/${encodeURIComponent(reflectionFile)}`, {
       method: 'DELETE',
     });
     const payload = await response.json();
-
     if (!response.ok) {
       throw new Error(payload.error || 'Failed to delete reflection.');
     }
-
     removeBoard(board.id);
     syncReflectionBoardNames();
     renderTabs();
@@ -56,7 +74,7 @@ function renderTabs() {
 
     tab.appendChild(btn);
 
-    if (board.kind === 'reflection') {
+    if (board.kind === 'reflection' || board.kind === 'intent') {
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
       closeBtn.className = 'tab-close-button' + (board.id === activeBoardId ? ' active' : '');
@@ -64,7 +82,11 @@ function renderTabs() {
       closeBtn.textContent = '×';
       closeBtn.onclick = async (event) => {
         event.stopPropagation();
-        await deleteReflectionBoard(board);
+        if (board.kind === 'reflection') {
+          await deleteReflectionBoard(board);
+        } else if (board.kind === 'intent') {
+          await deleteIntentBoard(board);
+        }
       };
       tab.appendChild(closeBtn);
     }
@@ -74,7 +96,10 @@ function renderTabs() {
 }
 // --- Intent Tab Support ---
 export function createIntentTab(intent, metadata = {}) {
-  const board = createIntentBoard(intent, metadata);
+  // Ensure intentFile is set in metadata
+  const meta = { ...metadata };
+  if (!meta.intentFile && meta.intent_file) meta.intentFile = meta.intent_file;
+  const board = createIntentBoard(intent, meta);
   setActiveBoard(board.id);
   renderTabs();
 }
@@ -89,7 +114,10 @@ export function syncIntentTabs(intents) {
 
   intents.forEach((intent, index) => {
     if (!intent?.data) return;
-    const board = createIntentBoard(intent.data, intent);
+    // Ensure intentFile is set in metadata
+    const meta = { ...intent };
+    if (!meta.intentFile && meta.intent_file) meta.intentFile = meta.intent_file;
+    const board = createIntentBoard(intent.data, meta);
     board.name = `Intent ${index + 1}`;
   });
 

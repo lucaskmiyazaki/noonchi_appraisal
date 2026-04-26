@@ -422,7 +422,80 @@ def build_session_analysis_payload(session_name=""):
         "segments": transcript_segments,
     }
 
-# --- NEW: API endpoint for generic analysis (emotion + intent) ---
+
+# --- API endpoint to delete intent file and db entry ---
+@app.delete("/api/audio/intent/<intent_filename>")
+def delete_intent(intent_filename):
+    safe_filename = secure_filename(intent_filename or "")
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid intent filename."}), 400
+
+    db_path = DATA_DIR / "db.csv"
+    rows, fieldnames = load_reflection_db_rows()
+    remaining_rows = []
+    deleted_row = None
+    for row in rows:
+        if row.get("intent_filename", "") == safe_filename and deleted_row is None:
+            deleted_row = row
+            continue
+        remaining_rows.append(row)
+    write_reflection_db_rows(remaining_rows, fieldnames)
+
+    intent_path = DATA_DIR / safe_filename
+    file_deleted = False
+    if intent_path.exists() and intent_path.is_file():
+        intent_path.unlink()
+        file_deleted = True
+
+    if deleted_row is None and not file_deleted:
+        return jsonify({"error": "Intent not found."}), 404
+
+    return jsonify({
+        "message": "intent deleted",
+        "intent_file": safe_filename,
+    })
+
+@app.post("/api/audio/session/save_intent")
+def save_intent():
+    payload = request.get_json() or {}
+    session_name = payload.get("session_name", "").strip()
+    wearer_agent = payload.get("wearer_agent", "").strip()
+    intent_file = payload.get("intent_file", "").strip()
+    intent_data = payload.get("intent_data")
+    if not session_name or not intent_file or intent_data is None:
+        return jsonify({"error": "Missing required fields."}), 400
+
+    # Save intent JSON
+    intent_path = DATA_DIR / intent_file
+    try:
+        intent_path.write_text(json.dumps(intent_data, indent=2), encoding="utf-8")
+    except Exception as e:
+        return jsonify({"error": f"Failed to save intent file: {e}"}), 500
+
+    # Update db.csv
+    rows, fieldnames = load_reflection_db_rows()
+    if "intent_filename" not in fieldnames:
+        fieldnames.append("intent_filename")
+        for row in rows:
+            if "intent_filename" not in row:
+                row["intent_filename"] = ""
+
+    # Add new row for intent
+    new_row = {
+        "wearer_agent": wearer_agent,
+        "session_name": session_name,
+        "reflection_tree_file": "",
+        "startms": "",
+        "endms": "",
+        "practice": "null",
+        "audio_filename": "",
+        "intent_filename": intent_file,
+    }
+    rows.append(new_row)
+    write_reflection_db_rows(rows, fieldnames)
+
+    return jsonify({"message": "Intent saved.", "intent_file": intent_file})
+
 @app.get("/api/audio/session/<session_name>/analysis")
 def get_session_analysis(session_name):
     try:
