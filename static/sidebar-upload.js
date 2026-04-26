@@ -332,6 +332,22 @@ async function loadAudioById(audioId) {
 
     setLoadedAudio(data);
     await loadReflectionTabsForAudio(data.id, data.sessionName);
+
+    // Fetch intents for the selected session and sync intent tabs
+    if (data.sessionName) {
+      try {
+        const intentRes = await fetch(`/api/audio/session/${encodeURIComponent(data.sessionName)}/intents`);
+        const intentPayload = await intentRes.json();
+        if (intentPayload && Array.isArray(intentPayload.intents)) {
+          import('./tabs.js').then(({ syncIntentTabs }) => {
+            syncIntentTabs(intentPayload.intents);
+          });
+        }
+      } catch (intentErr) {
+        console.error('Failed to load intent tabs', intentErr);
+      }
+    }
+
     return true;
   } catch (error) {
     console.error(error);

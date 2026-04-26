@@ -22,19 +22,7 @@ let graphPlayState = {
 
 initTabs();
 
-// --- Load intent tabs for a session (example: on page load or session select) ---
-// Replace 'Water Project' with dynamic session name as needed
-const sessionName = window.currentSessionName || 'Water Project';
-fetch(`/api/audio/session/${encodeURIComponent(sessionName)}/intents`)
-  .then((res) => res.json())
-  .then((payload) => {
-    if (payload && Array.isArray(payload.intents)) {
-      syncIntentTabs(payload.intents);
-    }
-  })
-  .catch((err) => {
-    console.error('Failed to load intent tabs', err);
-  });
+
 
 function isGraphBoardActive() {
   const board = getActiveBoard();
