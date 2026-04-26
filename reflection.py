@@ -56,12 +56,13 @@ class ReflectionTree:
     def _agent_label(self, agent, fallback="the responsible agent"):
         if agent is None:
             return fallback
-        name = getattr(agent, "name", "")
+        name = getattr(agent, "name", None)
         if isinstance(name, str) and name.strip():
             return name.strip()
-        role = getattr(agent, "role", "")
+        role = getattr(agent, "role", None)
         if isinstance(role, str) and role.strip():
             return role.strip()
+        # If both name and role are empty or None, return fallback
         return fallback
 
     def _agent_possessive_label(self, agent, fallback="your colleague"):
