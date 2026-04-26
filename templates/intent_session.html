@@ -80,18 +80,38 @@
           </div>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
-          <label for="intentFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Filter:</label>
-          <select id="intentFilterSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
-            <option value="">All</option>
+          <label for="vizTypeSelect" style="font-size:13px;color:#64748b;font-weight:600;">View:</label>
+          <select id="vizTypeSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
+            <option value="intent">Intent</option>
+            <option value="goal_blocker">Goal/Blocker</option>
           </select>
+          <span id="intentFilterBox">
+            <label for="intentFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Intent Filter:</label>
+            <select id="intentFilterSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
+              <option value="">All</option>
+            </select>
+          </span>
+          <span id="goalBlockerFilterBox" style="display:none;">
+            <label for="goalBlockerFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Goal/Blocker Filter:</label>
+            <select id="goalBlockerFilterSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
+              <option value="">All</option>
+            </select>
+          </span>
         </div>
       </header>
       <div id="intentContainer" class="session-content"></div>
+      <div id="goalBlockerContainer" class="session-content" style="display:none;"></div>
     </div>
     <aside class="session-sidebar">
       <div class="session-sidebar-panel">
-        <h2 class="session-sidebar-title">Intent Labels</h2>
-        <div id="intentLabelList"></div>
+        <div id="intentSidebarSection">
+          <h2 class="session-sidebar-title">Intent Labels</h2>
+          <div id="intentLabelList"></div>
+        </div>
+        <div id="goalBlockerSidebarSection" style="display:none;">
+          <h2 class="session-sidebar-title">Goal/Blocker Labels</h2>
+          <div id="goalBlockerLabelList"></div>
+        </div>
       </div>
     </aside>
   </div>
@@ -123,14 +143,17 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
-    // Fetch and render intent-labeled transcript
+    // Fetch and render intent and goal_blocker-labeled transcript
     async function loadIntentSession() {
       const container = document.getElementById('intentContainer');
+      const goalBlockerContainer = document.getElementById('goalBlockerContainer');
       container.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Loading intent analysis...</div></div></div>';
+      goalBlockerContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Loading goal/blocker analysis...</div></div></div>';
       // Use current session from Jinja variable
       const session = "{{ current_session|e }}";
       if (!session) {
         container.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Missing session.</div></div></div>';
+        goalBlockerContainer.innerHTML = '<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">Missing session.</div></div></div>';
         return;
       }
       try {
@@ -140,19 +163,33 @@
           throw new Error(payload.error || 'Failed to load intent analysis.');
         }
         const segments = payload.segments || [];
+        // --- INTENT LABEL VISUALIZATION ---
         container.innerHTML = `
           <div class="transcript-scroll">
             <div class="transcript-content">
-              <div class="section-title">Transcript</div>
+              <div class="section-title">Intent Label Transcript</div>
               <div id="intentTranscript" class="session-transcript"></div>
             </div>
           </div>
         `;
         const transcriptRoot = document.getElementById('intentTranscript');
         const labelList = document.getElementById('intentLabelList');
+        // --- GOAL/BLOCKER LABEL VISUALIZATION ---
+        goalBlockerContainer.innerHTML = `
+          <div class="transcript-scroll">
+            <div class="transcript-content">
+              <div class="section-title">Goal/Blocker Label Transcript</div>
+              <div id="goalBlockerTranscript" class="session-transcript"></div>
+            </div>
+          </div>
+        `;
+        const goalBlockerRoot = document.getElementById('goalBlockerTranscript');
+        const goalBlockerLabelList = document.getElementById('goalBlockerLabelList');
         if (!segments.length) {
           transcriptRoot.innerHTML = '<div class="session-transcript-empty">Transcript unavailable for this session.</div>';
+          goalBlockerRoot.innerHTML = '<div class="session-transcript-empty">Transcript unavailable for this session.</div>';
           if (labelList) labelList.innerHTML = '<div class="session-transcript-empty">No labels available.</div>';
+          if (goalBlockerLabelList) goalBlockerLabelList.innerHTML = '<div class="session-transcript-empty">No labels available.</div>';
           return;
         }
         // --- Filter logic ---
@@ -162,11 +199,25 @@
         let currentFilter = '';
         filterSelect.onchange = function() {
           currentFilter = filterSelect.value;
-          renderFiltered();
+          renderIntentFiltered();
         };
 
-        function renderFiltered() {
-          // Transcript: always show all text, only highlight if matches filter
+        const goalBlockerFilterSelect = document.getElementById('goalBlockerFilterSelect');
+        const uniqueGBLabels = Array.from(new Set(segments.map(s => s.goal_blocker_label).filter(Boolean)));
+        goalBlockerFilterSelect.innerHTML = '<option value="">All</option>' + uniqueGBLabels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+        let currentGBFilter = '';
+        goalBlockerFilterSelect.onchange = function() {
+          currentGBFilter = goalBlockerFilterSelect.value;
+          renderGoalBlockerFiltered();
+        };
+
+        function goalBlockerLabelColor(label) {
+          if (label === 'goal') return '#2ca02c';
+          if (label === 'blocker') return '#d62728';
+          return '#cbd5e1';
+        }
+
+        function renderIntentFiltered() {
           transcriptRoot.innerHTML = '';
           segments.forEach((segment) => {
             const span = document.createElement('span');
@@ -216,18 +267,92 @@
           }
         }
 
-        if (!segments.length) {
-          transcriptRoot.innerHTML = '<div class="session-transcript-empty">Transcript unavailable for this session.</div>';
-          if (labelList) labelList.innerHTML = '<div class="session-transcript-empty">No labels available.</div>';
-          return;
+        function renderGoalBlockerFiltered() {
+          goalBlockerRoot.innerHTML = '';
+          segments.forEach((segment) => {
+            const span = document.createElement('span');
+            span.className = 'session-chunk';
+            const label = segment.goal_blocker_label;
+            if (!currentGBFilter || label === currentGBFilter) {
+              span.style.background = label ? goalBlockerLabelColor(label) + '33' : getNeutralBackground();
+            } else {
+              span.style.background = getNeutralBackground();
+            }
+            span.textContent = `${segment.text || ''} `;
+            goalBlockerRoot.appendChild(span);
+          });
+          // Sidebar: only show chips for filtered label
+          if (goalBlockerLabelList) {
+            goalBlockerLabelList.innerHTML = '';
+            segments.forEach((segment, idx) => {
+              if (currentGBFilter && segment.goal_blocker_label !== currentGBFilter) return;
+              const label = segment.goal_blocker_label;
+              const chip = document.createElement('span');
+              chip.className = 'session-chunk';
+              chip.style.background = label ? goalBlockerLabelColor(label) + '1f' : getNeutralBackground();
+              chip.style.color = label ? goalBlockerLabelColor(label) : '#0f172a';
+              chip.style.fontWeight = '700';
+              chip.style.textTransform = 'uppercase';
+              chip.style.fontSize = '11px';
+              chip.style.letterSpacing = '0.05em';
+              chip.style.padding = '4px 8px';
+              chip.style.marginRight = '8px';
+              chip.style.borderRadius = '999px';
+              chip.textContent = label || 'None';
+              const preview = document.createElement('span');
+              preview.style.fontSize = '12px';
+              preview.style.color = '#64748b';
+              preview.textContent = segment.text ? ` ${segment.text.slice(0, 32)}${segment.text && segment.text.length > 32 ? '…' : ''}` : '';
+              const row = document.createElement('div');
+              row.style.display = 'flex';
+              row.style.alignItems = 'center';
+              row.style.marginBottom = '8px';
+              row.appendChild(chip);
+              row.appendChild(preview);
+              goalBlockerLabelList.appendChild(row);
+            });
+            if (!goalBlockerLabelList.hasChildNodes()) {
+              goalBlockerLabelList.innerHTML = '<div class="session-transcript-empty">No labels available.</div>';
+            }
+          }
         }
-        renderFiltered();
+
+        renderIntentFiltered();
+        renderGoalBlockerFiltered();
       } catch (error) {
         container.innerHTML = `<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">${escapeHtml(error.message || 'Failed to load intent analysis.')}</div></div></div>`;
+        goalBlockerContainer.innerHTML = `<div class="transcript-scroll"><div class="transcript-content"><div class="session-transcript-empty">${escapeHtml(error.message || 'Failed to load goal/blocker analysis.')}</div></div></div>`;
         const labelList = document.getElementById('intentLabelList');
         if (labelList) labelList.innerHTML = '<div class="session-transcript-empty">No labels available.</div>';
+        const goalBlockerLabelList = document.getElementById('goalBlockerLabelList');
+        if (goalBlockerLabelList) goalBlockerLabelList.innerHTML = '<div class="session-transcript-empty">No labels available.</div>';
       }
     }
+    // Toggle visualization type
+    const vizTypeSelect = document.getElementById('vizTypeSelect');
+    const intentContainer = document.getElementById('intentContainer');
+    const goalBlockerContainer = document.getElementById('goalBlockerContainer');
+    const intentSidebarSection = document.getElementById('intentSidebarSection');
+    const goalBlockerSidebarSection = document.getElementById('goalBlockerSidebarSection');
+    const intentFilterBox = document.getElementById('intentFilterBox');
+    const goalBlockerFilterBox = document.getElementById('goalBlockerFilterBox');
+    vizTypeSelect.onchange = function() {
+      if (vizTypeSelect.value === 'intent') {
+        intentContainer.style.display = '';
+        goalBlockerContainer.style.display = 'none';
+        intentSidebarSection.style.display = '';
+        goalBlockerSidebarSection.style.display = 'none';
+        intentFilterBox.style.display = '';
+        goalBlockerFilterBox.style.display = 'none';
+      } else {
+        intentContainer.style.display = 'none';
+        goalBlockerContainer.style.display = '';
+        intentSidebarSection.style.display = 'none';
+        goalBlockerSidebarSection.style.display = '';
+        intentFilterBox.style.display = 'none';
+        goalBlockerFilterBox.style.display = '';
+      }
+    };
     loadIntentSession();
   </script>
 </body>
