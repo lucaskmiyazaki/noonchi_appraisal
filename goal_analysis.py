@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
+from tqdm import tqdm
 
 # Load environment variables
 load_dotenv()
@@ -25,20 +26,59 @@ def extract_goal_sentences(transcript):
 
 def annotate_transcript(transcript, indices, results):
     """Mark each segment as 'clear', 'unclear', or 'no goal' for goal clarity."""
-    for i, seg in enumerate(transcript):
-        seg["goal_clarity"] = "no goal"
-        seg["rephrased_goal"] = ""
     for idx, result in zip(indices, results):
         seg = transcript[idx]
-        seg["rephrased_goal"] = result["rephrased_goal"]
-        is_goal = result.get("is_goal", True if result["rephrased_goal"] else False)
+        rephrased_goal = result.get("rephrased_goal", "")
+        is_goal = result.get("is_goal", bool(rephrased_goal))
         is_clear = result.get("is_clear", False)
-        if not is_goal:
-            seg["goal_clarity"] = "no goal"
-        elif is_goal and not is_clear:
-            seg["goal_clarity"] = "unclear"
-        elif is_goal and is_clear:
-            seg["goal_clarity"] = "clear"
+        if not is_goal or not rephrased_goal:
+            # No goal from AI — preserve any existing value
+            continue
+        seg["rephrased_goal"] = rephrased_goal
+        seg["goal_clarity"] = "clear" if is_clear else "unclear"
+        seg["is_goal_status"] = "ongoing"
+
+def classify_goals(sentences, batch_size=10):
+    """Send sentences to GPT in batches, return ordered list of result dicts."""
+    all_results = []
+    n = len(sentences)
+    bar = tqdm(total=n, desc="Annotating goal clarity", unit="sentence")
+    for i in range(0, n, batch_size):
+        batch = sentences[i:i+batch_size]
+        gpt_input = {"goals": batch}
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {"role": "system", "content": PROMPT},
+                    {"role": "user", "content": json.dumps(gpt_input, ensure_ascii=False)}
+                ]
+            )
+            output = json.loads(response.choices[0].message.content)
+            batch_results = output["results"]
+            if len(batch_results) != len(batch):
+                raise ValueError(f"Expected {len(batch)} results, got {len(batch_results)}")
+            all_results.extend(batch_results)
+            bar.update(len(batch))
+        except Exception as e:
+            print(f"\nBatch {i//batch_size + 1} failed ({e}), falling back to per-sentence")
+            for sentence in batch:
+                try:
+                    single_resp = client.chat.completions.create(
+                        model="gpt-4.1-mini",
+                        messages=[
+                            {"role": "system", "content": PROMPT},
+                            {"role": "user", "content": json.dumps({"goals": [sentence]}, ensure_ascii=False)}
+                        ]
+                    )
+                    single_output = json.loads(single_resp.choices[0].message.content)
+                    all_results.append(single_output["results"][0])
+                except Exception:
+                    all_results.append({"goal_index": len(all_results), "rephrased_goal": "", "is_goal": False, "is_clear": False})
+                bar.update(1)
+    bar.close()
+    return all_results
+
 
 def main(json_path):
     data = json.loads(Path(json_path).read_text(encoding="utf-8"))
@@ -47,31 +87,10 @@ def main(json_path):
     if not sentences:
         print("No desire or negative evaluation sentences found.")
         return
-    # Prepare GPT input
-    gpt_input = {"goals": sentences}
-    print("\n--- GPT API INPUT ---")
-    print(json.dumps(gpt_input, indent=2, ensure_ascii=False))
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": PROMPT},
-            {"role": "user", "content": json.dumps(gpt_input, ensure_ascii=False)}
-        ]
-    )
-    print("\n--- GPT API OUTPUT ---")
-    print(response.choices[0].message.content)
-    # Parse GPT output
-    try:
-        output = json.loads(response.choices[0].message.content)
-        results = output["results"]
-    except Exception as e:
-        print("Failed to parse GPT output:", e)
-        print(response.choices[0].message.content)
+    results = classify_goals(sentences)
+    if len(results) != len(sentences):
+        print(f"Mismatch: expected {len(sentences)} results, got {len(results)}")
         return
-    # Print rephrased goals
-    for r in results:
-        print(f"[{r['goal_index']}] rephrased_goal: {r['rephrased_goal']}")
-    # Annotate transcript
     annotate_transcript(transcript, indices, results)
     Path(json_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Annotated {json_path} with goal_clarity.")

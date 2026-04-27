@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
+from tqdm import tqdm
 import re
 import argparse
 
@@ -21,12 +22,12 @@ Classify each sentence into EXACTLY ONE label:
 
 - request (ask for action, including orders, instructions, suggestions, proposals—even if phrased as a question)
 - question (ask for information or clarification ONLY, not action)
-- desire (speaker’s OWN goals/wishes)
+- desire (past/present/future personal or meeting goals, purposes, or wishes—including statements that define scope or intent, even implicitly or through exclusions like “not for X”; not specific actions or plans)
 - apology (acknowledgement of mistake or regret)
 - state (speaker expresses inability, confusion, or emotional condition without stating a goal)
 - positive evaluation (praise/appreciation)
 - negative evaluation (criticism/complaint or judgment)
-- informing (speaker’s OWN past or future actions)
+- informing (speaker’s OWN specific past actions or future plans, not goals)
 - greeting
 - None
 
@@ -45,6 +46,7 @@ def split_sentences(text):
 def classify_intents(sentences, client, batch_size=25):
     labels = []
     n = len(sentences)
+    bar = tqdm(total=n, desc="Classifying intents", unit="sentence")
     for i in range(0, n, batch_size):
         batch = sentences[i:i+batch_size]
         try:
@@ -117,6 +119,7 @@ def classify_intents(sentences, client, batch_size=25):
                     single_data = json.loads(single_resp.output_text)
                     label = single_data["labels"][0] if single_data["labels"] else "None"
                     batch_labels.append(label)
+                    bar.update(1)
             labels.extend(batch_labels)
         except Exception as e:
             # fallback: classify each sentence individually in this batch
@@ -155,8 +158,11 @@ def classify_intents(sentences, client, batch_size=25):
                     single_data = json.loads(single_resp.output_text)
                     label = single_data["labels"][0] if single_data["labels"] else "None"
                     labels.append(label)
+                    bar.update(1)
                 except Exception:
                     labels.append("None")
+                    bar.update(1)
+    bar.close()
     return labels
 
 def process_record(record_path, client):

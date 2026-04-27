@@ -33,13 +33,17 @@ is_goal:
   - "I want to improve communication" → goal
   - "I don't want to leave this company" → goal
   - "I want to avoid another mistake" → goal
-- false → otherwise.
+- false → otherwise, for example is talking about an action, a specific plan of action or question
+- Examples:
+  - "I'd like to start the meeting talking about dogs"
+  - "so the plan is to drive to the school" 
 
 rephrased_goal:
 - If is_goal = true:
   - Rewrite as a short goal using ONLY explicitly stated information.
   - Do NOT add or infer missing details.
-  - Do NOT remove vague or generic terms to make it clearer.
+  - use ing verbs
+  - use the structure: <verb> <object> <condition>
 - If is_goal = false:
   - ""
 
