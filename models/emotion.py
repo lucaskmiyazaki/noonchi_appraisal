@@ -1,4 +1,4 @@
-from constants import (
+from .constants import (
     DEFAULT_PAD,
     NAME_TO_PAD,
     PAD_NEUTRAL_MAX,

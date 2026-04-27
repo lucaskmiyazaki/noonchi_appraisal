@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR.parent / "data"
 DB_PATH = DATA_DIR / "db.csv"
 
 FIELDNAMES = [

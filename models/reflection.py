@@ -1,12 +1,12 @@
-from actionable import Actionable
-from agent import Agent
-from blocker import Blocker
-from constants import DEFAULT_PAD, GOAL_STATUS_ON_GOING
-from constants import GOAL_STATUS_SUCCESS, GOAL_STATUS_FAIL
-from constants import ROLE_PARTICIPANTS, ROLE_WEARER, normalize_role
-from emotion import Emotion
-from goal import Goal
-from question import Question
+from .actionable import Actionable
+from .agent import Agent
+from .blocker import Blocker
+from .constants import DEFAULT_PAD, GOAL_STATUS_ON_GOING
+from .constants import GOAL_STATUS_SUCCESS, GOAL_STATUS_FAIL
+from .constants import ROLE_PARTICIPANTS, ROLE_WEARER, normalize_role
+from .emotion import Emotion
+from .goal import Goal
+from .question import Question
 
 
 class ReflectionNode:

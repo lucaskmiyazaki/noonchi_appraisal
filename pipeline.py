@@ -13,15 +13,15 @@ def run_with_progress(cmd, desc):
 def main(transcript_path):
     base = os.path.splitext(os.path.basename(transcript_path))[0]
     # Step 1: transcript_analysis
-    run_with_progress(f"python3 transcript_analysis.py {transcript_path}", "Merging transcript segments")
+    run_with_progress(f"python3 pipeline/transcript_analysis.py {transcript_path}", "Merging transcript segments")
     # Step 2: emotion_analysis
-    run_with_progress(f"python3 emotion_analysis.py --record-id {base}", "Running emotion analysis")
+    run_with_progress(f"python3 pipeline/emotion_analysis.py --record-id {base}", "Running emotion analysis")
     # Step 3: intent_analysis
-    run_with_progress(f"python3 intent_analysis.py --record-id {base}", "Running intent analysis")
-    # Step 4: goal_analysis (annotates each segment with goal_clarity and rephrased_goal)
-    run_with_progress(f"python3 goal_analysis.py data/{base}.json", "Annotating goal clarity")
+    run_with_progress(f"python3 pipeline/intent_analysis.py --record-id {base}", "Running intent analysis")
+    # Step 4: analyze_goals (resets fields, then runs goal_analysis + evaluation_analysis)
+    run_with_progress(f"python3 pipeline/analyze_goals.py data/{base}.json", "Analyzing goals")
     # Step 5: build_intent_diagram (builds intent diagram JSON from annotated transcript)
-    run_with_progress(f"python3 build_intent_diagram.py data/{base}.json", "Building intent diagram")
+    run_with_progress(f"python3 pipeline/build_intent_diagram.py data/{base}.json", "Building intent diagram")
     print("\nAll analyses complete.")
 
 if __name__ == "__main__":

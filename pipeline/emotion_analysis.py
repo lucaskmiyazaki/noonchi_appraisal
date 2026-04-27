@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR.parent / "data"
 TARGET_SR = 16000
 PAD_MODEL = "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim"
 EMOTION_MODEL = "superb/wav2vec2-base-superb-er"

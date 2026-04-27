@@ -1,4 +1,4 @@
-from constants import PAD_HIGH_AROUSAL_THRESHOLD
+from .constants import PAD_HIGH_AROUSAL_THRESHOLD
 
 
 class Blocker:

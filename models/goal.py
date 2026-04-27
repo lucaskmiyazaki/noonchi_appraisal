@@ -1,4 +1,4 @@
-from constants import (
+from .constants import (
     GOAL_STATUS_ON_GOING,
     GOAL_STATUSES,
     PAD_HIGH_AROUSAL_THRESHOLD,

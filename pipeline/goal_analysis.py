@@ -10,7 +10,7 @@ from tqdm import tqdm
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-PROMPT = Path("gpt prompt").read_text(encoding="utf-8")
+PROMPT = (Path(__file__).resolve().parent / "gpt prompt").read_text(encoding="utf-8")
 
 def extract_goal_sentences(transcript):
     """Return (indices, sentences) for all desire/negative evaluation segments."""

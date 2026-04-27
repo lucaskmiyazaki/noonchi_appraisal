@@ -1,4 +1,4 @@
-from constants import (
+from models.constants import (
     GOAL_STATUS_ON_GOING,
     GOAL_STATUS_FAIL,
     GOAL_STATUS_SUCCESS,

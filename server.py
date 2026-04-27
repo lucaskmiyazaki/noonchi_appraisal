@@ -20,8 +20,8 @@ from flask_cors import CORS
 from pathlib import Path
 from werkzeug.utils import secure_filename
 
-from reflection import ReflectionTree
-from business_rules import (
+from models.reflection import ReflectionTree
+from rules.business_rules import (
     detect_participant_unclear_feedback,
     detect_participant_unclear_concern,
     find_wearer,

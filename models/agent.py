@@ -1,5 +1,5 @@
-from emotion import Emotion
-from constants import (
+from .emotion import Emotion
+from .constants import (
     ROLE_WEARER,
     ROLE_PARTICIPANTS,
     ROLE_EXTERNAL,
