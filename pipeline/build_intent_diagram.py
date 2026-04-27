@@ -96,6 +96,10 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
         label = seg.get("intent_label")
         clarity = seg.get("goal_clarity", "no goal")
 
+        # Map pipeline is_goal_status values to model constant values.
+        _STATUS_MAP = {"ongoing": "on_going", "success": "success", "failed": "fail"}
+        goal_status = _STATUS_MAP.get(seg.get("is_goal_status", ""), "")
+
         # Update goal node for every desire segment (clear or unclear).
         has_goal = label == "desire" and clarity in ("clear", "unclear")
 
@@ -109,14 +113,21 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
                 "y": 200.0,
                 "data": {
                     "text": seg.get("rephrased_goal") or seg.get("text", ""),
-                    "status": "",
+                    "status": goal_status,
                     "is_clear": clarity == "clear",
+                    "is_own_goal": True,
                 },
             }
             last_goal_node = goal_node
         else:
-            # Inherit the last known goal (may be None if no goal seen yet)
-            goal_node = last_goal_node
+            # Inherit the last known goal but mark it as not owned by this segment.
+            if last_goal_node is not None:
+                goal_node = {
+                    **last_goal_node,
+                    "data": {**last_goal_node["data"], "is_own_goal": False, "status": goal_status or last_goal_node["data"].get("status", "")},
+                }
+            else:
+                goal_node = None
 
         nodes = [agent_node]
         edges = []

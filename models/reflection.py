@@ -125,6 +125,7 @@ class ReflectionTree:
                     status=data.get("status", GOAL_STATUS_ON_GOING),
                 )
                 goal_obj.is_clear = bool(data.get("is_clear", True))
+                goal_obj.is_own_goal = bool(data.get("is_own_goal", True))
                 goals[node_id] = goal_obj
 
             elif node_type == "blocker":

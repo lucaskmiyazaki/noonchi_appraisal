@@ -46,6 +46,8 @@ def detect_tone_incoherence(wearer_agent):
     incoherent_goals = []
 
     for goal in get_wearer_goals(wearer_agent):
+        if not getattr(goal, "is_own_goal", True):
+            continue
         if goal.status == GOAL_STATUS_SUCCESS and emotion.valence < PAD_NEUTRAL_MIN:
             incoherent_goals.append(goal)
         elif goal.status == GOAL_STATUS_FAIL and emotion.valence > PAD_NEUTRAL_MAX:
@@ -233,7 +235,7 @@ def detect_unclear_feedback(wearer_agent):
         return None
 
     goals = get_wearer_goals(wearer_agent)
-    unclear_goal = next((g for g in goals if not getattr(g, "is_clear", True)), None)
+    unclear_goal = next((g for g in goals if getattr(g, "is_own_goal", True) and not getattr(g, "is_clear", True)), None)
     if unclear_goal is None:
         return None
 
@@ -275,7 +277,7 @@ def detect_good_feedback(wearer_agent):
 
     good_feedback_goals = [
         goal for goal in goals
-        if getattr(goal, "status", None) == GOAL_STATUS_FAIL
+        if getattr(goal, "is_own_goal", True) and getattr(goal, "status", None) == GOAL_STATUS_FAIL
     ]
 
     if not good_feedback_goals:
@@ -295,7 +297,7 @@ def detect_unclear_concern(wearer_agent):
         return None
 
     goals = get_agent_goals(wearer_agent)
-    unclear_goal = next((g for g in goals if not getattr(g, "is_clear", True)), None)
+    unclear_goal = next((g for g in goals if getattr(g, "is_own_goal", True) and not getattr(g, "is_clear", True)), None)
     if unclear_goal is None:
         return None
 
@@ -337,7 +339,8 @@ def detect_good_concern(wearer_agent):
 
     good_concern_goals = [
         goal for goal in goals
-        if getattr(goal, "status", None) in {GOAL_STATUS_FAIL, GOAL_STATUS_ON_GOING}
+        if getattr(goal, "is_own_goal", True)
+        and getattr(goal, "status", None) in {GOAL_STATUS_FAIL, GOAL_STATUS_ON_GOING}
     ]
 
     if not good_concern_goals:
@@ -368,7 +371,7 @@ def detect_good_excitement(wearer_agent):
 
     good_excitement_goals = [
         goal for goal in goals
-        if getattr(goal, "status", None) == GOAL_STATUS_SUCCESS
+        if getattr(goal, "is_own_goal", True) and getattr(goal, "status", None) == GOAL_STATUS_SUCCESS
     ]
 
     if not good_excitement_goals:
