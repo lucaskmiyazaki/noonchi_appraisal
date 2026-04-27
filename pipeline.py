@@ -18,8 +18,10 @@ def main(transcript_path):
     run_with_progress(f"python3 emotion_analysis.py --record-id {base}", "Running emotion analysis")
     # Step 3: intent_analysis
     run_with_progress(f"python3 intent_analysis.py --record-id {base}", "Running intent analysis")
-    # Step 4: goal_analysis
-    run_with_progress(f"python3 goal_analysis.py data/{base}.json", "Extracting goals and negative evaluations")
+    # Step 4: goal_analysis (annotates each segment with goal_clarity and rephrased_goal)
+    run_with_progress(f"python3 goal_analysis.py data/{base}.json", "Annotating goal clarity")
+    # Step 5: build_intent_diagram (builds intent diagram JSON from annotated transcript)
+    run_with_progress(f"python3 build_intent_diagram.py data/{base}.json", "Building intent diagram")
     print("\nAll analyses complete.")
 
 if __name__ == "__main__":

@@ -1,102 +1,83 @@
-from dotenv import load_dotenv
 import os
 import sys
 import json
+from pathlib import Path
+from dotenv import load_dotenv
 from openai import OpenAI
 
+# Load environment variables
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-CLUSTER_PROMPT = """
-Compress each list into the fewest items without losing meaning.
+PROMPT = Path("gpt prompt").read_text(encoding="utf-8")
 
-Rules:
-- Merge only items with the same or very similar meaning
-- Do not add or invent new ideas
-- Do not lose information
-- Keep wording close to the original
-- Keep distinct or conflicting items separate
-- Output only JSON
-"""
-
-def extract_desires_and_negative_evaluations(json_path):
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    transcript = data.get("transcript", data)
-
-    desires = []
-    negative_evaluations = []
-
-    for seg in transcript:
+def extract_goal_sentences(transcript):
+    """Return (indices, sentences) for all desire/negative evaluation segments."""
+    indices = []
+    sentences = []
+    for i, seg in enumerate(transcript):
         label = seg.get("intent_label")
         text = seg.get("text", "").strip()
+        if label in ("desire") and text:
+            indices.append(i)
+            sentences.append(text)
+    return indices, sentences
 
-        if not text:
-            continue
-
-        if label == "desire":
-            desires.append(text)
-        elif label == "negative evaluation":
-            negative_evaluations.append(text)
-
-    return desires, negative_evaluations
-
-
-def cluster_lists(desires, negative_evaluations):
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[
-            {"role": "system", "content": CLUSTER_PROMPT},
-            {
-                "role": "user",
-                "content": json.dumps(
-                    {
-                        "desires": desires,
-                        "negative_evaluations": negative_evaluations
-                    },
-                    ensure_ascii=False
-                )
-            }
-        ],
-        text={
-            "format": {
-                "type": "json_schema",
-                "name": "clustered_goals_blockers",
-                "schema": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "goals": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                        },
-                        "blockers": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                        }
-                    },
-                    "required": ["goals", "blockers"]
-                },
-                "strict": True
-            }
-        }
-    )
-
-    return json.loads(response.output_text)
-
+def annotate_transcript(transcript, indices, results):
+    """Mark each segment as 'clear', 'unclear', or 'no goal' for goal clarity."""
+    for i, seg in enumerate(transcript):
+        seg["goal_clarity"] = "no goal"
+        seg["rephrased_goal"] = ""
+    for idx, result in zip(indices, results):
+        seg = transcript[idx]
+        seg["rephrased_goal"] = result["rephrased_goal"]
+        is_goal = result.get("is_goal", True if result["rephrased_goal"] else False)
+        is_clear = result.get("is_clear", False)
+        if not is_goal:
+            seg["goal_clarity"] = "no goal"
+        elif is_goal and not is_clear:
+            seg["goal_clarity"] = "unclear"
+        elif is_goal and is_clear:
+            seg["goal_clarity"] = "clear"
 
 def main(json_path):
-    desires, negative_evaluations = extract_desires_and_negative_evaluations(json_path)
-
-    clustered = cluster_lists(desires, negative_evaluations)
-
-    print(json.dumps(clustered, indent=2, ensure_ascii=False))
-
+    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    transcript = data.get("transcript", data)
+    indices, sentences = extract_goal_sentences(transcript)
+    if not sentences:
+        print("No desire or negative evaluation sentences found.")
+        return
+    # Prepare GPT input
+    gpt_input = {"goals": sentences}
+    print("\n--- GPT API INPUT ---")
+    print(json.dumps(gpt_input, indent=2, ensure_ascii=False))
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": PROMPT},
+            {"role": "user", "content": json.dumps(gpt_input, ensure_ascii=False)}
+        ]
+    )
+    print("\n--- GPT API OUTPUT ---")
+    print(response.choices[0].message.content)
+    # Parse GPT output
+    try:
+        output = json.loads(response.choices[0].message.content)
+        results = output["results"]
+    except Exception as e:
+        print("Failed to parse GPT output:", e)
+        print(response.choices[0].message.content)
+        return
+    # Print rephrased goals
+    for r in results:
+        print(f"[{r['goal_index']}] rephrased_goal: {r['rephrased_goal']}")
+    # Annotate transcript
+    annotate_transcript(transcript, indices, results)
+    Path(json_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Annotated {json_path} with goal_clarity.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python goal_analysis.py <transcript.json>")
+        print("Usage: python goal_analysis_v2.py <transcript.json>")
         sys.exit(1)
-
     main(sys.argv[1])
