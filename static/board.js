@@ -22,6 +22,38 @@ export const boards = [];
 export let activeBoardId = null;
 let boardCounter = 0;
 let reflectionCounter = 0;
+export function createIntentBoard(intent, metadata = {}) {
+  boardCounter += 1;
+  const id = `board-${boardCounter}`;
+  // Only use the first diagram for display, but keep all diagrams in metadata for later switching
+  let graph = { nodes: [], edges: [] };
+  if (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0) {
+    graph = intent.diagrams[0];
+  }
+  const board = {
+    id,
+    name: metadata.name || metadata.sessionName || 'Intent',
+    kind: 'intent',
+    graph,
+    metadata: {
+      sessionName: metadata.sessionName || '',
+      intentFile: metadata.intentFile || '',
+      intentData: intent || null,
+      diagramStartMs: (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0)
+        ? intent.diagrams[0].startms ?? null
+        : null,
+      diagramEndMs: (intent && Array.isArray(intent.diagrams) && intent.diagrams.length > 0)
+        ? intent.diagrams[0].endms ?? null
+        : null,
+    },
+  };
+  boards.push(board);
+  // Store diagrams globally for fallback (optional, for dynamic import)
+  if (intent && Array.isArray(intent.diagrams)) {
+    window.lastIntentDiagrams = intent.diagrams;
+  }
+  return board;
+}
 
 const factories = {
   agent: createAgentNode,

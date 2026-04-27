@@ -1,63 +1,115 @@
+import csv
 import sys
 import json
 from pathlib import Path
 
-def build_intent_diagram(json_path):
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DB_PATH = DATA_DIR / "db.csv"
+
+FIELDNAMES = [
+    "wearer_agent",
+    "session_name",
+    "reflection_tree_file",
+    "startms",
+    "endms",
+    "practice",
+    "audio_filename",
+    "intent_filename",
+]
+
+
+def _add_to_db(session_name, intent_file):
+    rows = []
+    fieldnames = list(FIELDNAMES)
+    if DB_PATH.exists():
+        with DB_PATH.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            existing = list(reader.fieldnames or [])
+            for name in existing:
+                if name not in fieldnames:
+                    fieldnames.append(name)
+            for row in reader:
+                rows.append({field: row.get(field, "") for field in fieldnames})
+
+    # Remove any existing row for this intent file
+    rows = [r for r in rows if r.get("intent_filename", "") != intent_file]
+
+    rows.append({
+        "wearer_agent": "",
+        "session_name": session_name,
+        "reflection_tree_file": "",
+        "startms": "",
+        "endms": "",
+        "practice": "null",
+        "audio_filename": "",
+        "intent_filename": intent_file,
+    })
+
+    with DB_PATH.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in fieldnames})
+
+
+def _resolve_role(speaker, wearer, participants):
+    """Return (role, name) for a segment's speaker."""
+    if not speaker:
+        return "wearer", wearer
+    if speaker == wearer:
+        return "wearer", speaker
+    if speaker in (participants or []):
+        return "participants", speaker
+    return "external", speaker
+
+
+def build_intent_diagram(json_path, wearer="wearer", participants=None):
+    participants = participants or []
     data = json.loads(Path(json_path).read_text(encoding="utf-8"))
     transcript = data.get("transcript", data)
-    # Find all goal segments
-    indices = []
-    for i, seg in enumerate(transcript):
-        label = seg.get("intent_label")
-        text = seg.get("text", "").strip()
-        if label == "desire" and text:
-            indices.append(i)
-    # Collect goal segments with clarity
-    goal_segments = []
-    for idx in indices:
-        seg = transcript[idx]
-        clarity = seg.get("goal_clarity", "no goal")
-        goal_segments.append({
-            "idx": idx,
-            "seg": seg,
-            "clarity": clarity
-        })
 
     diagrams = []
-    agent_id = "agent-1"
-    agent_node = {
-        "id": agent_id,
-        "type": "agent",
-        "title": "Agent",
-        "badge": "wearer",
-        "x": 80.0,
-        "y": 180.0,
-        "data": {
-            "name": "wearer",
-            "role": "wearer",
-            "valence": 0.5,
-            "arousal": 0.5,
-            "dominance": 0.5
-        }
-    }
+    last_goal_node = None
+    seen_clear_goal = False
 
-    # Build diagrams: one for each goal segment
-    for i, g in enumerate(goal_segments):
-        clarity = g["clarity"]
-        seg = g["seg"]
-        idx = g["idx"]
-        # Only add unclear if no clear before
-        if clarity == "clear" or (clarity == "unclear" and not any(
-            gs["clarity"] == "clear" for gs in goal_segments[:i])):
-            # Set startms and endms for this diagram
-            startms = seg.get("start", None)
-            if i + 1 < len(goal_segments):
-                endms = transcript[goal_segments[i + 1]["idx"]].get("start", None)
-            else:
-                endms = transcript[-1].get("end", None) if transcript else None
-            # Place goal node with x/y
+    for seg in transcript:
+        # --- Agent node ---
+        speaker = seg.get("speaker") or None
+        role, name = _resolve_role(speaker, wearer, participants)
+        agent_node = {
+            "id": "agent-1",
+            "type": "agent",
+            "title": "Agent",
+            "badge": role,
+            "x": 80.0,
+            "y": 180.0,
+            "data": {
+                "name": name,
+                "role": role,
+                "valence": seg.get("valence", 0.5),
+                "arousal": seg.get("arousal", 0.5),
+                "dominance": seg.get("dominance", 0.5),
+            },
+        }
+
+        # --- Goal node ---
+        label = seg.get("intent_label")
+        clarity = seg.get("goal_clarity", "no goal")
+
+        # A segment "has a goal" if it's a desire that is clear,
+        # or if it's unclear and no clear goal has been seen yet (first unclear).
+        has_goal = (
+            label == "desire"
+            and clarity in ("clear", "unclear")
+            and (clarity == "clear" or not seen_clear_goal)
+        )
+
+        if has_goal:
+            if clarity == "clear":
+                seen_clear_goal = True
             goal_node = {
-                "id": f"goal-{idx}",
+                "id": "goal-1",
                 "type": "goal",
                 "title": "Goal",
                 "badge": "goal",
@@ -65,36 +117,54 @@ def build_intent_diagram(json_path):
                 "y": 200.0,
                 "data": {
                     "text": seg.get("rephrased_goal") or seg.get("text", ""),
-                    "status": clarity,
-                    "is_clear": clarity == "clear"
-                }
+                    "status": "",
+                    "is_clear": clarity == "clear",
+                },
             }
-            edge = {
-                "fromId": agent_id,
-                "toId": goal_node["id"],
+            last_goal_node = goal_node
+        else:
+            # Inherit the last known goal (may be None if no goal seen yet)
+            goal_node = last_goal_node
+
+        nodes = [agent_node]
+        edges = []
+        if goal_node:
+            nodes.append(goal_node)
+            edges.append({
+                "fromId": "agent-1",
+                "toId": "goal-1",
                 "fromSide": "right",
                 "toSide": "left",
-                "label": ""
-            }
-            diagrams.append({
-                "nodes": [agent_node, goal_node],
-                "edges": [edge],
-                "startms": startms,
-                "endms": endms
+                "label": "",
             })
 
-    # Compose new intent structure
+        diagrams.append({
+            "nodes": nodes,
+            "edges": edges,
+            "startms": seg.get("start", None),
+            "endms": seg.get("end", None),
+        })
+
+    # Compose intent structure
     intent = {"diagrams": diagrams}
     if isinstance(data, dict):
         for k in ("sessionName",):
             if k in data:
                 intent[k] = data[k]
-    intent_path = str(Path(json_path).with_suffix(".intent.json"))
-    Path(intent_path).write_text(json.dumps(intent, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    intent_path = Path(json_path).with_suffix(".intent.json")
+    intent_path.write_text(json.dumps(intent, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Wrote intent file: {intent_path}")
 
+    _add_to_db(intent.get("sessionName", ""), intent_path.name)
+    print(f"Added {intent_path.name} to db.csv")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python build_intent_diagram.py <transcript.json>")
-        sys.exit(1)
-    build_intent_diagram(sys.argv[1])
+    import argparse
+    parser = argparse.ArgumentParser(description="Build intent diagram JSON from annotated transcript.")
+    parser.add_argument("json_path", help="Path to transcript JSON file.")
+    parser.add_argument("--wearer", default="wearer", help="Name/ID of the wearer speaker.")
+    parser.add_argument("--participants", nargs="*", default=[], help="Names/IDs of participant speakers.")
+    args = parser.parse_args()
+    build_intent_diagram(args.json_path, wearer=args.wearer, participants=args.participants)
