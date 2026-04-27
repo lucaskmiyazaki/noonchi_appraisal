@@ -412,6 +412,7 @@ def build_session_analysis_payload(session_name=""):
             "goal_blocker_label": chunk.get("goal_blocker_label"),
             "goal_clarity": chunk.get("goal_clarity"),
             "rephrased_goal": chunk.get("rephrased_goal"),
+            "is_goal_status": chunk.get("is_goal_status", ""),
         })
 
     return {

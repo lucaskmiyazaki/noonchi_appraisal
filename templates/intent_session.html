@@ -86,6 +86,7 @@
             <option value="intent">Intent</option>
             <option value="goal_blocker">Goal/Blocker</option>
             <option value="clarity">Goal Clarity</option>
+            <option value="goal_status">Goal Status</option>
           </select>
           <span id="intentFilterBox">
             <label for="intentFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Intent Filter:</label>
@@ -104,6 +105,7 @@
       <div id="intentContainer" class="session-content"></div>
       <div id="goalBlockerContainer" class="session-content" style="display:none;"></div>
       <div id="clarityContainer" class="session-content" style="display:none;"></div>
+      <div id="goalStatusContainer" class="session-content" style="display:none;"></div>
     </div>
     <aside class="session-sidebar">
       <div class="session-sidebar-panel">
@@ -114,6 +116,16 @@
         <div id="goalBlockerSidebarSection" style="display:none;">
           <h2 class="session-sidebar-title">Goal/Blocker Labels</h2>
           <div id="goalBlockerLabelList"></div>
+        </div>
+        <div id="goalStatusSidebarSection" style="display:none;">
+          <h2 class="session-sidebar-title">Goal Status</h2>
+          <div id="goalStatusLegend" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;display:inline-block;"></span><span style="font-size:13px;">ongoing</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;border-radius:3px;background:#22c55e;display:inline-block;"></span><span style="font-size:13px;">success</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span><span style="font-size:13px;">failed</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;border-radius:3px;background:#e2e8f0;display:inline-block;"></span><span style="font-size:13px;">none</span></div>
+          </div>
+          <div id="goalStatusList"></div>
         </div>
       </div>
     </aside>
@@ -205,6 +217,65 @@
         }
 
         renderClarity();
+
+        // --- GOAL STATUS VISUALIZATION ---
+        const goalStatusContainer = document.getElementById('goalStatusContainer');
+        goalStatusContainer.innerHTML = `
+          <div class="transcript-scroll">
+            <div class="transcript-content">
+              <div class="section-title">Goal Status Transcript</div>
+              <div id="goalStatusTranscript" class="session-transcript"></div>
+            </div>
+          </div>
+        `;
+        const goalStatusRoot = document.getElementById('goalStatusTranscript');
+        const goalStatusList = document.getElementById('goalStatusList');
+
+        function goalStatusColor(status) {
+          if (status === 'ongoing') return '#f59e0b';
+          if (status === 'success') return '#22c55e';
+          if (status === 'failed') return '#ef4444';
+          return null;
+        }
+
+        function renderGoalStatus() {
+          goalStatusRoot.innerHTML = '';
+          if (goalStatusList) goalStatusList.innerHTML = '';
+          segments.forEach((segment) => {
+            const status = segment.is_goal_status;
+            const color = goalStatusColor(status);
+            const span = document.createElement('span');
+            span.className = 'session-chunk';
+            span.style.background = color ? color + '33' : 'transparent';
+            if (color) span.style.borderBottom = `2.5px solid ${color}`;
+            span.textContent = `${segment.text || ''} `;
+            if (status && color) {
+              const goal = segment.rephrased_goal;
+              span.title = goal && goal !== 'none' ? `${status}: ${goal}` : status;
+            }
+            goalStatusRoot.appendChild(span);
+
+            if (goalStatusList && status && color) {
+              const chip = document.createElement('span');
+              chip.style.cssText = `background:${color}1f;color:${color};font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em;padding:4px 8px;margin-right:8px;border-radius:999px;`;
+              chip.textContent = status;
+              const preview = document.createElement('span');
+              preview.style.cssText = 'font-size:12px;color:#64748b;';
+              const goal = segment.rephrased_goal;
+              preview.textContent = goal && goal !== 'none' ? ` ${goal.slice(0, 36)}${goal.length > 36 ? '…' : ''}` : (segment.text ? ` ${segment.text.slice(0, 32)}${segment.text.length > 32 ? '…' : ''}` : '');
+              const row = document.createElement('div');
+              row.style.cssText = 'display:flex;align-items:center;margin-bottom:8px;';
+              row.appendChild(chip);
+              row.appendChild(preview);
+              goalStatusList.appendChild(row);
+            }
+          });
+          if (goalStatusList && !goalStatusList.hasChildNodes()) {
+            goalStatusList.innerHTML = '<div class="session-transcript-empty">No goal status annotations found.</div>';
+          }
+        }
+
+        renderGoalStatus();
         // --- INTENT LABEL VISUALIZATION ---
         container.innerHTML = `
           <div class="transcript-scroll">
@@ -374,36 +445,23 @@
     const vizTypeSelect = document.getElementById('vizTypeSelect');
     const intentContainer = document.getElementById('intentContainer');
     const goalBlockerContainer = document.getElementById('goalBlockerContainer');
+    const goalStatusContainer = document.getElementById('goalStatusContainer');
     const intentSidebarSection = document.getElementById('intentSidebarSection');
     const goalBlockerSidebarSection = document.getElementById('goalBlockerSidebarSection');
+    const goalStatusSidebarSection = document.getElementById('goalStatusSidebarSection');
     const intentFilterBox = document.getElementById('intentFilterBox');
     const goalBlockerFilterBox = document.getElementById('goalBlockerFilterBox');
     vizTypeSelect.onchange = function() {
-      if (vizTypeSelect.value === 'intent') {
-        intentContainer.style.display = '';
-        goalBlockerContainer.style.display = 'none';
-        clarityContainer.style.display = 'none';
-        intentSidebarSection.style.display = '';
-        goalBlockerSidebarSection.style.display = 'none';
-        intentFilterBox.style.display = '';
-        goalBlockerFilterBox.style.display = 'none';
-      } else if (vizTypeSelect.value === 'goal_blocker') {
-        intentContainer.style.display = 'none';
-        goalBlockerContainer.style.display = '';
-        clarityContainer.style.display = 'none';
-        intentSidebarSection.style.display = 'none';
-        goalBlockerSidebarSection.style.display = '';
-        intentFilterBox.style.display = 'none';
-        goalBlockerFilterBox.style.display = '';
-      } else if (vizTypeSelect.value === 'clarity') {
-        intentContainer.style.display = 'none';
-        goalBlockerContainer.style.display = 'none';
-        clarityContainer.style.display = '';
-        intentSidebarSection.style.display = 'none';
-        goalBlockerSidebarSection.style.display = 'none';
-        intentFilterBox.style.display = 'none';
-        goalBlockerFilterBox.style.display = 'none';
-      }
+      const v = vizTypeSelect.value;
+      intentContainer.style.display = v === 'intent' ? '' : 'none';
+      goalBlockerContainer.style.display = v === 'goal_blocker' ? '' : 'none';
+      clarityContainer.style.display = v === 'clarity' ? '' : 'none';
+      goalStatusContainer.style.display = v === 'goal_status' ? '' : 'none';
+      intentSidebarSection.style.display = v === 'intent' ? '' : 'none';
+      goalBlockerSidebarSection.style.display = v === 'goal_blocker' ? '' : 'none';
+      goalStatusSidebarSection.style.display = v === 'goal_status' ? '' : 'none';
+      intentFilterBox.style.display = v === 'intent' ? '' : 'none';
+      goalBlockerFilterBox.style.display = v === 'goal_blocker' ? '' : 'none';
     };
     loadIntentSession();
   </script>
