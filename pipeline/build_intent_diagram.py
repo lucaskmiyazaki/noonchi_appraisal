@@ -168,3 +168,8 @@ if __name__ == "__main__":
     parser.add_argument("--participants", nargs="*", default=[], help="Names/IDs of participant speakers.")
     args = parser.parse_args()
     build_intent_diagram(args.json_path, wearer=args.wearer, participants=args.participants)
+
+
+def run(json_path, wearer="wearer", participants=None, log=print):
+    build_intent_diagram(str(json_path), wearer=wearer, participants=participants or [])
+    log(f"Intent diagram built: {Path(json_path).name}")

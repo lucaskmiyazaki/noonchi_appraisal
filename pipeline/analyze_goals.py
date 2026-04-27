@@ -1,9 +1,9 @@
 import sys
 import json
 from pathlib import Path
+from dotenv import load_dotenv
 
-import goal_analysis
-import evaluation_analysis
+from pipeline import goal_analysis, evaluation_analysis
 
 
 def reset_goal_fields(transcript):
@@ -50,6 +50,11 @@ def main(json_path):
 
     Path(json_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nDone. Annotated {json_path}.")
+
+
+def run(json_path, log=print):
+    main(str(json_path))
+    log(f"Goal analysis done: {Path(json_path).name}")
 
 
 if __name__ == "__main__":

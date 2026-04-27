@@ -4,8 +4,10 @@ import atexit
 import csv
 import json
 import os
+import queue
 import shutil
 import subprocess
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -14,7 +16,7 @@ from urllib import error as url_error
 from urllib.parse import quote
 from urllib import request as url_request
 
-from flask import Flask, jsonify, request, render_template, redirect, send_from_directory, abort
+from flask import Flask, jsonify, request, render_template, redirect, send_from_directory, abort, Response
 from flask_cors import CORS
 
 from pathlib import Path
@@ -571,6 +573,69 @@ def get_session_analysis(session_name):
         return jsonify({"error": f"Failed to analyze session: {exc}"}), 500
 
     return jsonify(payload)
+
+
+@app.get("/api/pipeline/run/<record_id>")
+def run_pipeline_sse(record_id):
+    """Stream pipeline progress as SSE. The client reads text/event-stream."""
+    safe_id = secure_filename(record_id or "")
+    if not safe_id:
+        return jsonify({"error": "Invalid record id."}), 400
+
+    json_path = DATA_DIR / f"{safe_id}.json"
+    if not json_path.exists():
+        return jsonify({"error": "Record not found."}), 404
+
+    log_queue = queue.Queue()
+    STEPS_TOTAL = 5
+
+    def do_run():
+        try:
+            import pipeline as pl
+            import re as _re
+            step = [0]
+            _seg_pattern = _re.compile(r"^Emotion analysis: (\d+)/(\d+) segments$")
+
+            def log(msg):
+                msg_str = str(msg)
+                m = _seg_pattern.match(msg_str)
+                if m:
+                    done, total = int(m.group(1)), int(m.group(2))
+                    log_queue.put({
+                        "progress": step[0],
+                        "total": STEPS_TOTAL,
+                        "sub_progress": done,
+                        "sub_total": total,
+                        "message": msg_str,
+                    })
+                else:
+                    step[0] += 1
+                    log_queue.put({
+                        "progress": min(step[0], STEPS_TOTAL),
+                        "total": STEPS_TOTAL,
+                        "message": msg_str,
+                    })
+            pl.run_pipeline(str(json_path), log=log)
+        except Exception as exc:
+            log_queue.put({"progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": f"Error: {exc}", "error": True})
+        finally:
+            log_queue.put(None)  # sentinel
+
+    thread = threading.Thread(target=do_run, daemon=True)
+    thread.start()
+
+    def generate():
+        while True:
+            item = log_queue.get()
+            if item is None:
+                yield "event: done\ndata: {}\n\n"
+                break
+            import json as _json
+            yield f"data: {_json.dumps(item)}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
 
 @app.get("/wizard")
 def wizard():

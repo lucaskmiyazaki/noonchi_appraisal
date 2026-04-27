@@ -204,5 +204,17 @@ def main():
         except Exception as e:
             print(f"Failed to process {path.name}: {e}")
 
+
+def run(record_id, log=print):
+    load_dotenv()
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    path = DATA_DIR / f"{record_id}.json"
+    if not path.exists():
+        raise FileNotFoundError(f"Record not found: {path}")
+    updated = process_record(path, client)
+    if updated:
+        log(f"Intent analysis done: {path.name}")
+
+
 if __name__ == "__main__":
     main()

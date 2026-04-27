@@ -58,6 +58,10 @@ def main(input_path, output_path=None):
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"Merged transcript saved to {target_path}")
 
+def run(json_path, log=print):
+    main(str(json_path))
+    log(f"Transcript merged: {Path(json_path).name}")
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('Usage: python transcript_analysis.py <input.json> [output.json]')

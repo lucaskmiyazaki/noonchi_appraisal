@@ -589,6 +589,32 @@ button:disabled {
   word-break: break-word;
 }
 
+.pipeline-progress-bar-wrap {
+  margin-top: 8px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pipeline-progress-bar {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.pipeline-log {
+  margin-top: 6px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 11px;
+  color: #374151;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .session-list {
   padding: 12px;
   border-bottom: 1px solid #e5e7eb;

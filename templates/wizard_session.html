@@ -65,11 +65,19 @@
         <button id="sidebarBackBtn" class="transcript-control-btn" hidden>Back</button>
         <button id="sidebarPlayBtn" class="transcript-control-btn" disabled>Play</button>
         <button id="sidebarClearBtn" class="transcript-control-btn">Clear</button>
+        <button id="runPipelineBtn" class="transcript-control-btn" hidden>Run Pipeline</button>
         <button id="generateReflectionBtn" class="transcript-control-btn" hidden>Generate Reflection</button>
       </div>
 
       <div id="transcriptStatus" class="transcript-status">Idle</div>
       <div id="transcriptFileName" class="transcript-file-name"></div>
+
+      <div id="pipelinePanel" hidden>
+        <div class="pipeline-progress-bar-wrap">
+          <div id="pipelineProgressBar" class="pipeline-progress-bar" style="width:0%"></div>
+        </div>
+        <div id="pipelineLog" class="pipeline-log"></div>
+      </div>
     </div>
 
     <div id="sessionList" class="session-list"></div>
@@ -78,5 +86,6 @@
 
   <script type="module" src="{{ url_for('static', filename='app.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='sidebar-upload.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='pipeline.js') }}"></script>
 </body>
 </html>

@@ -1,31 +1,48 @@
 import sys
-import subprocess
 import os
-from tqdm import tqdm
+from pathlib import Path
+from dotenv import load_dotenv
 
-def run_with_progress(cmd, desc):
-    print(f"\n{desc}")
-    with tqdm(total=1, desc=desc, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
-        result = subprocess.run(cmd, shell=True)
-        pbar.update(1)
-    return result.returncode
+from pipeline import transcript_analysis, emotion_analysis, intent_analysis, analyze_goals, build_intent_diagram
 
-def main(transcript_path):
-    base = os.path.splitext(os.path.basename(transcript_path))[0]
-    # Step 1: transcript_analysis
-    run_with_progress(f"python3 pipeline/transcript_analysis.py {transcript_path}", "Merging transcript segments")
-    # Step 2: emotion_analysis
-    run_with_progress(f"python3 pipeline/emotion_analysis.py --record-id {base}", "Running emotion analysis")
-    # Step 3: intent_analysis
-    run_with_progress(f"python3 pipeline/intent_analysis.py --record-id {base}", "Running intent analysis")
-    # Step 4: analyze_goals (resets fields, then runs goal_analysis + evaluation_analysis)
-    run_with_progress(f"python3 pipeline/analyze_goals.py data/{base}.json", "Analyzing goals")
-    # Step 5: build_intent_diagram (builds intent diagram JSON from annotated transcript)
-    run_with_progress(f"python3 pipeline/build_intent_diagram.py data/{base}.json", "Building intent diagram")
-    print("\nAll analyses complete.")
+
+STEPS = [
+    ("Merging transcript",       "transcript"),
+    ("Running emotion analysis", "emotion"),
+    ("Running intent analysis",  "intent"),
+    ("Analyzing goals",          "goals"),
+    ("Building intent diagram",  "diagram"),
+]
+
+
+def run_pipeline(json_path, log=print, wearer="wearer", participants=None):
+    """Run the full pipeline. Calls log(message) after each step."""
+    load_dotenv()
+    path = Path(json_path)
+    record_id = path.stem
+    data_path = path
+
+    log(f"[1/5] Merging transcript segments...")
+    transcript_analysis.run(data_path, log=log)
+
+    log(f"[2/5] Running emotion analysis...")
+    emotion_analysis.run(record_id, log=log)
+
+    log(f"[3/5] Running intent analysis...")
+    intent_analysis.run(record_id, log=log)
+
+    log(f"[4/5] Analyzing goals...")
+    analyze_goals.run(data_path, log=log)
+
+    log(f"[5/5] Building intent diagram...")
+    build_intent_diagram.run(data_path, wearer=wearer, participants=participants or [], log=log)
+
+    log("Pipeline complete.")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python pipeline.py <transcript.json>")
         sys.exit(1)
-    main(sys.argv[1])
+    run_pipeline(sys.argv[1])
+

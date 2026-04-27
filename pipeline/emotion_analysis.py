@@ -5,6 +5,9 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
+from tqdm import tqdm
+
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "data"
 TARGET_SR = 16000
@@ -188,6 +191,18 @@ def _prepare_segment_samples(audio_samples, start_seconds, end_seconds):
     return np.pad(segment_array, (0, padding), mode="constant").astype("float32", copy=False)
 
 
+@lru_cache(maxsize=4)
+def _load_audio_samples(audio_path_str, audio_mtime_ns):
+    del audio_mtime_ns
+    deps = _import_pad_dependencies()
+    librosa = deps["librosa"]
+    audio_path = Path(audio_path_str)
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Audio file not found: {audio_path}")
+    samples, _ = librosa.load(str(audio_path), sr=TARGET_SR, mono=True)
+    return samples
+
+
 @lru_cache(maxsize=24)
 def _analyze_audio_segments_cached(audio_path_str, audio_mtime_ns, transcript_signature):
     del audio_mtime_ns
@@ -200,8 +215,26 @@ def _analyze_audio_segments_cached(audio_path_str, audio_mtime_ns, transcript_si
     audio_samples, _ = librosa.load(str(audio_path), sr=TARGET_SR, mono=True)
     raw_segments = json.loads(transcript_signature)
 
+    analyzed_segments = _process_segments(
+        raw_segments, audio_samples,
+        pad_feature_extractor, pad_model,
+        emotion_feature_extractor, emotion_model,
+        torch,
+    )
+    return analyzed_segments
+
+
+def _process_segments(
+    raw_segments, audio_samples,
+    pad_feature_extractor, pad_model,
+    emotion_feature_extractor, emotion_model,
+    torch,
+    on_progress=None,
+):
+    """Process each segment. Calls on_progress(done, total) after each one if provided."""
+    total = len(raw_segments)
     analyzed_segments = []
-    for chunk in raw_segments:
+    for i, chunk in enumerate(raw_segments):
         start_seconds = float(chunk.get("start", 0.0) or 0.0)
         end_seconds = float(chunk.get("end", start_seconds) or start_seconds)
         if end_seconds < start_seconds:
@@ -229,12 +262,30 @@ def _analyze_audio_segments_cached(audio_path_str, audio_mtime_ns, transcript_si
             "emotion_probabilities": emotion_probabilities,
         })
 
+        if on_progress is not None:
+            on_progress(i + 1, total)
+
     return analyzed_segments
 
 
-def analyze_audio_segments(audio_path, transcript_segments):
+def analyze_audio_segments(audio_path, transcript_segments, on_progress=None):
     serialized_transcript = json.dumps(transcript_segments or [], sort_keys=True)
     path = Path(audio_path)
+
+    if on_progress is not None:
+        # Bypass cache so the progress callback fires on every segment.
+        pad_feature_extractor, pad_model, torch, librosa = load_pad_model_bundle()
+        emotion_feature_extractor, emotion_model, _ = load_emotion_model_bundle()
+        audio_samples, _ = librosa.load(str(path), sr=TARGET_SR, mono=True)
+        raw_segments = json.loads(serialized_transcript)
+        return _process_segments(
+            raw_segments, audio_samples,
+            pad_feature_extractor, pad_model,
+            emotion_feature_extractor, emotion_model,
+            torch,
+            on_progress=on_progress,
+        )
+
     return _analyze_audio_segments_cached(
         str(path),
         path.stat().st_mtime_ns,
@@ -292,9 +343,9 @@ def resolve_record_paths(record_id="", session_name="", process_all=False):
     return matches[:1]
 
 
-def enrich_record_with_pad(record, audio_path):
+def enrich_record_with_pad(record, audio_path, on_progress=None):
     transcript_segments = list(record.get("transcript") or [])
-    analyzed_segments = analyze_audio_segments(audio_path, transcript_segments)
+    analyzed_segments = analyze_audio_segments(audio_path, transcript_segments, on_progress=on_progress)
     analyzed_by_id = {segment.get("id"): segment for segment in analyzed_segments}
 
     updated_segments = []
@@ -314,7 +365,7 @@ def enrich_record_with_pad(record, audio_path):
     return updated_record, len(updated_segments)
 
 
-def process_record_file(record_path, record):
+def process_record_file(record_path, record, on_progress=None):
     audio_filename = str(record.get("audioFilename", "") or "").strip()
     if not audio_filename:
         raise FileNotFoundError(f"Audio filename missing in {record_path.name}")
@@ -323,7 +374,7 @@ def process_record_file(record_path, record):
     if not audio_path.exists():
         raise FileNotFoundError(f"Audio file not found for {record_path.name}: {audio_path.name}")
 
-    updated_record, count = enrich_record_with_pad(record, audio_path)
+    updated_record, count = enrich_record_with_pad(record, audio_path, on_progress=on_progress)
     save_audio_record(record_path, updated_record)
     return count
 
@@ -353,11 +404,28 @@ def main():
 
     processed_count = 0
     for record_path, record in targets:
-        segment_count = process_record_file(record_path, record)
+        total_segments = len(record.get("transcript") or [])
+        with tqdm(total=total_segments, desc=f"Emotion: {record_path.stem}", unit="seg") as pbar:
+            def _on_progress(done, total, _pbar=pbar):
+                _pbar.update(1)
+            segment_count = process_record_file(record_path, record, on_progress=_on_progress)
         processed_count += 1
         print(f"Annotated {record_path.name} with PAD for {segment_count} transcript segments.")
 
     print(f"Completed PAD annotation for {processed_count} record(s).")
+
+
+def run(record_id, log=print):
+    load_dotenv()
+    targets = resolve_record_paths(record_id=record_id)
+    if not targets:
+        raise RuntimeError(f"No audio record found for id: {record_id}")
+    for record_path, record in targets:
+        total_segments = len(record.get("transcript") or [])
+        def _on_progress(done, total, _total=total_segments):
+            log(f"Emotion analysis: {done}/{_total} segments")
+        count = process_record_file(record_path, record, on_progress=_on_progress)
+        log(f"Emotion analysis done: {record_path.name} ({count} segments)")
 
 
 if __name__ == "__main__":

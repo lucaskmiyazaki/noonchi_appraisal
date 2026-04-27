@@ -239,6 +239,9 @@ function setLoadedAudio(data) {
     setTranscriptStatus("Select a session or upload audio.");
     setSidebarView("list");
     dispatchGraphPlayState();
+    if (typeof window.onPipelineAudioLoaded === "function") {
+      window.onPipelineAudioLoaded(null);
+    }
     return;
   }
 
@@ -249,6 +252,9 @@ function setLoadedAudio(data) {
   setSidebarView("transcript");
   dispatchGraphPlayState();
   syncSessionNavBtns();
+  if (typeof window.onPipelineAudioLoaded === "function") {
+    window.onPipelineAudioLoaded(data.id);
+  }
 }
 
 function clearLoadedAudio() {
