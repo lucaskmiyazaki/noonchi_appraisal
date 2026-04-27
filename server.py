@@ -663,10 +663,13 @@ def user_interface():
 
 @app.get("/<user_name>/analysis/<session_name>")
 def user_session_detail(user_name, session_name):
+    record = find_latest_audio_record(session_name)
+    display_name = (record.get("displayName") if record else None) or session_name
     return render_template(
         "session.html",
         current_user=user_name,
         current_session=session_name,
+        display_name=display_name,
     )
 
 

@@ -154,7 +154,7 @@
           <div class="session-heading">
             <div class="session-heading-title-row">
               <a class="back-link" href="/{{ resolved_user|urlencode }}/analysis" aria-label="Back to sessions">←</a>
-              <h1>{{ resolved_session|replace('_', ' ') }}</h1>
+              <h1>{{ (display_name or resolved_session)|replace('_', ' ') }}</h1>
               <button id="playBtn" class="session-play-btn" type="button" aria-label="Play audio" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"></path></svg>
               </button>
