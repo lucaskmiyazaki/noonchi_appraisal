@@ -321,8 +321,8 @@ function renderTranscript() {
 
         const segStartSec = Number(segment.start);
         const found = diagrams.find((d) => {
-          const dStart = Number(d.startms);
-          const dEnd = Number(d.endms);
+          const dStart = Number(d.startms) / 1000;
+          const dEnd = Number(d.endms) / 1000;
           return segStartSec === dStart || (segStartSec >= dStart && segStartSec < dEnd);
         });
         if (found) {

@@ -141,8 +141,8 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
         diagrams.append({
             "nodes": nodes,
             "edges": edges,
-            "startms": seg.get("start", None),
-            "endms": seg.get("end", None),
+            "startms": seg.get("start") * 1000 if seg.get("start") is not None else None,
+            "endms": seg.get("end") * 1000 if seg.get("end") is not None else None,
         })
 
     # Compose intent structure
