@@ -407,13 +407,23 @@ class ReflectionTree:
         observation = ReflectionNode(
             id="observation",
             text="Your voice suggests you are concerned.",
-            options=[{"label": "Continue", "next": "timing_question"}],
+            options=[{"label": "Continue", "next": "attention_question"}],
             node_type="audio",
+        )
+
+        attention_question = ReflectionNode(
+            id="attention_question",
+            text="Were you trying to raise any points of attention?",
+            options=[
+                {"label": "Yes", "value": "yes", "next": "timing_question"},
+                {"label": "No", "value": "no", "next": "clarity_question"},
+            ],
+            node_type="question",
         )
 
         timing_question = ReflectionNode(
             id="timing_question",
-            text="Was that a good moment to share your concerns?",
+            text="Was that a good moment to share them?",
             options=[
                 {"label": "Yes", "value": "yes", "next": "actionable_journal"},
                 {"label": "No", "value": "no", "next": "clarity_question"},
@@ -460,6 +470,7 @@ class ReflectionTree:
         self.start_node = "observation"
         self.nodes = {
             "observation": observation,
+            "attention_question": attention_question,
             "timing_question": timing_question,
             "actionable_journal": actionable_journal,
             "clarity_question": clarity_question,

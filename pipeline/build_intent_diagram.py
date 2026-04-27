@@ -100,8 +100,8 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
         _STATUS_MAP = {"ongoing": "on_going", "success": "success", "failed": "fail"}
         goal_status = _STATUS_MAP.get(seg.get("is_goal_status", ""), "")
 
-        # Update goal node for every desire segment (clear or unclear).
-        has_goal = label == "desire" and clarity in ("clear", "unclear")
+        # Any segment with a clear or unclear goal gets its own goal node and propagates it.
+        has_goal = clarity in ("clear", "unclear")
 
         if has_goal:
             goal_node = {
