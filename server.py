@@ -168,6 +168,7 @@ def summarize_audio_record(record):
     return {
         "id": record.get("id"),
         "sessionName": record.get("sessionName"),
+        "displayName": record.get("displayName") or record.get("sessionName"),
         "safeSessionName": record.get("safeSessionName"),
         "originalName": record.get("originalName"),
         "audioFilename": record.get("audioFilename"),
@@ -639,6 +640,7 @@ def run_pipeline_sse(record_id):
 
 
 @app.get("/wizard")
+@app.get("/wizard/")
 def wizard():
     return render_template("wizard.html")
 
@@ -1304,7 +1306,24 @@ def get_audio(audio_id):
     if record is None:
         return jsonify({"error": "Not found"}), 404
 
+    record.setdefault("displayName", record.get("sessionName"))
     return jsonify(record)
+
+
+@app.patch("/api/audio/<audio_id>")
+def patch_audio(audio_id):
+    record = load_audio_record(audio_id)
+    if record is None:
+        return jsonify({"error": "Not found"}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    new_name = str(body.get("displayName", "") or "").strip()
+    if not new_name:
+        return jsonify({"error": "displayName is required"}), 400
+
+    record["displayName"] = new_name
+    save_audio_record(record)
+    return jsonify({"displayName": record["displayName"]})
 
 
 @app.delete("/api/audio/<audio_id>")
@@ -1389,7 +1408,13 @@ def list_reflections_for_user(user):
         session = row.get("session_name", "")
         if row.get("wearer_agent", "").lower() == user.lower() and session:
             session_names.add(session)
-    return jsonify({"user": user, "session_names": sorted(session_names)})
+    sorted_names = sorted(session_names)
+    sessions = []
+    for sn in sorted_names:
+        record = find_latest_audio_record(sn)
+        display = (record.get("displayName") if record else None) or sn
+        sessions.append({"sessionName": sn, "displayName": display})
+    return jsonify({"user": user, "session_names": sorted_names, "sessions": sessions})
 
 
 # Place the /reflection/<user>/<session> endpoint here, after all other route functions

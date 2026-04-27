@@ -92,14 +92,15 @@
 
       const res = await fetch(`/reflection/${encodeURIComponent(user)}`);
       const data = await res.json();
-      if (!data.session_names.length) {
+      const sessions = Array.isArray(data.sessions) ? data.sessions : (data.session_names || []).map(sn => ({ sessionName: sn, displayName: sn }));
+      if (!sessions.length) {
         sessionList.innerHTML = '<div class="empty-state">No meetings found for this user.</div>';
         return;
       }
 
-      sessionList.innerHTML = data.session_names.map(session => (
-        `<article class="session-card" data-session="${escapeHtml(session)}">
-          <h2 class="session-card-title">${escapeHtml(formatSessionLabel(session))}</h2>
+      sessionList.innerHTML = sessions.map(session => (
+        `<article class="session-card" data-session="${escapeHtml(session.sessionName)}">
+          <h2 class="session-card-title">${escapeHtml(formatSessionLabel(session.displayName || session.sessionName))}</h2>
           <p class="session-card-copy">Review the analysis and reflection trail for this meeting.</p>
           <div class="session-card-meta">Open session <span>→</span></div>
         </article>`

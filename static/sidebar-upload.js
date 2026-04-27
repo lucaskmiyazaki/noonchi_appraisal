@@ -9,6 +9,7 @@ const transcriptFileName = document.getElementById("transcriptFileName");
 const sessionList = document.getElementById("sessionList");
 const transcriptList = document.getElementById("transcriptList");
 const sessionNameInput = document.getElementById("sessionNameInput");
+const saveSessionNameBtn = document.getElementById("saveSessionNameBtn");
 const emotionSessionBtn = document.getElementById("emotionSessionBtn");
 const intentSessionBtn = document.getElementById("intentSessionBtn");
 
@@ -150,7 +151,7 @@ function renderSessionList() {
     const metaParts = [session.originalName, `${session.segmentCount || 0} transcript boxes`, formatSessionTimestamp(session.uploadedAt)].filter(Boolean);
     item.innerHTML = `
       <button class="session-item-main" type="button">
-        <span class="session-item-title">${escapeHtml(session.sessionName || session.originalName || "Untitled session")}</span>
+        <span class="session-item-title">${escapeHtml(session.displayName || session.sessionName || session.originalName || "Untitled session")}</span>
         <span class="session-item-meta">${escapeHtml(metaParts.join(" • "))}</span>
       </button>
       <button class="session-item-delete" type="button" aria-label="Delete recording" title="Delete recording">
@@ -230,7 +231,7 @@ function setLoadedAudio(data) {
   sidebarPlayBtn.disabled = !data?.audioUrl;
   transcriptFileName.textContent = data?.originalName ? `File: ${data.originalName}` : "";
   if (data?.sessionName) {
-    syncSessionNameInput(data.sessionName);
+    syncSessionNameInput(data.displayName || data.sessionName);
   }
 
   if (!data) {
@@ -495,7 +496,11 @@ sidebarUploadBtn?.addEventListener("click", () => {
 });
 
 sidebarBackBtn?.addEventListener("click", () => {
-  showSessionListView();
+  if (document.body.dataset.autoloadSession) {
+    window.location.href = "/wizard";
+  } else {
+    showSessionListView();
+  }
 });
 
 sidebarAudioInput?.addEventListener("change", async () => {
@@ -611,6 +616,39 @@ export function clearSelectedTranscriptSegments() {
 
 export function getSessionName() {
   return getCurrentSessionName();
+}
+
+if (saveSessionNameBtn) {
+  saveSessionNameBtn.addEventListener("click", async () => {
+    if (!audioData?.id) {
+      setTranscriptStatus("No session loaded.");
+      return;
+    }
+    const newName = sessionNameInput?.value.trim();
+    if (!newName) {
+      setTranscriptStatus("Session name cannot be empty.");
+      return;
+    }
+    saveSessionNameBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/audio/${encodeURIComponent(audioData.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: newName }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      audioData.displayName = data.displayName;
+      syncSessionNameInput(data.displayName);
+      syncSessionNavBtns();
+      await loadSessions();
+      setTranscriptStatus("Session name saved.");
+    } catch (err) {
+      setTranscriptStatus("Failed to save session name: " + err.message);
+    } finally {
+      saveSessionNameBtn.disabled = false;
+    }
+  });
 }
 
 (async () => {
