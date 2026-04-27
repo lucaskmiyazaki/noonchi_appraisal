@@ -233,27 +233,15 @@ def detect_unclear_feedback(wearer_agent):
         return None
 
     goals = get_wearer_goals(wearer_agent)
-    if not goals:
-        return {
-            "kind": "unclear_feedback",
-            "goal": None,
-            "blocker": None,
-            "blockers_without_actionables": [],
-        }
-
-    goal, blocker = find_first_unclear_concern_target(wearer_agent)
-    if goal is None and blocker is None:
+    unclear_goal = next((g for g in goals if not getattr(g, "is_clear", True)), None)
+    if unclear_goal is None:
         return None
-
-    blockers_without_actionables = []
-    if blocker is not None and not blocker_has_actionable(blocker):
-        blockers_without_actionables.append(blocker)
 
     return {
         "kind": "unclear_feedback",
-        "goal": goal,
-        "blocker": blocker,
-        "blockers_without_actionables": blockers_without_actionables,
+        "goal": unclear_goal,
+        "blocker": None,
+        "blockers_without_actionables": [],
     }
 
 
@@ -307,27 +295,15 @@ def detect_unclear_concern(wearer_agent):
         return None
 
     goals = get_agent_goals(wearer_agent)
-    if not goals:
-        return {
-            "kind": "unclear_concern",
-            "goal": None,
-            "blocker": None,
-            "blockers_without_actionables": [],
-        }
-
-    goal, blocker = find_first_unclear_concern_target(wearer_agent)
-    if goal is None and blocker is None:
+    unclear_goal = next((g for g in goals if not getattr(g, "is_clear", True)), None)
+    if unclear_goal is None:
         return None
-
-    blockers_without_actionables = []
-    if blocker is not None and not blocker_has_actionable(blocker):
-        blockers_without_actionables.append(blocker)
 
     return {
         "kind": "unclear_concern",
-        "goal": goal,
-        "blocker": blocker,
-        "blockers_without_actionables": blockers_without_actionables,
+        "goal": unclear_goal,
+        "blocker": None,
+        "blockers_without_actionables": [],
     }
 
 

@@ -120,10 +120,12 @@ class ReflectionTree:
                 agents[node_id] = agent
 
             elif node_type == "goal":
-                goals[node_id] = Goal(
+                goal_obj = Goal(
                     text=data.get("text", ""),
                     status=data.get("status", GOAL_STATUS_ON_GOING),
                 )
+                goal_obj.is_clear = bool(data.get("is_clear", True))
+                goals[node_id] = goal_obj
 
             elif node_type == "blocker":
                 blockers[node_id] = Blocker(text=data.get("text", ""))

@@ -71,7 +71,6 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
 
     diagrams = []
     last_goal_node = None
-    seen_clear_goal = False
 
     for seg in transcript:
         # --- Agent node ---
@@ -97,17 +96,10 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
         label = seg.get("intent_label")
         clarity = seg.get("goal_clarity", "no goal")
 
-        # A segment "has a goal" if it's a desire that is clear,
-        # or if it's unclear and no clear goal has been seen yet (first unclear).
-        has_goal = (
-            label == "desire"
-            and clarity in ("clear", "unclear")
-            and (clarity == "clear" or not seen_clear_goal)
-        )
+        # Update goal node for every desire segment (clear or unclear).
+        has_goal = label == "desire" and clarity in ("clear", "unclear")
 
         if has_goal:
-            if clarity == "clear":
-                seen_clear_goal = True
             goal_node = {
                 "id": "goal-1",
                 "type": "goal",

@@ -724,6 +724,10 @@ def evaluate_diagram_for_reflection(diagram, session_name="", wearer_agent_overr
         tone_issue = detect_tone_incoherence(wearer_agent)
         intensity_issue = detect_intensity_incoherence(wearer_agent)
 
+        if reflection_tree is None and tone_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_tone(tone_issue["goal"], wearer=wearer_agent).to_dict()
+        if reflection_tree is None and intensity_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(intensity_issue["issue"], wearer=wearer_agent).to_dict()
         if reflection_tree is None and unclear_feedback_issue is not None:
             reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(unclear_feedback_issue, wearer=wearer_agent).to_dict()
         if reflection_tree is None and unclear_concern_issue is not None:
@@ -731,10 +735,6 @@ def evaluate_diagram_for_reflection(diagram, session_name="", wearer_agent_overr
                 unclear_concern_issue, wearer=wearer_agent,
                 blockers_without_actionables=unclear_concern_issue.get("blockers_without_actionables"),
             ).to_dict()
-        if reflection_tree is None and tone_issue is not None:
-            reflection_tree = ReflectionTree().build_from_incoherent_tone(tone_issue["goal"], wearer=wearer_agent).to_dict()
-        if reflection_tree is None and intensity_issue is not None:
-            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(intensity_issue["issue"], wearer=wearer_agent).to_dict()
         if reflection_tree is None and good_feedback_issue is not None:
             reflection_tree = ReflectionTree().build_from_good_feedback_issue(good_feedback_issue, wearer=wearer_agent).to_dict()
         if reflection_tree is None and good_concern_issue is not None:
