@@ -177,6 +177,8 @@ function applyData(node, type, data, badge) {
     if (input) input.value = data.text || '';
     const select = node.querySelector('select');
     if (select) select.value = data.status || 'on_going';
+    const isClearCheckbox = node.querySelector('input[data-field="is_clear"]');
+    if (isClearCheckbox) isClearCheckbox.checked = Boolean(data.is_clear);
   }
 
   if (type === 'blocker') {

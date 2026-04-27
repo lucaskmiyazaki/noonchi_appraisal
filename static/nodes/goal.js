@@ -11,6 +11,7 @@ export function createGoalNode({ x = 220, y = 180, linkedFromId = null, _id = nu
 
   body.appendChild(createField('Goal', '<input type="text" placeholder="Type goal">'));
   body.appendChild(createField('Status', '<select><option value="on_going">on going</option><option value="fail">fail</option><option value="success">success</option></select>'));
+  body.appendChild(createField('Is Clear', '<input type="checkbox" data-field="is_clear">'));  
 
   const buttonRow = document.createElement('div');
   buttonRow.className = 'button-row';
@@ -44,9 +45,11 @@ export function createGoalNode({ x = 220, y = 180, linkedFromId = null, _id = nu
 export function getGoalData(node) {
   const textInput = node.querySelector('input[type="text"]');
   const statusSelect = node.querySelector('select');
+  const isClearCheckbox = node.querySelector('input[data-field="is_clear"]');
 
   return {
     text: textInput?.value || '',
     status: statusSelect?.value || 'on_going',
+    is_clear: isClearCheckbox?.checked ?? false,
   };
 }
