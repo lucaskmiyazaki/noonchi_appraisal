@@ -259,6 +259,10 @@
         return;
       }
 
+      if (activeReflectionState.bodyElement?.querySelector(`[data-node-id="${CSS.escape(nextNodeId)}"]`)) {
+        return;
+      }
+
       activeReflectionState.currentNodeId = nextNodeId;
       renderActiveReflectionNode();
     }
