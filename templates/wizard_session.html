@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reflection Node Interface</title>
+  <title>{{ session_name }} — Reflection Node Interface</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<body data-session-nav="true">
+<body data-autoload-session="{{ session_name }}">
   <div id="tab-bar">
     <div id="tabs"></div>
     <button id="addTabBtn" class="new-tab-btn">+ New board</button>
@@ -49,7 +49,7 @@
   <aside id="transcript-sidebar">
     <div class="transcript-sidebar-header">
       <div class="transcript-sidebar-title-row">
-        <span class="transcript-sidebar-title">Transcript</span>
+        <a href="/wizard" class="transcript-nav-btn" style="margin-right:auto;">← Sessions</a>
         <a id="emotionSessionBtn" class="transcript-nav-btn" href="#" hidden>Emotion</a>
         <a id="intentSessionBtn" class="transcript-nav-btn" href="#" hidden>Intent</a>
       </div>

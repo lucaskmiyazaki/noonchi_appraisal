@@ -9,6 +9,8 @@ const transcriptFileName = document.getElementById("transcriptFileName");
 const sessionList = document.getElementById("sessionList");
 const transcriptList = document.getElementById("transcriptList");
 const sessionNameInput = document.getElementById("sessionNameInput");
+const emotionSessionBtn = document.getElementById("emotionSessionBtn");
+const intentSessionBtn = document.getElementById("intentSessionBtn");
 
 import { syncReflectionTabs } from "./tabs.js";
 
@@ -162,6 +164,11 @@ function renderSessionList() {
     const deleteButton = item.querySelector(".session-item-delete");
 
     mainButton?.addEventListener("click", async () => {
+      if (document.body.dataset.sessionNav === 'true') {
+        const sessionName = session.sessionName || session.originalName || '';
+        window.location.href = `/wizard/${encodeURIComponent(sessionName)}`;
+        return;
+      }
       await loadAudioById(session.id);
     });
 
@@ -203,6 +210,17 @@ function renderSessionList() {
   }
 }
 
+function syncSessionNavBtns() {
+  const session = getCurrentSessionName();
+  if (session && audioData) {
+    if (emotionSessionBtn) { emotionSessionBtn.href = `/wizard/${encodeURIComponent(session)}/emotion`; emotionSessionBtn.hidden = false; }
+    if (intentSessionBtn) { intentSessionBtn.href = `/wizard/${encodeURIComponent(session)}/intent`; intentSessionBtn.hidden = false; }
+  } else {
+    if (emotionSessionBtn) emotionSessionBtn.hidden = true;
+    if (intentSessionBtn) intentSessionBtn.hidden = true;
+  }
+}
+
 function setLoadedAudio(data) {
   audioData = data;
   activeChunkId = null;
@@ -230,6 +248,7 @@ function setLoadedAudio(data) {
   renderTranscript();
   setSidebarView("transcript");
   dispatchGraphPlayState();
+  syncSessionNavBtns();
 }
 
 function clearLoadedAudio() {
@@ -588,12 +607,24 @@ export function getSessionName() {
   return getCurrentSessionName();
 }
 
-if (sessionNameInput && !sessionNameInput.value.trim()) {
-  syncSessionNameInput("audio");
-}
+(async () => {
+  if (sessionNameInput && !sessionNameInput.value.trim()) {
+    syncSessionNameInput("audio");
+  }
 
-loadSessions();
-clearLoadedAudio();
-setSidebarView("list");
-renderTranscript();
-dispatchGraphPlayState();
+  await loadSessions();
+
+  const autoloadSession = document.body.dataset.autoloadSession;
+  if (autoloadSession) {
+    const match = sessions.find(s => (s.sessionName || s.originalName) === autoloadSession);
+    if (match) {
+      await loadAudioById(match.id);
+      return;
+    }
+  }
+
+  clearLoadedAudio();
+  setSidebarView("list");
+  renderTranscript();
+  dispatchGraphPlayState();
+})();

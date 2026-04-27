@@ -516,10 +516,32 @@ button:disabled {
   gap: 10px;
 }
 
+.transcript-sidebar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .transcript-sidebar-title {
   font-size: 18px;
   font-weight: 700;
   color: #111827;
+  flex: 1;
+}
+
+.transcript-nav-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e0e7ff;
+  color: #3730a3;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.transcript-nav-btn:hover {
+  background: #c7d2fe;
 }
 
 .session-name-input {

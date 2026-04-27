@@ -576,6 +576,10 @@ def get_session_analysis(session_name):
 def wizard():
     return render_template("wizard.html")
 
+@app.get("/wizard/<session_name>")
+def wizard_session(session_name):
+    return render_template("wizard_session.html", session_name=session_name)
+
 @app.get("/")
 def root():
     return redirect("/login")
@@ -599,6 +603,7 @@ def user_session_detail(user_name, session_name):
 
 
 @app.get("/emotion/<session_name>")
+@app.get("/wizard/<session_name>/emotion")
 def user_emotion_detail(session_name):
     return render_template(
         "emotion_session.html",
@@ -606,6 +611,7 @@ def user_emotion_detail(session_name):
     )
 
 @app.get("/intent/<session_name>")
+@app.get("/wizard/<session_name>/intent")
 def user_intent_detail(session_name):
     return render_template(
         "intent_session.html",
