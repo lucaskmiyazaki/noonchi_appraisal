@@ -1142,6 +1142,52 @@ def update_reflection_practice(reflection_filename):
         "practice": updated_row.get("practice", "null"),
     })
 
+
+@app.post("/api/voice/generate")
+def voice_generate():
+    payload = request.get_json(silent=True) or {}
+    session_name = str(payload.get("session_name", "") or "").strip()
+    reflection_id = str(payload.get("reflection_id", "") or "").strip()
+    transcription = str(payload.get("transcription", "") or "").strip()
+    summary = str(payload.get("summary", "") or "").strip()
+    emotion = str(payload.get("emotion", "") or "").strip()
+
+    def _to_float(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    valence = _to_float(payload.get("valence"))
+    arousal = _to_float(payload.get("arousal"))
+    dominance = _to_float(payload.get("dominance"))
+
+    if not session_name or not transcription:
+        return jsonify({"error": "Missing required parameters: session_name, transcription"}), 400
+
+    if not emotion and not all(v is not None for v in (valence, arousal, dominance)):
+        return jsonify({"error": "Provide either emotion or valence+arousal+dominance"}), 400
+
+    try:
+        from pipeline.elevenlabs_voice import generate_tagged_voice
+        result = generate_tagged_voice(
+            transcript=transcription,
+            session_name=session_name,
+            emotion=emotion,
+            summary=summary,
+            reflection_id=reflection_id,
+            valence=valence,
+            arousal=arousal,
+            dominance=dominance,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Voice generation failed: {exc}"}), 500
+
+    return jsonify(result)
+
+
 @app.post("/save_recording")
 def save_recording():
     audio = request.files.get("audio")

@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 
-from models.constants import EMOTION_CATEGORY_BY_EMOTION, UNIFIED_TAGS_BY_CATEGORY
+from models.constants import EMOTION_CATEGORY_BY_EMOTION, UNIFIED_TAGS_BY_CATEGORY, SUGGESTIONS_BY_CATEGORY, OPPOSITE_CATEGORY, classify_emotion_from_vad
 
 
 load_dotenv()
@@ -20,8 +20,11 @@ TRAINING_CSV_PATH = DATA_DIR / "training.csv"
 TRAINING_CSV_FIELDNAMES = [
     "training_id",
     "session_name",
+    "reflection_id",
     "training_files",
     "transcription",
+    "summary",
+    "suggestions",
 ]
 
 
@@ -31,7 +34,7 @@ def _sanitize_name(value: str, fallback: str) -> str:
     return normalized or fallback
 
 
-def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str) -> None:
+def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     csv_exists = TRAINING_CSV_PATH.exists()
 
@@ -42,8 +45,11 @@ def _append_training_csv_row(training_id: str, session_name: str, training_files
         writer.writerow({
             "training_id": training_id,
             "session_name": session_name,
+            "reflection_id": reflection_id,
             "training_files": ";".join(training_files),
             "transcription": transcription,
+            "summary": summary,
+            "suggestions": "|".join(suggestions) if suggestions else "",
         })
 
 
@@ -54,6 +60,11 @@ def generate_tagged_voice(
     voice_id: str = "b3tuFWghbXYRa9Cs9MJf",
     model_id: str = "eleven_v3",
     output_dir: str | None = None,
+    summary: str = "",
+    reflection_id: str = "",
+    valence: float | None = None,
+    arousal: float | None = None,
+    dominance: float | None = None,
 ) -> dict:
     """Generate multiple ElevenLabs audio files for an emotion-specific tag set.
 
@@ -85,10 +96,17 @@ def generate_tagged_voice(
         raise ValueError("emotion must be a non-empty string")
 
     category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
-    tags = UNIFIED_TAGS_BY_CATEGORY.get(category)
-    if not tags:
+    if not category and valence is not None and arousal is not None and dominance is not None:
+        clean_emotion = classify_emotion_from_vad(valence, arousal, dominance)
+        category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
+    if not category:
         supported = ", ".join(sorted(EMOTION_CATEGORY_BY_EMOTION.keys()))
         raise ValueError(f"Unsupported emotion '{clean_emotion}'. Supported emotions: {supported}")
+
+    # Generate audio for the opposite valence category (practice goal)
+    target_category = OPPOSITE_CATEGORY[category]
+    tags = UNIFIED_TAGS_BY_CATEGORY[target_category]
+    suggestions = SUGGESTIONS_BY_CATEGORY[target_category]
 
     api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
     if not api_key:
@@ -120,18 +138,29 @@ def generate_tagged_voice(
         file_path.write_bytes(audio_bytes)
         output_files.append(filename)
 
+    clean_summary = str(summary or "").strip()
+    clean_reflection_id = str(reflection_id or "").strip()
+
     _append_training_csv_row(
         training_id=training_id,
         session_name=clean_session_name,
         training_files=output_files,
         transcription=clean_transcript,
+        summary=clean_summary,
+        reflection_id=clean_reflection_id,
+        suggestions=list(suggestions),
     )
 
     return {
         "training_id": training_id,
         "session_name": clean_session_name,
+        "reflection_id": clean_reflection_id,
         "emotion": clean_emotion,
+        "category": category,
+        "target_category": target_category,
         "tags": list(tags),
+        "suggestions": list(suggestions),
         "output_files": output_files,
         "transcription": clean_transcript,
+        "summary": clean_summary,
     }

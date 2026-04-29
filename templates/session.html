@@ -215,6 +215,7 @@
     let sessionAudio = null;
     let activeSegmentPlayback = null;
     let activeSegmentScrub = null;
+    let sessionTranscriptSegments = [];
     const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
     function setSegmentPlaybackUi(progressBar, progressHandle, progress = 0) {
@@ -692,6 +693,56 @@
 
             try {
               await updateReflectionPractice(reflection, 'todo');
+
+              // Fire-and-forget voice training data collection
+              try {
+                const reflectionStartSec = Number(reflection.startms) / 1000;
+                const reflectionEndSec = Number(reflection.endms) / 1000;
+                const relevantSegments = sessionTranscriptSegments.filter(
+                  seg => Number(seg.end) > reflectionStartSec && Number(seg.start) < reflectionEndSec
+                );
+                const transcription = relevantSegments.map(seg => String(seg.text || '').trim()).filter(Boolean).join(' ');
+                const emotionCounts = {};
+                let vadSum = { valence: 0, arousal: 0, dominance: 0, count: 0 };
+                relevantSegments.forEach(seg => {
+                  if (seg.emotion_label) {
+                    emotionCounts[seg.emotion_label] = (emotionCounts[seg.emotion_label] || 0) + 1;
+                  }
+                  if (seg.valence != null && seg.arousal != null && seg.dominance != null) {
+                    vadSum.valence += Number(seg.valence);
+                    vadSum.arousal += Number(seg.arousal);
+                    vadSum.dominance += Number(seg.dominance);
+                    vadSum.count += 1;
+                  }
+                });
+                const dominantEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+                const avgVad = vadSum.count > 0 ? {
+                  valence: vadSum.valence / vadSum.count,
+                  arousal: vadSum.arousal / vadSum.count,
+                  dominance: vadSum.dominance / vadSum.count,
+                } : null;
+                const summaryNode = Object.values(tree?.nodes || {}).find(
+                  n => Array.isArray(n.options) && n.options.some(opt => opt.next === currentNodeId)
+                );
+                const summary = summaryNode?.text || '';
+                if (transcription && (dominantEmotion || avgVad)) {
+                  fetch('/api/voice/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      session_name: currentSession,
+                      reflection_id: reflection.reflectionKey || '',
+                      transcription,
+                      summary,
+                      emotion: dominantEmotion,
+                      ...(avgVad || {}),
+                    }),
+                  }).catch(() => {});
+                }
+              } catch (_voiceErr) {
+                // Voice generation is non-critical; suppress errors
+              }
+
               if (action === 'now') {
                 window.location.href = `/${encodeURIComponent(currentUser.trim())}/practice`;
                 return;
@@ -801,6 +852,7 @@
               const audioRecord = await audioResponse.json();
               audioUrl = audioRecord.audioUrl || '';
               transcriptSegments = Array.isArray(audioRecord.transcript) ? audioRecord.transcript : [];
+              sessionTranscriptSegments = transcriptSegments;
             }
           }
         }
