@@ -204,6 +204,14 @@ def find_latest_audio_record(session_name=""):
         if safe_session_name_folded and record_safe_session_name.casefold() == safe_session_name_folded:
             return record
 
+        # Also match by displayName so renamed sessions can still be resolved
+        record_display_name = str(record.get("displayName", "") or "").strip()
+        if record_display_name and record_display_name == requested_session:
+            return record
+
+        if record_display_name and record_display_name.casefold() == requested_session_folded:
+            return record
+
     return None
 
 

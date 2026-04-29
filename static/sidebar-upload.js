@@ -212,7 +212,8 @@ function renderSessionList() {
 }
 
 function syncSessionNavBtns() {
-  const session = getCurrentSessionName();
+  // Always use the stable sessionName (not the displayName input) for URL routing
+  const session = audioData?.sessionName || getCurrentSessionName();
   if (session && audioData) {
     if (emotionSessionBtn) { emotionSessionBtn.href = `/wizard/${encodeURIComponent(session)}/emotion`; emotionSessionBtn.hidden = false; }
     if (intentSessionBtn) { intentSessionBtn.href = `/wizard/${encodeURIComponent(session)}/intent`; intentSessionBtn.hidden = false; }
@@ -615,7 +616,8 @@ export function clearSelectedTranscriptSegments() {
 }
 
 export function getSessionName() {
-  return getCurrentSessionName();
+  // Return the stable sessionName key, not the display label
+  return audioData?.sessionName || getCurrentSessionName();
 }
 
 if (saveSessionNameBtn) {
