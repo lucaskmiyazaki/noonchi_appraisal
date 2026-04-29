@@ -11,15 +11,69 @@ PAD_HIGH_AROUSAL_THRESHOLD = 0.85
 
 DEFAULT_PAD = (PAD_DEFAULT, PAD_DEFAULT, PAD_DEFAULT)
 
+EXCITED = "excited"
+SURPRISED = "surprised"
+ENJOYMENT = "enjoyment"
+RELAXED = "relaxed"
+ANGRY = "angry"
+ANXIOUS = "anxious"
+DISAPPOINTED = "disappointed"
+SAD = "sad"
+
 NAME_TO_PAD = {
-    "excited":      (PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT),
-    "surprised":    (PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT),
-    "enjoyment":    (PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT),
-    "relaxed":      (PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT, PAD_LOW_DEFAULT),
-    "angry":        (PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT),
-    "anxious":      (PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT),
-    "disappointed": (PAD_LOW_DEFAULT, PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT),
-    "sad":          (PAD_LOW_DEFAULT, PAD_LOW_DEFAULT, PAD_LOW_DEFAULT),
+    EXCITED:      (PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT),
+    SURPRISED:    (PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT),
+    ENJOYMENT:    (PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT),
+    RELAXED:      (PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT, PAD_LOW_DEFAULT),
+    ANGRY:        (PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT, PAD_HIGH_DEFAULT),
+    ANXIOUS:      (PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT, PAD_LOW_DEFAULT),
+    DISAPPOINTED: (PAD_LOW_DEFAULT, PAD_LOW_DEFAULT, PAD_HIGH_DEFAULT),
+    SAD:          (PAD_LOW_DEFAULT, PAD_LOW_DEFAULT, PAD_LOW_DEFAULT),
+}
+
+POSITIVE_CATEGORY = "positive"
+NEGATIVE_DOMINANT_CATEGORY = "negative_dominant"
+NEGATIVE_SUBMISSIVE_CATEGORY = "negative_submissive"
+
+UNIFIED_TAGS_BY_CATEGORY = {
+    POSITIVE_CATEGORY: [
+        "laughing",
+        "excited and energetic",
+        "calm and pleased",
+    ],
+    NEGATIVE_DOMINANT_CATEGORY: [
+        "angry and explosive",
+        "disapointed and forgiving",
+        "scolding and firm",
+    ],
+    NEGATIVE_SUBMISSIVE_CATEGORY: [
+        "sobbing and depressed",
+        "sad and regretful",
+        "withdrawn and isolated",
+    ],
+}
+
+POSITIVE_EMOTIONS = {
+    EXCITED,
+    SURPRISED,
+    ENJOYMENT,
+    RELAXED,
+}
+
+NEGATIVE_DOMINANT_EMOTIONS = {
+    ANGRY,
+    DISAPPOINTED,
+}
+
+NEGATIVE_SUBMISSIVE_EMOTIONS = {
+    ANXIOUS,
+    SAD,
+}
+
+EMOTION_CATEGORY_BY_EMOTION = {
+    **{emotion: POSITIVE_CATEGORY for emotion in POSITIVE_EMOTIONS},
+    **{emotion: NEGATIVE_DOMINANT_CATEGORY for emotion in NEGATIVE_DOMINANT_EMOTIONS},
+    **{emotion: NEGATIVE_SUBMISSIVE_CATEGORY for emotion in NEGATIVE_SUBMISSIVE_EMOTIONS},
 }
 
 GOAL_STATUS_ON_GOING = "on_going"
