@@ -332,6 +332,10 @@ TRAINING_FIELDNAMES = [
     "session_name",
     "reflection_id",
     "wearer_agent",
+    "type",
+    "valence",
+    "arousal",
+    "dominance",
     "done",
     "training_files",
     "transcription",
@@ -343,6 +347,11 @@ TRAINING_FIELDNAMES = [
 def _normalize_done_str(value) -> str:
     normalized = str(value or "").strip().lower()
     return "true" if normalized in {"true", "1", "yes", "done"} else "false"
+
+
+def _normalize_training_type_str(value) -> str:
+    normalized = str(value or "").strip().lower()
+    return "arousal" if normalized == "arousal" else "valence"
 
 
 def _parse_bool(value):
@@ -370,6 +379,10 @@ def write_training_rows(rows):
                 "session_name": str(row.get("session_name", "") or session_value),
                 "reflection_id": str(row.get("reflection_id", "") or "").strip(),
                 "wearer_agent": str(row.get("wearer_agent", "") or "").strip(),
+                "type": _normalize_training_type_str(row.get("type", "valence")),
+                "valence": str(row.get("valence", "") or "").strip(),
+                "arousal": str(row.get("arousal", "") or "").strip(),
+                "dominance": str(row.get("dominance", "") or "").strip(),
                 "done": _normalize_done_str(row.get("done", "false")),
                 "training_files": str(row.get("training_files", "") or "").strip(),
                 "transcription": str(row.get("transcription", "") or "").strip(),
@@ -458,6 +471,7 @@ def build_practice_items_for_user(user_name: str):
             "display_name": display_name,
             "reflection_id": reflection_id,
             "wearer_agent": wearer_agent,
+            "type": _normalize_training_type_str(row.get("type", "valence")),
             "done": _normalize_done_str(row.get("done", "false")) == "true",
             "title": title,
             "summary": summary,
@@ -1307,6 +1321,7 @@ def voice_generate():
     session_name = str(payload.get("session_name", "") or "").strip()
     reflection_id = str(payload.get("reflection_id", "") or "").strip()
     wearer_agent = str(payload.get("wearer_agent", "") or "").strip()
+    training_type = str(payload.get("type", "") or "").strip()
     transcription = str(payload.get("transcription", "") or "").strip()
     summary = str(payload.get("summary", "") or "").strip()
     emotion = str(payload.get("emotion", "") or "").strip()
@@ -1336,6 +1351,7 @@ def voice_generate():
             summary=summary,
             reflection_id=reflection_id,
             wearer_agent=wearer_agent,
+            training_type=training_type,
             valence=valence,
             arousal=arousal,
             dominance=dominance,

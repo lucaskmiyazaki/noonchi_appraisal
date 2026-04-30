@@ -99,7 +99,7 @@
         <p id="practiceDetailTranscript" class="practice-detail-copy"></p>
         <p class="practice-detail-section-title">Original Voice</p>
         <audio id="practiceDetailAudio" class="practice-detail-audio" controls preload="metadata"></audio>
-        <p class="practice-detail-section-title">Suggestions And AI Voices</p>
+        <p id="practiceAiSectionTitle" class="practice-detail-section-title">Suggestions And AI Voices</p>
         <div id="practiceAiList" class="practice-ai-list"></div>
         <p class="practice-detail-instruction">Record your voice to practice.</p>
         <div id="practiceRecordings" class="practice-recordings"></div>
@@ -129,6 +129,7 @@
     const practiceDetailSummary = document.getElementById('practiceDetailSummary');
     const practiceDetailTranscript = document.getElementById('practiceDetailTranscript');
     const practiceDetailAudio = document.getElementById('practiceDetailAudio');
+    const practiceAiSectionTitle = document.getElementById('practiceAiSectionTitle');
     const practiceAiList = document.getElementById('practiceAiList');
     const practiceSearchInput = document.getElementById('practiceSearchInput');
     const practiceRecordings = document.getElementById('practiceRecordings');
@@ -437,6 +438,8 @@
       const title = String(reflection.title || `reflection on ${formatSessionLabel(reflection.session_name || 'Untitled session')}`).trim();
       const summary = String(reflection.summary || '').trim() || 'No summary available.';
       const transcript = String(reflection.transcription || '').trim() || 'No transcript available.';
+      const trainingType = String(reflection.type || 'valence').trim().toLowerCase();
+      const isArousalPractice = trainingType === 'arousal';
       const startTime = Number(reflection.startms || 0) / 1000;
       const endTime = Number(reflection.endms || 0) / 1000;
       const originalAudioUrl = String(reflection.original_audio_url || '').trim();
@@ -451,16 +454,24 @@
       updateRecordButtonUi();
 
       const aiPractice = Array.isArray(reflection.ai_practice) ? reflection.ai_practice : [];
-      if (!aiPractice.length) {
-        practiceAiList.innerHTML = '<div class="practice-recording-empty">No AI suggestions available yet.</div>';
+      if (practiceAiSectionTitle) {
+        practiceAiSectionTitle.hidden = isArousalPractice;
+      }
+      practiceAiList.hidden = isArousalPractice;
+      if (!isArousalPractice) {
+        if (!aiPractice.length) {
+          practiceAiList.innerHTML = '<div class="practice-recording-empty">No AI suggestions available yet.</div>';
+        } else {
+          practiceAiList.innerHTML = aiPractice.map((item, index) => `
+            <div class="practice-ai-item">
+              <p class="practice-ai-item-title">Suggestion ${index + 1}</p>
+              <p class="practice-ai-item-copy">${escapeHtml(item.suggestion || 'No suggestion text provided.')}</p>
+              ${item.audio_url ? `<audio class="practice-detail-audio" controls preload="metadata" src="${escapeHtml(item.audio_url)}"></audio>` : '<p class="practice-recording-empty">Missing AI voice.</p>'}
+            </div>
+          `).join('');
+        }
       } else {
-        practiceAiList.innerHTML = aiPractice.map((item, index) => `
-          <div class="practice-ai-item">
-            <p class="practice-ai-item-title">Suggestion ${index + 1}</p>
-            <p class="practice-ai-item-copy">${escapeHtml(item.suggestion || 'No suggestion text provided.')}</p>
-            ${item.audio_url ? `<audio class="practice-detail-audio" controls preload="metadata" src="${escapeHtml(item.audio_url)}"></audio>` : '<p class="practice-recording-empty">Missing AI voice.</p>'}
-          </div>
-        `).join('');
+        practiceAiList.innerHTML = '';
       }
 
       activePracticeSegment = Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime
@@ -522,6 +533,7 @@
       const payload = await response.json().catch(() => ({ items: [] }));
       const practiceReflections = (Array.isArray(payload.items) ? payload.items : []).map((item, index) => ({
         ...item,
+        type: String(item.type || 'valence').trim().toLowerCase(),
         done: String(item.done ?? '').toLowerCase() === 'true' || item.done === true,
         reflectionKey: item.training_id || item.reflection_id || `${item.session_name || 'session'}-${index}`,
       }));

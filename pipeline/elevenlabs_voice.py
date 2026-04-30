@@ -23,6 +23,10 @@ TRAINING_CSV_FIELDNAMES = [
     "session_name",
     "reflection_id",
     "wearer_agent",
+    "type",
+    "valence",
+    "arousal",
+    "dominance",
     "done",
     "training_files",
     "transcription",
@@ -40,6 +44,11 @@ def _sanitize_name(value: str, fallback: str) -> str:
 def _normalize_done(value: str) -> str:
     normalized = str(value or "").strip().lower()
     return "true" if normalized in {"true", "1", "yes", "done"} else "false"
+
+
+def _normalize_training_type(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    return "arousal" if normalized == "arousal" else "valence"
 
 
 def _ensure_training_csv_schema() -> None:
@@ -65,6 +74,10 @@ def _ensure_training_csv_schema() -> None:
                 "session_name": str(row.get("session_name", "") or session_value),
                 "reflection_id": row.get("reflection_id", ""),
                 "wearer_agent": row.get("wearer_agent", ""),
+                "type": _normalize_training_type(row.get("type", "valence")),
+                "valence": row.get("valence", ""),
+                "arousal": row.get("arousal", ""),
+                "dominance": row.get("dominance", ""),
                 "done": _normalize_done(row.get("done", "false")),
                 "training_files": row.get("training_files", ""),
                 "transcription": row.get("transcription", ""),
@@ -73,7 +86,7 @@ def _ensure_training_csv_schema() -> None:
             })
 
 
-def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "") -> None:
+def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     _ensure_training_csv_schema()
     csv_exists = TRAINING_CSV_PATH.exists()
@@ -88,6 +101,10 @@ def _append_training_csv_row(training_id: str, session_name: str, training_files
             "session_name": session_name,
             "reflection_id": reflection_id,
             "wearer_agent": wearer_agent,
+            "type": _normalize_training_type(training_type),
+            "valence": "" if valence is None else str(valence),
+            "arousal": "" if arousal is None else str(arousal),
+            "dominance": "" if dominance is None else str(dominance),
             "done": "false",
             "training_files": ";".join(training_files),
             "transcription": transcription,
@@ -106,6 +123,7 @@ def generate_tagged_voice(
     summary: str = "",
     reflection_id: str = "",
     wearer_agent: str = "",
+    training_type: str = "valence",
     valence: float | None = None,
     arousal: float | None = None,
     dominance: float | None = None,
@@ -139,48 +157,52 @@ def generate_tagged_voice(
     if not clean_emotion:
         raise ValueError("emotion must be a non-empty string")
 
-    category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
-    if not category and valence is not None and arousal is not None and dominance is not None:
-        clean_emotion = classify_emotion_from_vad(valence, arousal, dominance)
-        category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
-    if not category:
-        supported = ", ".join(sorted(EMOTION_CATEGORY_BY_EMOTION.keys()))
-        raise ValueError(f"Unsupported emotion '{clean_emotion}'. Supported emotions: {supported}")
-
-    # Generate audio for the opposite valence category (practice goal)
-    target_category = OPPOSITE_CATEGORY[category]
-    tags = UNIFIED_TAGS_BY_CATEGORY[target_category]
-    suggestions = SUGGESTIONS_BY_CATEGORY[target_category]
-
-    api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
-    if not api_key:
-        raise ValueError("ELEVENLABS_API_KEY is not set")
-
-    output_root = Path(output_dir) if output_dir else TRAINING_AUDIO_DIR
-    output_root.mkdir(parents=True, exist_ok=True)
-
     training_id = uuid.uuid4().hex
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    safe_session = _sanitize_name(clean_session_name, "session")
-
-    client = ElevenLabs(api_key=api_key)
+    clean_training_type = _normalize_training_type(training_type)
+    category = ""
+    target_category = ""
+    tags: list[str] = []
+    suggestions: list[str] = []
     output_files: list[str] = []
 
-    for index, tag in enumerate(tags, start=1):
-        tagged_text = f"[{tag}] {clean_transcript}"
-        response = client.text_to_speech.convert(
-            voice_id=voice_id,
-            text=tagged_text,
-            model_id=model_id,
-            voice_settings={"stability": 0.3},
-        )
+    if clean_training_type == "valence":
+        category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
+        if not category and valence is not None and arousal is not None and dominance is not None:
+            clean_emotion = classify_emotion_from_vad(valence, arousal, dominance)
+            category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
+        if not category:
+            supported = ", ".join(sorted(EMOTION_CATEGORY_BY_EMOTION.keys()))
+            raise ValueError(f"Unsupported emotion '{clean_emotion}'. Supported emotions: {supported}")
 
-        audio_bytes = b"".join(chunk for chunk in response if chunk)
-        safe_tag = _sanitize_name(tag, f"tag{index}")
-        filename = f"{training_id}_{safe_session}_{clean_emotion}_{safe_tag}_{timestamp}_{index}.mp3"
-        file_path = output_root / filename
-        file_path.write_bytes(audio_bytes)
-        output_files.append(filename)
+        target_category = OPPOSITE_CATEGORY[category]
+        tags = list(UNIFIED_TAGS_BY_CATEGORY[target_category])
+        suggestions = list(SUGGESTIONS_BY_CATEGORY[target_category])
+
+        api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+        if not api_key:
+            raise ValueError("ELEVENLABS_API_KEY is not set")
+
+        output_root = Path(output_dir) if output_dir else TRAINING_AUDIO_DIR
+        output_root.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        safe_session = _sanitize_name(clean_session_name, "session")
+        client = ElevenLabs(api_key=api_key)
+
+        for index, tag in enumerate(tags, start=1):
+            tagged_text = f"[{tag}] {clean_transcript}"
+            response = client.text_to_speech.convert(
+                voice_id=voice_id,
+                text=tagged_text,
+                model_id=model_id,
+                voice_settings={"stability": 0.3},
+            )
+
+            audio_bytes = b"".join(chunk for chunk in response if chunk)
+            safe_tag = _sanitize_name(tag, f"tag{index}")
+            filename = f"{training_id}_{safe_session}_{clean_emotion}_{safe_tag}_{timestamp}_{index}.mp3"
+            file_path = output_root / filename
+            file_path.write_bytes(audio_bytes)
+            output_files.append(filename)
 
     clean_summary = str(summary or "").strip()
     clean_reflection_id = str(reflection_id or "").strip()
@@ -195,6 +217,10 @@ def generate_tagged_voice(
         reflection_id=clean_reflection_id,
         suggestions=list(suggestions),
         wearer_agent=clean_wearer_agent,
+        training_type=clean_training_type,
+        valence=valence,
+        arousal=arousal,
+        dominance=dominance,
     )
 
     return {
@@ -202,6 +228,7 @@ def generate_tagged_voice(
         "session_name": clean_session_name,
         "reflection_id": clean_reflection_id,
         "wearer_agent": clean_wearer_agent,
+        "type": clean_training_type,
         "emotion": clean_emotion,
         "category": category,
         "target_category": target_category,

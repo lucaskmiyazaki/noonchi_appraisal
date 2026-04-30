@@ -721,10 +721,15 @@
                   arousal: vadSum.arousal / vadSum.count,
                   dominance: vadSum.dominance / vadSum.count,
                 } : null;
+                const reflectionType = String(reflection?.reflectionType || '').trim().toLowerCase();
+                const isArousalPractice = reflectionType === 'incoherent intensity';
                 const summaryNode = Object.values(tree?.nodes || {}).find(
                   n => Array.isArray(n.options) && n.options.some(opt => opt.next === currentNodeId)
                 );
-                const summary = summaryNode?.text || '';
+                const firstNode = tree?.start_node ? tree?.nodes?.[tree.start_node] : null;
+                const summary = isArousalPractice
+                  ? String(firstNode?.text || '')
+                  : String(summaryNode?.text || '');
                 if (transcription && (dominantEmotion || avgVad)) {
                   fetch('/api/voice/generate', {
                     method: 'POST',
@@ -733,6 +738,7 @@
                       session_name: currentSession,
                       reflection_id: reflection.reflectionKey || '',
                       wearer_agent: reflection.wearer_agent || currentUser,
+                      type: isArousalPractice ? 'arousal' : 'valence',
                       transcription,
                       summary,
                       emotion: dominantEmotion,
