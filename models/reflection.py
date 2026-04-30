@@ -271,8 +271,7 @@ class ReflectionTree:
             actionable_journal = ReflectionNode(
                 id="actionable_journal",
                 text=(
-                    "When providing feedback, suggesting clear and specific points of improvement can make your message more constructive and actionable. "
-                    "What do you think those points might be?"
+                    "Be clear and specific with feedback instead of relying on the other person’s ability to infer. State exactly what needs to change and what actions should be taken next. "
                 ),
                 options=[],
                 node_type="journaling",
@@ -361,8 +360,7 @@ class ReflectionTree:
         actionable_journal = ReflectionNode(
             id="actionable_journal",
             text=(
-                "When providing feedback, suggesting clear and specific points of improvement can make your message more constructive and actionable. "
-                "What do you think those points might be?"
+                "Be clear and specific with feedback instead relying on the other person’s ability to infer. State exactly what needs to change and what actions should be taken next. "
             ),
             options=[],
             node_type="journaling",
@@ -434,8 +432,7 @@ class ReflectionTree:
         actionable_journal = ReflectionNode(
             id="actionable_journal",
             text=(
-                "When sharing concerns, pointing out specific points of risk and steps for mitigation can make message more constructive and actionable. "
-                "What do you think those points might be?"
+                "Be clear and specific with concerns instead relying on the other person’s inference ability. State exactly what are the points of risk and actions for mitigation."
             ),
             options=[],
             node_type="journaling",
@@ -605,7 +602,7 @@ class ReflectionTree:
 
         points_journal = ReflectionNode(
             id="points_journal",
-            text="What do you think those points were?",
+            text="Be clear and specific with concerns instead of relying on the other person’s inference ability. State exactly what are the points of risk and actions for mitigation.",
             options=[],
             node_type="journaling",
         )
@@ -665,7 +662,9 @@ class ReflectionTree:
 
         points_journal = ReflectionNode(
             id="points_journal",
-            text="What do you think those points might be?",
+            text=(
+                "Be clear and specific with feedback instead of relying on the other person’s inference ability. State exactly what needs to change and what actions should be taken next."
+            ),
             options=[],
             node_type="journaling",
         )
@@ -741,7 +740,7 @@ class ReflectionTree:
 
         acknowledgement_journal = ReflectionNode(
             id="acknowledgement_journal",
-            text="Why? What specific things you could have acknowledged?",
+            text="Being clear and specific with what you appreciated the other person has done instead of relying on the other person’s inference ability could strengthen your relationship with others and make communication more clear. Do you think you could have acknowledged any specific actions others did well?",
             options=[],
             node_type="journaling",
         )
@@ -926,7 +925,7 @@ class ReflectionTree:
             concerns_journal = ReflectionNode(
                 id="concerns_journal",
                 text=(
-                    "If something feels off, it might help to make it explicit. "
+                    "If something feels off, it might help to make it explicit instead of relying on the other person’s inference ability. "
                     "Can you describe what your concerns are?"
                 ),
                 options=[],
