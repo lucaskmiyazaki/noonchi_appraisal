@@ -509,7 +509,7 @@ class ReflectionTree:
 
         ask_followup = ReflectionNode(
             id="ask_followup",
-            text="You might want to ask them what their concerns are and what you can do to mitigate them.",
+            text="Some people tend to communicate through indirect cues—such as tone of voice, hints, or implied meanings—rather than stating things explicitly. When giving guidance in these situations, avoid telling them “your communication is wrong.” Instead, frame your suggestion around how you process information best. For example, explain that you understand communication more clearly when expectations, concerns, or feedback are stated directly. How could you phrase a question that helps clarify their intention without making them feel criticized?",
             options=[],
             node_type="journaling",
         )
@@ -555,7 +555,7 @@ class ReflectionTree:
 
         ask_followup = ReflectionNode(
             id="ask_followup",
-            text="You might want to ask them what the problems are and actionable steps for improvement.",
+            text="Some people tend to communicate through indirect cues—such as tone of voice, hints, or implied meanings—rather than stating things explicitly. When giving guidance in these situations, avoid telling them “your communication is wrong.” Instead, frame your suggestion around how you process information best. For example, explain that you understand communication more clearly when expectations, concerns, or feedback are stated directly. How could you phrase a question that helps clarify their intention without making them feel criticized?",
             options=[],
             node_type="journaling",
         )

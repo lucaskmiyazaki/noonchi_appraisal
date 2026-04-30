@@ -53,7 +53,7 @@ function syncToolbarState() {
   addBlockerBtn.disabled = !enabled;
   addFollowupBtn.disabled = !enabled;
   playBtn.disabled = !enabled;
-  playBtn.hidden = !enabled || board?.kind === 'intent' || !graphPlayState.hasSession || !graphPlayState.hasSelection;
+  playBtn.hidden = !enabled || !graphPlayState.hasSession || !graphPlayState.hasSelection;
 
   const isReflectionBoard = board?.kind === 'reflection';
   if (toolbarActions) toolbarActions.hidden = isReflectionBoard;
