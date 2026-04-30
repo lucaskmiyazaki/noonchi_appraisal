@@ -23,6 +23,7 @@ TRAINING_CSV_FIELDNAMES = [
     "session_name",
     "reflection_id",
     "wearer_agent",
+    "done",
     "training_files",
     "transcription",
     "summary",
@@ -36,8 +37,45 @@ def _sanitize_name(value: str, fallback: str) -> str:
     return normalized or fallback
 
 
+def _normalize_done(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    return "true" if normalized in {"true", "1", "yes", "done"} else "false"
+
+
+def _ensure_training_csv_schema() -> None:
+    if not TRAINING_CSV_PATH.exists():
+        return
+
+    with TRAINING_CSV_PATH.open("r", newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        existing_fieldnames = list(reader.fieldnames or [])
+        existing_rows = list(reader)
+
+    if existing_fieldnames == TRAINING_CSV_FIELDNAMES:
+        return
+
+    with TRAINING_CSV_PATH.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=TRAINING_CSV_FIELDNAMES)
+        writer.writeheader()
+        for row in existing_rows:
+            session_value = str(row.get("session", "") or row.get("session_name", "") or "").strip()
+            writer.writerow({
+                "training_id": row.get("training_id", ""),
+                "session": session_value,
+                "session_name": str(row.get("session_name", "") or session_value),
+                "reflection_id": row.get("reflection_id", ""),
+                "wearer_agent": row.get("wearer_agent", ""),
+                "done": _normalize_done(row.get("done", "false")),
+                "training_files": row.get("training_files", ""),
+                "transcription": row.get("transcription", ""),
+                "summary": row.get("summary", ""),
+                "suggestions": row.get("suggestions", ""),
+            })
+
+
 def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "") -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    _ensure_training_csv_schema()
     csv_exists = TRAINING_CSV_PATH.exists()
 
     with TRAINING_CSV_PATH.open("a", newline="", encoding="utf-8") as handle:
@@ -50,6 +88,7 @@ def _append_training_csv_row(training_id: str, session_name: str, training_files
             "session_name": session_name,
             "reflection_id": reflection_id,
             "wearer_agent": wearer_agent,
+            "done": "false",
             "training_files": ";".join(training_files),
             "transcription": transcription,
             "summary": summary,

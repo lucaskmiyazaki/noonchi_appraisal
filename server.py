@@ -326,6 +326,58 @@ def load_training_rows():
         return list(reader)
 
 
+TRAINING_FIELDNAMES = [
+    "training_id",
+    "session",
+    "session_name",
+    "reflection_id",
+    "wearer_agent",
+    "done",
+    "training_files",
+    "transcription",
+    "summary",
+    "suggestions",
+]
+
+
+def _normalize_done_str(value) -> str:
+    normalized = str(value or "").strip().lower()
+    return "true" if normalized in {"true", "1", "yes", "done"} else "false"
+
+
+def _parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "done"}:
+            return True
+        if normalized in {"false", "0", "no", "todo", ""}:
+            return False
+    return None
+
+
+def write_training_rows(rows):
+    training_path = DATA_DIR / "training.csv"
+    with open(training_path, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=TRAINING_FIELDNAMES)
+        writer.writeheader()
+        for row in rows:
+            session_value = str(row.get("session", "") or row.get("session_name", "") or "").strip()
+            writer.writerow({
+                "training_id": str(row.get("training_id", "") or "").strip(),
+                "session": session_value,
+                "session_name": str(row.get("session_name", "") or session_value),
+                "reflection_id": str(row.get("reflection_id", "") or "").strip(),
+                "wearer_agent": str(row.get("wearer_agent", "") or "").strip(),
+                "done": _normalize_done_str(row.get("done", "false")),
+                "training_files": str(row.get("training_files", "") or "").strip(),
+                "transcription": str(row.get("transcription", "") or "").strip(),
+                "summary": str(row.get("summary", "") or "").strip(),
+                "suggestions": str(row.get("suggestions", "") or "").strip(),
+            })
+
+
 def format_reflection_type_label(tree_type: str) -> str:
     normalized = str(tree_type or "").strip().lower()
     if normalized == "incoherent intensity":
@@ -406,6 +458,7 @@ def build_practice_items_for_user(user_name: str):
             "display_name": display_name,
             "reflection_id": reflection_id,
             "wearer_agent": wearer_agent,
+            "done": _normalize_done_str(row.get("done", "false")) == "true",
             "title": title,
             "summary": summary,
             "transcription": transcription,
@@ -1335,6 +1388,36 @@ def serve_training_audio(filename):
 def list_practice_items(user_name):
     items = build_practice_items_for_user(user_name)
     return jsonify({"user": user_name, "items": items})
+
+
+@app.patch("/api/practice/<training_id>/done")
+def update_practice_done(training_id):
+    safe_training_id = str(training_id or "").strip()
+    if not safe_training_id:
+        return jsonify({"error": "Invalid training id."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    done_value = _parse_bool(payload.get("done"))
+    if done_value is None:
+        return jsonify({"error": "Invalid done value."}), 400
+
+    rows = load_training_rows()
+    updated = None
+    for row in rows:
+        if str(row.get("training_id", "") or "").strip() != safe_training_id:
+            continue
+        row["done"] = "true" if done_value else "false"
+        updated = row
+        break
+
+    if updated is None:
+        return jsonify({"error": "Training row not found."}), 404
+
+    write_training_rows(rows)
+    return jsonify({
+        "training_id": safe_training_id,
+        "done": _normalize_done_str(updated.get("done", "false")) == "true",
+    })
 
 
 @app.post("/api/audio/upload")

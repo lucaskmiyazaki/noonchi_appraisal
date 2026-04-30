@@ -206,10 +206,11 @@
       }
 
       practiceList.innerHTML = filteredReflections.map((reflection) => {
+        const isDone = Boolean(reflection.done);
         return `
           <button class="practice-item" type="button" data-practice-key="${escapeHtml(reflection.reflectionKey)}">
             <div class="practice-item-row">
-              <span class="practice-item-checkbox is-todo" aria-hidden="true"></span>
+              <span class="practice-item-checkbox ${isDone ? 'is-done' : 'is-todo'}" role="checkbox" aria-checked="${isDone ? 'true' : 'false'}" tabindex="0" data-toggle-done="true">${isDone ? '&#10003;' : ''}</span>
               <span class="practice-item-title">${escapeHtml(reflection.title || 'Practice item')}</span>
             </div>
           </button>
@@ -217,10 +218,44 @@
       }).join('');
 
       practiceList.querySelectorAll('.practice-item').forEach((item) => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (event) => {
+          const toggle = event.target instanceof Element ? event.target.closest('[data-toggle-done]') : null;
+          if (toggle) {
+            event.preventDefault();
+            const reflectionKey = item.dataset.practiceKey || '';
+            const reflection = practiceReflectionsState.find((entry) => entry.reflectionKey === reflectionKey);
+            if (!reflection) {
+              return;
+            }
+            const nextDone = !Boolean(reflection.done);
+            setPracticeDone(reflection, nextDone).catch((error) => {
+              console.error('Failed to update done state', error);
+            });
+            return;
+          }
+
           const reflectionKey = item.dataset.practiceKey || '';
           selectPracticeReflection(reflectionKey).catch((error) => {
             console.error('Failed to select practice reflection', error);
+          });
+        });
+      });
+
+      practiceList.querySelectorAll('[data-toggle-done="true"]').forEach((toggle) => {
+        toggle.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+          }
+          event.preventDefault();
+          const item = event.target instanceof Element ? event.target.closest('.practice-item') : null;
+          const reflectionKey = item?.dataset.practiceKey || '';
+          const reflection = practiceReflectionsState.find((entry) => entry.reflectionKey === reflectionKey);
+          if (!reflection) {
+            return;
+          }
+          const nextDone = !Boolean(reflection.done);
+          setPracticeDone(reflection, nextDone).catch((error) => {
+            console.error('Failed to update done state', error);
           });
         });
       });
@@ -359,6 +394,35 @@
       }
     }
 
+    async function setPracticeDone(reflection, nextDone) {
+      if (!reflection?.training_id) {
+        return;
+      }
+
+      const previousDone = Boolean(reflection.done);
+      reflection.done = Boolean(nextDone);
+      renderPracticeList();
+
+      try {
+        const response = await fetch(`/api/practice/${encodeURIComponent(reflection.training_id)}/done`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ done: Boolean(nextDone) }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to update done status.');
+        }
+        reflection.done = Boolean(payload.done);
+      } catch (error) {
+        reflection.done = previousDone;
+        renderPracticeList();
+        throw error;
+      }
+
+      renderPracticeList();
+    }
+
     async function selectPracticeReflection(reflectionKey) {
       const reflection = practiceReflectionsState.find((item) => item.reflectionKey === reflectionKey);
       if (!reflection) {
@@ -458,6 +522,7 @@
       const payload = await response.json().catch(() => ({ items: [] }));
       const practiceReflections = (Array.isArray(payload.items) ? payload.items : []).map((item, index) => ({
         ...item,
+        done: String(item.done ?? '').toLowerCase() === 'true' || item.done === true,
         reflectionKey: item.training_id || item.reflection_id || `${item.session_name || 'session'}-${index}`,
       }));
 
