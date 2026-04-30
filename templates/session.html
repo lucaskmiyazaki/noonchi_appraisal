@@ -664,9 +664,40 @@
         const journalInput = entryElement.querySelector('.reflection-journal-input');
         const submitButton = entryElement.querySelector('.reflection-journal-submit');
         if (journalInput && submitButton) {
-          submitButton.addEventListener('click', () => {
+          submitButton.addEventListener('click', async () => {
+            const entryText = String(journalInput.value || '').trim();
             const savedMessage = ensureReflectionNotice(entryElement, 'journal');
-            savedMessage.textContent = 'Journal entry saved. You can still edit your answer.';
+            if (!entryText) {
+              savedMessage.textContent = 'Please write a journal entry before submitting.';
+              return;
+            }
+
+            const reflectionFile = String(reflection?.reflection_tree_file || '').trim();
+            const journalingNodeId = String(currentNodeId || '').trim();
+            if (!reflectionFile || !journalingNodeId) {
+              savedMessage.textContent = 'Could not save this journal entry.';
+              return;
+            }
+
+            submitButton.disabled = true;
+            savedMessage.textContent = 'Saving journal entry...';
+            try {
+              const response = await fetch(`/api/journaling/${encodeURIComponent(reflectionFile)}/${encodeURIComponent(journalingNodeId)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ journal_entry: entryText }),
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok) {
+                throw new Error(payload.error || 'Failed to save journal entry.');
+              }
+              savedMessage.textContent = 'Journal entry saved. You can still edit your answer.';
+            } catch (error) {
+              console.error('Failed to save journal entry', error);
+              savedMessage.textContent = error?.message || 'Failed to save journal entry.';
+            } finally {
+              submitButton.disabled = false;
+            }
           });
         }
       }

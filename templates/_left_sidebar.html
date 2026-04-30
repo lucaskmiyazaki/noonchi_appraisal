@@ -14,6 +14,9 @@
         </g>
       </svg>
     </a>
+    <a class="app-nav-icon{% if active_nav_icon == 'journal' %} is-active{% endif %}" href="/{{ current_user|urlencode }}/journaling" aria-label="Open journaling">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6.768-6.768a2.5 2.5 0 113.536 3.536L12.536 14.536a4 4 0 01-1.657 1.01L7 17l1.454-3.879A4 4 0 019.464 11zM6 20h12"/></svg>
+    </a>
     <a class="app-nav-icon{% if active_nav_icon == 'regulation' %} is-active{% endif %}" href="{{ nudges_nav_href or ('/' ~ (current_user|urlencode) ~ '/nudges') }}" aria-label="Open nudge settings">
       <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
     </a>

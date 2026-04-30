@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Journaling</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root {
+      --bg-main: #f3f6fa;
+      --panel-bg: #ffffff;
+      --right-panel-bg: #fafbfc;
+      --sidebar-bg: #e5ebf4;
+      --text-dark: #111827;
+      --text-muted: #6b7280;
+      --highlight: #fdf4d7;
+      --border-soft: rgba(226, 232, 240, 0.9);
+      --card-radius: 16px;
+    }
+
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    .journal-layout { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
+    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
+    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
+    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+    .journal-main { background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 32px; min-width: 0; overflow-y: auto; }
+    .journal-sidebar { min-width: 0; }
+    .journal-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; border-radius: var(--card-radius); border: 1px solid var(--border-soft); }
+    .journal-detail { padding: 24px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); }
+    .journal-detail[hidden] { display: none; }
+    .journal-detail-title { margin: 0; font-size: 24px; line-height: 1.2; }
+    .journal-section-title { margin: 20px 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; font-weight: 700; }
+    .journal-copy { margin: 10px 0 0; font-size: 16px; line-height: 1.7; color: #374151; white-space: pre-wrap; }
+    .journal-path-list { margin: 12px 0 0; display: flex; flex-direction: column; gap: 10px; }
+    .journal-path-item { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: #f8fafc; }
+    .journal-path-question { margin: 0; font-size: 14px; font-weight: 700; color: #334155; }
+    .journal-path-answer { margin: 6px 0 0; font-size: 14px; color: #475569; }
+    .journal-entry-field { margin-top: 12px; width: 100%; min-height: 220px; padding: 14px 16px; border-radius: 12px; border: 1px solid #cbd5e1; font: inherit; color: var(--text-dark); line-height: 1.6; resize: vertical; box-sizing: border-box; }
+    .journal-entry-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+    .journal-actions { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
+    .journal-save-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 140px; padding: 11px 16px; border: 0; border-radius: 999px; background: #0f172a; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease; }
+    .journal-save-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18); }
+    .journal-save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .journal-save-status { margin: 0; min-height: 18px; font-size: 13px; color: #64748b; }
+    .journal-detail-empty { padding: 24px; border-radius: 16px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 15px; }
+    .session-search-bar { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+    .session-search-input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; color: var(--text-dark); }
+    .journal-sidebar-title { margin: 0 0 18px; font-size: 14px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .journal-list { display: flex; flex-direction: column; gap: 12px; }
+    .journal-item { width: 100%; display: block; padding: 14px 16px; border-radius: 12px; background: #fff; border: 1px solid var(--border-soft); text-align: left; color: inherit; transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; cursor: pointer; }
+    .journal-item:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); border-color: rgba(148, 163, 184, 0.5); }
+    .journal-item.is-selected { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); border-color: rgba(37, 99, 235, 0.35); }
+    .journal-item-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-dark); }
+    .journal-item-subtitle { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); }
+    .journal-empty { padding: 16px; border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .journal-layout { grid-template-columns: 1fr; }
+      .app-nav { display: none; }
+      .journal-main { min-height: 60vh; }
+      .journal-sidebar-panel { height: auto; min-height: 0; }
+    }
+  </style>
+</head>
+{% set resolved_user = current_user or '' %}
+{% set active_nav_icon = 'journal' %}
+{% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
+{% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
+{% set meetings_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
+{% set nudges_nav_href = '/' ~ (resolved_user|urlencode) ~ '/nudges' %}
+<body data-current-user="{{ resolved_user }}">
+  <div class="journal-layout">
+    {% include '_left_sidebar.html' %}
+
+    <main class="journal-main">
+      <section id="journalDetailEmpty" class="journal-detail-empty">Select a journaling node from the sidebar.</section>
+
+      <section id="journalDetail" class="journal-detail" hidden>
+        <h2 id="journalDetailTitle" class="journal-detail-title"></h2>
+
+        <p class="journal-section-title">Question And Answer Path</p>
+        <div id="journalPathList" class="journal-path-list"></div>
+
+        <p class="journal-section-title">Journaling Prompt</p>
+        <p id="journalPrompt" class="journal-copy"></p>
+
+        <p class="journal-section-title">Your Journal Entry</p>
+        <textarea id="journalEntryField" class="journal-entry-field" placeholder="Write your journal entry here..."></textarea>
+
+        <div class="journal-actions">
+          <button id="journalSaveBtn" class="journal-save-btn" type="button">Save entry</button>
+          <p id="journalSaveStatus" class="journal-save-status" aria-live="polite"></p>
+        </div>
+      </section>
+    </main>
+
+    <aside class="journal-sidebar">
+      <div class="journal-sidebar-panel">
+        <label class="session-search-bar" aria-label="Search journaling items">
+          <span>🔍</span>
+          <input id="journalSearchInput" class="session-search-input" type="text" placeholder="Search">
+        </label>
+        <h2 class="journal-sidebar-title">Journaling Nodes</h2>
+        <div id="journalList" class="journal-list"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const currentUser = document.body.dataset.currentUser || '';
+
+    const journalList = document.getElementById('journalList');
+    const journalSearchInput = document.getElementById('journalSearchInput');
+    const journalDetail = document.getElementById('journalDetail');
+    const journalDetailEmpty = document.getElementById('journalDetailEmpty');
+    const journalDetailTitle = document.getElementById('journalDetailTitle');
+    const journalPrompt = document.getElementById('journalPrompt');
+    const journalPathList = document.getElementById('journalPathList');
+    const journalEntryField = document.getElementById('journalEntryField');
+    const journalSaveBtn = document.getElementById('journalSaveBtn');
+    const journalSaveStatus = document.getElementById('journalSaveStatus');
+
+    let journalingItemsState = [];
+    let selectedItemId = '';
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getSearchQuery() {
+      return String(journalSearchInput?.value || '').trim().toLowerCase();
+    }
+
+    function getFilteredItems() {
+      const query = getSearchQuery();
+      if (!query) {
+        return journalingItemsState;
+      }
+      return journalingItemsState.filter((item) => {
+        const haystack = [
+          item.title || '',
+          item.display_name || '',
+          item.journaling_prompt || '',
+          item.journal_entry || '',
+          ...(Array.isArray(item.qa_path) ? item.qa_path.map((pair) => `${pair.question || ''} ${pair.answer || ''}`) : []),
+        ].join(' ').toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
+    function updateSelectionUi() {
+      journalList.querySelectorAll('.journal-item').forEach((item) => {
+        item.classList.toggle('is-selected', item.dataset.itemId === selectedItemId);
+      });
+    }
+
+    function renderList() {
+      const filtered = getFilteredItems();
+      if (!filtered.length) {
+        journalList.innerHTML = '<div class="journal-empty">No journaling nodes match your search.</div>';
+        if (!journalingItemsState.some((item) => item.item_id === selectedItemId)) {
+          selectedItemId = '';
+        }
+        updateSelectionUi();
+        return;
+      }
+
+      journalList.innerHTML = filtered.map((item) => `
+        <button class="journal-item" type="button" data-item-id="${escapeHtml(item.item_id)}">
+          <p class="journal-item-title">${escapeHtml(item.title || 'Journaling node')}</p>
+          <p class="journal-item-subtitle">${escapeHtml(item.display_name || item.session_name || '')}</p>
+        </button>
+      `).join('');
+
+      journalList.querySelectorAll('.journal-item').forEach((item) => {
+        item.addEventListener('click', () => {
+          const itemId = item.dataset.itemId || '';
+          selectItem(itemId);
+        });
+      });
+
+      if (!filtered.some((item) => item.item_id === selectedItemId)) {
+        selectItem(filtered[0]?.item_id || '');
+        return;
+      }
+
+      updateSelectionUi();
+    }
+
+    function renderPath(qaPath) {
+      const pairs = Array.isArray(qaPath) ? qaPath : [];
+      if (!pairs.length) {
+        journalPathList.innerHTML = '<div class="journal-path-item"><p class="journal-path-answer">No question path available for this journaling node.</p></div>';
+        return;
+      }
+
+      journalPathList.innerHTML = pairs.map((pair) => `
+        <div class="journal-path-item">
+          <p class="journal-path-question">${escapeHtml(pair.question || 'Question')}</p>
+          <p class="journal-path-answer">Answer: ${escapeHtml(pair.answer || '-')}</p>
+        </div>
+      `).join('');
+    }
+
+    function selectItem(itemId) {
+      const item = journalingItemsState.find((entry) => entry.item_id === itemId);
+      if (!item) {
+        return;
+      }
+
+      selectedItemId = item.item_id;
+      updateSelectionUi();
+
+      journalDetailTitle.textContent = String(item.title || 'Journaling node').trim();
+      journalPrompt.textContent = String(item.journaling_prompt || 'No journaling prompt available.').trim();
+      journalEntryField.value = String(item.journal_entry || '');
+      journalSaveStatus.textContent = '';
+      renderPath(item.qa_path);
+
+      journalDetail.hidden = false;
+      journalDetailEmpty.hidden = true;
+    }
+
+    async function saveCurrentEntry() {
+      const item = journalingItemsState.find((entry) => entry.item_id === selectedItemId);
+      if (!item) {
+        return;
+      }
+
+      journalSaveBtn.disabled = true;
+      journalSaveStatus.textContent = 'Saving...';
+
+      const nextEntry = String(journalEntryField.value || '').trim();
+
+      try {
+        const response = await fetch(`/api/journaling/${encodeURIComponent(item.reflection_tree_file)}/${encodeURIComponent(item.node_id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ journal_entry: nextEntry }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to save journal entry.');
+        }
+        item.journal_entry = String(payload.journal_entry || '');
+        journalSaveStatus.textContent = 'Saved.';
+      } catch (error) {
+        console.error('Failed to save journal entry', error);
+        journalSaveStatus.textContent = error.message || 'Failed to save journal entry.';
+      } finally {
+        journalSaveBtn.disabled = false;
+      }
+    }
+
+    async function loadJournalingItems() {
+      const user = currentUser.trim();
+      journalList.innerHTML = '';
+
+      if (!user) {
+        journalList.innerHTML = '<div class="journal-empty">No user selected.</div>';
+        return;
+      }
+
+      const response = await fetch(`/api/journaling/${encodeURIComponent(user)}`);
+      const payload = await response.json().catch(() => ({ items: [] }));
+      journalingItemsState = Array.isArray(payload.items) ? payload.items : [];
+
+      if (!journalingItemsState.length) {
+        journalList.innerHTML = '<div class="journal-empty">No journaling nodes found for this user.</div>';
+        return;
+      }
+
+      selectItem(journalingItemsState[0]?.item_id || '');
+      renderList();
+    }
+
+    journalSaveBtn.addEventListener('click', () => {
+      saveCurrentEntry().catch((error) => {
+        console.error('Failed to save entry', error);
+      });
+    });
+
+    journalSearchInput.addEventListener('input', () => {
+      renderList();
+    });
+
+    loadJournalingItems().catch((error) => {
+      console.error('Failed to load journaling items', error);
+      journalList.innerHTML = '<div class="journal-empty">Failed to load journaling nodes.</div>';
+    });
+  </script>
+</body>
+</html>

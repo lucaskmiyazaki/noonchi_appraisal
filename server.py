@@ -58,6 +58,7 @@ REFLECTION_DB_FIELDNAMES = [
     "endms",
     "practice",
     "audio_filename",
+    "journal_entry",
 ]
 
 NGROK_API_URL = "http://127.0.0.1:4040/api/tunnels"
@@ -405,6 +406,150 @@ def _safe_float(value, fallback=0.0):
         return float(value)
     except (TypeError, ValueError):
         return fallback
+
+
+def _parse_journal_entry_map(raw_value):
+    text = str(raw_value or "").strip()
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return {"_single": text}
+    if not isinstance(parsed, dict):
+        return {}
+    normalized = {}
+    for key, value in parsed.items():
+        if not isinstance(key, str):
+            continue
+        normalized[key] = str(value or "")
+    return normalized
+
+
+def _serialize_journal_entry_map(value_map):
+    cleaned = {}
+    for key, value in (value_map or {}).items():
+        key_str = str(key or "").strip()
+        if not key_str:
+            continue
+        value_str = str(value or "").strip()
+        if not value_str:
+            continue
+        cleaned[key_str] = value_str
+    if not cleaned:
+        return ""
+    return json.dumps(cleaned, ensure_ascii=True)
+
+
+def _collect_journaling_paths(tree):
+    nodes = tree.get("nodes") or {}
+    start_node_id = tree.get("start_node")
+    if not isinstance(nodes, dict) or not start_node_id:
+        return []
+
+    results = []
+
+    def walk(node_id, path, visited):
+        if node_id in visited:
+            return
+        node = nodes.get(node_id) or {}
+        node_type = str(node.get("type", "") or "").strip().lower()
+        if node_type == "journaling":
+            results.append({
+                "node_id": node_id,
+                "node_text": str(node.get("text", "") or ""),
+                "path": list(path),
+            })
+            return
+
+        options = node.get("options") or []
+        next_visited = set(visited)
+        next_visited.add(node_id)
+
+        if not isinstance(options, list):
+            return
+
+        for option in options:
+            if not isinstance(option, dict):
+                continue
+            next_id = str(option.get("next", "") or "").strip()
+            if not next_id:
+                continue
+
+            next_path = list(path)
+            if node_type == "question":
+                answer_label = str(option.get("label", "") or option.get("value", "") or "").strip()
+                next_path.append({
+                    "question": str(node.get("text", "") or "").strip(),
+                    "answer": answer_label,
+                })
+            walk(next_id, next_path, next_visited)
+
+    walk(str(start_node_id), [], set())
+    return results
+
+
+def build_journaling_items_for_user(user_name: str):
+    rows, _ = load_reflection_db_rows()
+    items = []
+    normalized_user = str(user_name or "").strip().lower()
+
+    for row in rows:
+        wearer_agent = str(row.get("wearer_agent", "") or "").strip()
+        if normalized_user and wearer_agent.lower() != normalized_user:
+            continue
+
+        reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
+        if not reflection_file:
+            continue
+
+        reflection_path = DATA_DIR / reflection_file
+        if not reflection_path.exists() or reflection_path.suffix != ".json":
+            continue
+
+        try:
+            tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        journaling_paths = _collect_journaling_paths(tree)
+        if not journaling_paths:
+            continue
+
+        session_name = str(row.get("session_name", "") or "").strip()
+        record = find_latest_audio_record(session_name) if session_name else None
+        display_name = (record.get("displayName") if record else None) or session_name or "Untitled session"
+        entry_map = _parse_journal_entry_map(row.get("journal_entry", ""))
+        fallback_entry = entry_map.get("_single", "")
+
+        for index, journaling_path in enumerate(journaling_paths):
+            node_id = str(journaling_path.get("node_id", "") or "").strip()
+            node_text = str(journaling_path.get("node_text", "") or "").strip()
+            path_pairs = journaling_path.get("path") or []
+            entry_value = entry_map.get(node_id, fallback_entry)
+            if not str(entry_value or "").strip():
+                continue
+
+            title_type = format_reflection_type_label(tree.get("type", ""))
+            title = f"{title_type} on {display_name.replace('_', ' ')}"
+            if len(journaling_paths) > 1:
+                title = f"{title} ({index + 1})"
+
+            items.append({
+                "item_id": f"{reflection_file}:{node_id}",
+                "reflection_tree_file": reflection_file,
+                "node_id": node_id,
+                "session_name": session_name,
+                "display_name": display_name,
+                "wearer_agent": wearer_agent,
+                "title": title,
+                "journaling_prompt": node_text,
+                "qa_path": path_pairs,
+                "journal_entry": entry_value,
+            })
+
+    items.sort(key=lambda item: item.get("reflection_tree_file", ""), reverse=True)
+    return items
 
 
 def build_practice_items_for_user(user_name: str):
@@ -872,6 +1017,11 @@ def user_intent_detail(session_name):
 @app.get("/<user_name>/practice")
 def user_practice(user_name):
     return render_template("practice.html", current_user=user_name)
+
+
+@app.get("/<user_name>/journaling")
+def user_journaling(user_name):
+    return render_template("journaling.html", current_user=user_name)
 
 @app.get("/<user_name>/analysis")
 def user_analysis(user_name):
@@ -1404,6 +1554,51 @@ def serve_training_audio(filename):
 def list_practice_items(user_name):
     items = build_practice_items_for_user(user_name)
     return jsonify({"user": user_name, "items": items})
+
+
+@app.get("/api/journaling/<user_name>")
+def list_journaling_items(user_name):
+    items = build_journaling_items_for_user(user_name)
+    return jsonify({"user": user_name, "items": items})
+
+
+@app.patch("/api/journaling/<reflection_filename>/<node_id>")
+def update_journal_entry(reflection_filename, node_id):
+    safe_filename = secure_filename(reflection_filename or "")
+    safe_node_id = str(node_id or "").strip()
+    if not safe_filename or Path(safe_filename).suffix != ".json":
+        return jsonify({"error": "Invalid reflection filename."}), 400
+    if not safe_node_id:
+        return jsonify({"error": "Invalid journaling node id."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    journal_entry = str(payload.get("journal_entry", "") or "").strip()
+
+    rows, fieldnames = load_reflection_db_rows()
+    if "journal_entry" not in fieldnames:
+        fieldnames.append("journal_entry")
+        for row in rows:
+            row.setdefault("journal_entry", "")
+
+    updated_row = None
+    for row in rows:
+        if str(row.get("reflection_tree_file", "") or "").strip() != safe_filename:
+            continue
+        entry_map = _parse_journal_entry_map(row.get("journal_entry", ""))
+        entry_map[safe_node_id] = journal_entry
+        row["journal_entry"] = _serialize_journal_entry_map(entry_map)
+        updated_row = row
+        break
+
+    if updated_row is None:
+        return jsonify({"error": "Reflection row not found."}), 404
+
+    write_reflection_db_rows(rows, fieldnames)
+    return jsonify({
+        "reflection_tree_file": safe_filename,
+        "node_id": safe_node_id,
+        "journal_entry": journal_entry,
+    })
 
 
 @app.patch("/api/practice/<training_id>/done")
