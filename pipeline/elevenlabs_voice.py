@@ -34,6 +34,15 @@ TRAINING_CSV_FIELDNAMES = [
     "suggestions",
 ]
 
+EMOTION_CATEGORY_ALIASES = {
+    "hap": "positive",
+    "joy": "positive",
+    "ang": "negative",
+    "sad": "negative",
+    # Keep neutral unresolved so PAD/VAD can determine direction.
+    "neu": "",
+}
+
 
 def _sanitize_name(value: str, fallback: str) -> str:
     normalized = "".join(char if char.isalnum() or char in "-_" else "_" for char in str(value or ""))
@@ -49,6 +58,21 @@ def _normalize_done(value: str) -> str:
 def _normalize_training_type(value: str) -> str:
     normalized = str(value or "").strip().lower()
     return "arousal" if normalized == "arousal" else "valence"
+
+
+def _resolve_source_category(emotion: str, valence: float | None, arousal: float | None, dominance: float | None) -> tuple[str, str]:
+    normalized_emotion = str(emotion or "").strip().lower()
+
+    category = EMOTION_CATEGORY_ALIASES.get(normalized_emotion, "")
+    if not category:
+        category = EMOTION_CATEGORY_BY_EMOTION.get(normalized_emotion, "")
+
+    resolved_emotion = normalized_emotion
+    if not category and valence is not None and arousal is not None and dominance is not None:
+        resolved_emotion = classify_emotion_from_vad(valence, arousal, dominance)
+        category = EMOTION_CATEGORY_BY_EMOTION.get(resolved_emotion, "")
+
+    return category, resolved_emotion
 
 
 def _ensure_training_csv_schema() -> None:
@@ -166,13 +190,10 @@ def generate_tagged_voice(
     output_files: list[str] = []
 
     if clean_training_type == "valence":
-        category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
-        if not category and valence is not None and arousal is not None and dominance is not None:
-            clean_emotion = classify_emotion_from_vad(valence, arousal, dominance)
-            category = EMOTION_CATEGORY_BY_EMOTION.get(clean_emotion, "")
+        category, clean_emotion = _resolve_source_category(clean_emotion, valence, arousal, dominance)
         if not category:
             supported = ", ".join(sorted(EMOTION_CATEGORY_BY_EMOTION.keys()))
-            raise ValueError(f"Unsupported emotion '{clean_emotion}'. Supported emotions: {supported}")
+            raise ValueError(f"Unsupported emotion '{clean_emotion}'. Supported emotions: {supported}, hap, ang, sad, neu")
 
         target_category = OPPOSITE_CATEGORY[category]
         tags = list(UNIFIED_TAGS_BY_CATEGORY[target_category])
