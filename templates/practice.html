@@ -36,9 +36,14 @@
     .practice-detail { padding: 24px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); }
     .practice-detail[hidden] { display: none; }
     .practice-detail-title { margin: 0; font-size: 24px; line-height: 1.2; }
+    .practice-detail-section-title { margin: 20px 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; font-weight: 700; }
     .practice-detail-copy { margin: 16px 0 0; font-size: 16px; line-height: 1.7; color: #374151; white-space: pre-wrap; }
     .practice-detail-audio { width: 100%; margin-top: 20px; }
     .practice-detail-instruction { margin: 20px 0 0; font-size: 15px; line-height: 1.6; color: #4b5563; }
+    .practice-ai-list { margin-top: 10px; display: flex; flex-direction: column; gap: 14px; }
+    .practice-ai-item { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: #f8fafc; }
+    .practice-ai-item-title { margin: 0; font-size: 13px; font-weight: 700; color: #334155; }
+    .practice-ai-item-copy { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: #475569; white-space: pre-wrap; }
     .practice-recordings { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
     .practice-recording-item { padding: 14px 16px; border-radius: 12px; background: #f8fafc; border: 1px solid var(--border-soft); }
     .practice-recording-label { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: #475569; }
@@ -88,10 +93,14 @@
 
       <section id="practiceDetail" class="practice-detail" hidden>
         <h2 id="practiceDetailTitle" class="practice-detail-title"></h2>
-        <p id="practiceDetailText" class="practice-detail-copy"></p>
+        <p class="practice-detail-section-title">Summary</p>
+        <p id="practiceDetailSummary" class="practice-detail-copy"></p>
+        <p class="practice-detail-section-title">Transcript</p>
+        <p id="practiceDetailTranscript" class="practice-detail-copy"></p>
+        <p class="practice-detail-section-title">Original Voice</p>
         <audio id="practiceDetailAudio" class="practice-detail-audio" controls preload="metadata"></audio>
-        <p class="practice-detail-instruction">Practice your tone by listening an example voice tone that would be suitable for this situation.</p>
-        <audio id="practicePlaceholderAudio" class="practice-detail-audio" controls preload="metadata" src="/uploads/placeholder_audio.wav"></audio>
+        <p class="practice-detail-section-title">Suggestions And AI Voices</p>
+        <div id="practiceAiList" class="practice-ai-list"></div>
         <p class="practice-detail-instruction">Record your voice to practice.</p>
         <div id="practiceRecordings" class="practice-recordings"></div>
         <button id="practiceRecordButton" class="practice-record-button" type="button">Start recording</button>
@@ -117,9 +126,10 @@
     const practiceDetail = document.getElementById('practiceDetail');
     const practiceDetailEmpty = document.getElementById('practiceDetailEmpty');
     const practiceDetailTitle = document.getElementById('practiceDetailTitle');
-    const practiceDetailText = document.getElementById('practiceDetailText');
+    const practiceDetailSummary = document.getElementById('practiceDetailSummary');
+    const practiceDetailTranscript = document.getElementById('practiceDetailTranscript');
     const practiceDetailAudio = document.getElementById('practiceDetailAudio');
-    const practicePlaceholderAudio = document.getElementById('practicePlaceholderAudio');
+    const practiceAiList = document.getElementById('practiceAiList');
     const practiceSearchInput = document.getElementById('practiceSearchInput');
     const practiceRecordings = document.getElementById('practiceRecordings');
     const practiceRecordButton = document.getElementById('practiceRecordButton');
@@ -146,20 +156,6 @@
       return String(value || '').replace(/_/g, ' ');
     }
 
-    function getReflectionTypeLabel(reflection) {
-      const type = String(reflection?.tree?.type || '').trim();
-      const normalizedType = type.toLowerCase();
-      if (normalizedType === 'incoherent intensity') return 'elevation';
-      if (normalizedType === 'incoherent tone') return 'tone difference';
-      return type || 'reflection';
-    }
-
-    function getFirstNodeText(reflection) {
-      const startNodeId = reflection?.tree?.start_node || '';
-      const startNode = startNodeId ? reflection?.tree?.nodes?.[startNodeId] : null;
-      return String(startNode?.text || '').trim();
-    }
-
     function getPracticeSearchQuery() {
       return String(practiceSearchInput?.value || '').trim().toLowerCase();
     }
@@ -172,9 +168,10 @@
 
       return practiceReflectionsState.filter((reflection) => {
         const haystack = [
-          getReflectionTypeLabel(reflection),
-          reflection.session || '',
-          getFirstNodeText(reflection),
+          reflection.title || '',
+          reflection.session_name || '',
+          reflection.summary || '',
+          reflection.transcription || '',
         ].join(' ').toLowerCase();
         return haystack.includes(query);
       });
@@ -209,14 +206,11 @@
       }
 
       practiceList.innerHTML = filteredReflections.map((reflection) => {
-        const status = String(reflection.practice || '').toLowerCase();
-        const typeLabel = getReflectionTypeLabel(reflection);
-        const colorClass = getReflectionColorClass(reflection);
         return `
-          <button class="practice-item ${colorClass}" type="button" data-practice-key="${escapeHtml(reflection.reflectionKey)}">
+          <button class="practice-item" type="button" data-practice-key="${escapeHtml(reflection.reflectionKey)}">
             <div class="practice-item-row">
-              <span class="practice-item-checkbox ${status === 'done' ? 'is-done' : 'is-todo'}" aria-hidden="true">${status === 'done' ? '&#10003;' : ''}</span>
-              <span class="practice-item-title">${escapeHtml(typeLabel)} on ${escapeHtml(formatSessionLabel(reflection.displayName || reflection.session || 'Untitled session'))}</span>
+              <span class="practice-item-checkbox is-todo" aria-hidden="true"></span>
+              <span class="practice-item-title">${escapeHtml(reflection.title || 'Practice item')}</span>
             </div>
           </button>
         `;
@@ -358,12 +352,11 @@
 
     function stopPracticeDetailAudio(resetTime = false) {
       practiceDetailAudio.pause();
-      practicePlaceholderAudio.pause();
+      practiceAiList.querySelectorAll('audio').forEach((audio) => audio.pause());
       pauseRecordedClips();
       if (resetTime && activePracticeSegment?.startTime != null) {
         practiceDetailAudio.currentTime = activePracticeSegment.startTime;
       }
-      practicePlaceholderAudio.currentTime = 0;
     }
 
     async function selectPracticeReflection(reflectionKey) {
@@ -377,28 +370,42 @@
       selectedPracticeKey = reflection.reflectionKey;
       updatePracticeSelectionUi();
 
-      const typeLabel = getReflectionTypeLabel(reflection);
-      const sessionLabel = formatSessionLabel(reflection.displayName || reflection.session || 'Untitled session');
-      const firstNodeText = getFirstNodeText(reflection) || 'No text available for this reflection.';
+      const title = String(reflection.title || `reflection on ${formatSessionLabel(reflection.session_name || 'Untitled session')}`).trim();
+      const summary = String(reflection.summary || '').trim() || 'No summary available.';
+      const transcript = String(reflection.transcription || '').trim() || 'No transcript available.';
       const startTime = Number(reflection.startms || 0) / 1000;
       const endTime = Number(reflection.endms || 0) / 1000;
-      const audioFilename = String(reflection.audio_filename || '').trim();
+      const originalAudioUrl = String(reflection.original_audio_url || '').trim();
 
-      practiceDetailTitle.textContent = `${typeLabel} on ${sessionLabel}`;
-      practiceDetailText.textContent = firstNodeText;
+      practiceDetailTitle.textContent = title;
+      practiceDetailSummary.textContent = summary;
+      practiceDetailTranscript.textContent = transcript;
       practiceDetail.hidden = false;
       practiceDetailEmpty.hidden = true;
       practiceRecordStatus.textContent = '';
       renderRecordedClips();
       updateRecordButtonUi();
 
+      const aiPractice = Array.isArray(reflection.ai_practice) ? reflection.ai_practice : [];
+      if (!aiPractice.length) {
+        practiceAiList.innerHTML = '<div class="practice-recording-empty">No AI suggestions available yet.</div>';
+      } else {
+        practiceAiList.innerHTML = aiPractice.map((item, index) => `
+          <div class="practice-ai-item">
+            <p class="practice-ai-item-title">Suggestion ${index + 1}</p>
+            <p class="practice-ai-item-copy">${escapeHtml(item.suggestion || 'No suggestion text provided.')}</p>
+            ${item.audio_url ? `<audio class="practice-detail-audio" controls preload="metadata" src="${escapeHtml(item.audio_url)}"></audio>` : '<p class="practice-recording-empty">Missing AI voice.</p>'}
+          </div>
+        `).join('');
+      }
+
       activePracticeSegment = Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime
         ? { startTime, endTime }
         : null;
 
       stopPracticeDetailAudio(false);
-      if (audioFilename) {
-        const nextSrc = `/uploads/${encodeURIComponent(audioFilename)}`;
+      if (originalAudioUrl) {
+        const nextSrc = originalAudioUrl;
         if (practiceDetailAudio.getAttribute('src') !== nextSrc) {
           practiceDetailAudio.src = nextSrc;
           practiceDetailAudio.load();
@@ -411,20 +418,6 @@
         practiceDetailAudio.load();
         practiceDetailAudio.hidden = true;
       }
-    }
-
-    function getReflectionColorClass(reflection) {
-      const normalizedType = String(reflection?.tree?.type || '').trim().toLowerCase();
-      if (normalizedType === 'incoherent tone') {
-        return 'is-tone';
-      }
-      if (normalizedType === 'unclear feedback' || normalizedType === 'unclear concern') {
-        return 'is-clarity';
-      }
-      if (normalizedType === 'incoherent intensity') {
-        return 'is-intensity';
-      }
-      return '';
     }
 
     practiceDetailAudio.addEventListener('loadedmetadata', () => {
@@ -461,72 +454,17 @@
         return;
       }
 
-      const sessionResponse = await fetch(`/reflection/${encodeURIComponent(user)}`);
-      const sessionData = await sessionResponse.json().catch(() => ({ session_names: [] }));
-      const sessionNames = Array.isArray(sessionData.session_names) ? sessionData.session_names : [];
-      const displayNameMap = {};
-      if (Array.isArray(sessionData.sessions)) {
-        for (const s of sessionData.sessions) {
-          displayNameMap[s.sessionName] = s.displayName || s.sessionName;
-        }
-      }
-
-      if (!sessionNames.length) {
-        practiceList.innerHTML = '<div class="practice-empty">No sessions found for this user.</div>';
-        return;
-      }
-
-      const reflectionGroups = await Promise.all(sessionNames.map(async (sessionName) => {
-        const response = await fetch(`/reflection/${encodeURIComponent(user)}/${encodeURIComponent(sessionName)}`);
-        const payload = await response.json().catch(() => ({ reflections: [] }));
-        const reflections = Array.isArray(payload.reflections) ? payload.reflections : [];
-
-        const withPractice = await Promise.all(reflections
-          .filter((reflection) => ['todo', 'done'].includes(String(reflection.practice || '').toLowerCase()))
-          .map(async (reflection) => {
-            const reflectionFile = reflection.reflection_tree_file || '';
-            if (!reflectionFile) {
-              return null;
-            }
-
-            try {
-              const treeResponse = await fetch(`/reflection_tree/${encodeURIComponent(reflectionFile)}`);
-              if (!treeResponse.ok) {
-                return null;
-              }
-
-              const tree = await treeResponse.json();
-              return {
-                ...reflection,
-                tree,
-                session: sessionName,
-                displayName: displayNameMap[sessionName] || sessionName,
-              };
-            } catch (error) {
-              console.warn('Failed to load reflection tree', reflectionFile, error);
-              return null;
-            }
-          }));
-
-        return withPractice.filter(Boolean);
+      const response = await fetch(`/api/practice/${encodeURIComponent(user)}`);
+      const payload = await response.json().catch(() => ({ items: [] }));
+      const practiceReflections = (Array.isArray(payload.items) ? payload.items : []).map((item, index) => ({
+        ...item,
+        reflectionKey: item.training_id || item.reflection_id || `${item.session_name || 'session'}-${index}`,
       }));
-
-      const practiceReflections = reflectionGroups.flat().map((reflection, index) => ({
-        ...reflection,
-        reflectionKey: reflection.reflection_tree_file || `${reflection.session || 'session'}-${index}`,
-      })).sort((a, b) => {
-        const statusA = String(a.practice || 'todo').toLowerCase();
-        const statusB = String(b.practice || 'todo').toLowerCase();
-        if (statusA !== statusB) {
-          return statusA === 'todo' ? -1 : 1;
-        }
-        return Number(a.startms || 0) - Number(b.startms || 0);
-      });
 
       practiceReflectionsState = practiceReflections;
 
       if (!practiceReflections.length) {
-        practiceList.innerHTML = '<div class="practice-empty">No practice reflections are currently marked as todo or done.</div>';
+        practiceList.innerHTML = '<div class="practice-empty">No practice items found in training data.</div>';
         return;
       }
       await selectPracticeReflection(practiceReflections[0]?.reflectionKey || '');

@@ -19,8 +19,10 @@ TRAINING_AUDIO_DIR = DATA_DIR / "training_audio"
 TRAINING_CSV_PATH = DATA_DIR / "training.csv"
 TRAINING_CSV_FIELDNAMES = [
     "training_id",
+    "session",
     "session_name",
     "reflection_id",
+    "wearer_agent",
     "training_files",
     "transcription",
     "summary",
@@ -34,7 +36,7 @@ def _sanitize_name(value: str, fallback: str) -> str:
     return normalized or fallback
 
 
-def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None) -> None:
+def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "") -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     csv_exists = TRAINING_CSV_PATH.exists()
 
@@ -44,8 +46,10 @@ def _append_training_csv_row(training_id: str, session_name: str, training_files
             writer.writeheader()
         writer.writerow({
             "training_id": training_id,
+            "session": session_name,
             "session_name": session_name,
             "reflection_id": reflection_id,
+            "wearer_agent": wearer_agent,
             "training_files": ";".join(training_files),
             "transcription": transcription,
             "summary": summary,
@@ -62,6 +66,7 @@ def generate_tagged_voice(
     output_dir: str | None = None,
     summary: str = "",
     reflection_id: str = "",
+    wearer_agent: str = "",
     valence: float | None = None,
     arousal: float | None = None,
     dominance: float | None = None,
@@ -140,6 +145,7 @@ def generate_tagged_voice(
 
     clean_summary = str(summary or "").strip()
     clean_reflection_id = str(reflection_id or "").strip()
+    clean_wearer_agent = str(wearer_agent or "").strip()
 
     _append_training_csv_row(
         training_id=training_id,
@@ -149,12 +155,14 @@ def generate_tagged_voice(
         summary=clean_summary,
         reflection_id=clean_reflection_id,
         suggestions=list(suggestions),
+        wearer_agent=clean_wearer_agent,
     )
 
     return {
         "training_id": training_id,
         "session_name": clean_session_name,
         "reflection_id": clean_reflection_id,
+        "wearer_agent": clean_wearer_agent,
         "emotion": clean_emotion,
         "category": category,
         "target_category": target_category,

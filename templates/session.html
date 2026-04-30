@@ -732,6 +732,7 @@
                     body: JSON.stringify({
                       session_name: currentSession,
                       reflection_id: reflection.reflectionKey || '',
+                      wearer_agent: reflection.wearer_agent || currentUser,
                       transcription,
                       summary,
                       emotion: dominantEmotion,

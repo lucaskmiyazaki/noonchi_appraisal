@@ -45,8 +45,10 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = DATA_DIR
 AUDIO_DATA_DIR = DATA_DIR
+TRAINING_AUDIO_DIR = DATA_DIR / "training_audio"
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
+TRAINING_AUDIO_DIR.mkdir(exist_ok=True)
 
 REFLECTION_DB_FIELDNAMES = [
     "wearer_agent",
@@ -312,6 +314,109 @@ def write_reflection_db_rows(rows, fieldnames=None):
         writer.writeheader()
         for row in rows:
             writer.writerow({field: row.get(field, "") for field in resolved_fieldnames})
+
+
+def load_training_rows():
+    training_path = DATA_DIR / "training.csv"
+    if not training_path.exists():
+        return []
+
+    with open(training_path, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        return list(reader)
+
+
+def format_reflection_type_label(tree_type: str) -> str:
+    normalized = str(tree_type or "").strip().lower()
+    if normalized == "incoherent intensity":
+        return "elevation"
+    if normalized == "incoherent tone":
+        return "tone difference"
+    return str(tree_type or "reflection").strip() or "reflection"
+
+
+def _safe_float(value, fallback=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def build_practice_items_for_user(user_name: str):
+    rows = load_training_rows()
+    items = []
+    normalized_user = str(user_name or "").strip().lower()
+
+    for row in rows:
+        wearer_agent = str(row.get("wearer_agent", "") or "").strip()
+        if normalized_user and wearer_agent.lower() != normalized_user:
+            continue
+
+        session_name = str(row.get("session", "") or row.get("session_name", "") or "").strip()
+        reflection_id = str(row.get("reflection_id", "") or "").strip()
+        transcription = str(row.get("transcription", "") or "").strip()
+        summary = str(row.get("summary", "") or "").strip()
+
+        training_files = [
+            file_name.strip()
+            for file_name in str(row.get("training_files", "") or "").split(";")
+            if file_name.strip()
+        ]
+        suggestions = [
+            suggestion.strip()
+            for suggestion in str(row.get("suggestions", "") or "").split("|")
+            if suggestion.strip()
+        ]
+
+        tree = {}
+        start_ms = ""
+        end_ms = ""
+        tree_type = ""
+        if reflection_id:
+            reflection_path = DATA_DIR / reflection_id
+            if reflection_path.exists() and reflection_path.suffix == ".json":
+                try:
+                    tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    tree = {}
+            start_ms = str(tree.get("startMs", "") or "")
+            end_ms = str(tree.get("endMs", "") or "")
+            tree_type = str(tree.get("type", "") or "")
+
+        record = find_latest_audio_record(session_name) if session_name else None
+        display_name = (record.get("displayName") if record else None) or session_name or "Untitled session"
+        original_audio_url = record.get("audioUrl", "") if record else ""
+
+        ai_practice = []
+        max_len = max(len(suggestions), len(training_files))
+        for index in range(max_len):
+            suggestion_text = suggestions[index] if index < len(suggestions) else ""
+            ai_file = training_files[index] if index < len(training_files) else ""
+            ai_practice.append({
+                "index": index + 1,
+                "suggestion": suggestion_text,
+                "audio_file": ai_file,
+                "audio_url": f"/training_audio/{quote(ai_file)}" if ai_file else "",
+            })
+
+        title = f"{format_reflection_type_label(tree_type)} on {display_name.replace('_', ' ')}"
+        items.append({
+            "training_id": str(row.get("training_id", "") or "").strip(),
+            "session_name": session_name,
+            "display_name": display_name,
+            "reflection_id": reflection_id,
+            "wearer_agent": wearer_agent,
+            "title": title,
+            "summary": summary,
+            "transcription": transcription,
+            "original_audio_url": original_audio_url,
+            "startms": start_ms,
+            "endms": end_ms,
+            "ai_practice": ai_practice,
+        })
+
+    items.sort(key=lambda item: item.get("training_id", ""), reverse=True)
+    return items
 
 
 def stop_ngrok():
@@ -1148,6 +1253,7 @@ def voice_generate():
     payload = request.get_json(silent=True) or {}
     session_name = str(payload.get("session_name", "") or "").strip()
     reflection_id = str(payload.get("reflection_id", "") or "").strip()
+    wearer_agent = str(payload.get("wearer_agent", "") or "").strip()
     transcription = str(payload.get("transcription", "") or "").strip()
     summary = str(payload.get("summary", "") or "").strip()
     emotion = str(payload.get("emotion", "") or "").strip()
@@ -1176,6 +1282,7 @@ def voice_generate():
             emotion=emotion,
             summary=summary,
             reflection_id=reflection_id,
+            wearer_agent=wearer_agent,
             valence=valence,
             arousal=arousal,
             dominance=dominance,
@@ -1217,6 +1324,17 @@ def save_recording():
 @app.get("/uploads/<path:filename>")
 def serve_uploaded_audio(filename):
     return send_from_directory(UPLOAD_DIR, filename, conditional=True)
+
+
+@app.get("/training_audio/<path:filename>")
+def serve_training_audio(filename):
+    return send_from_directory(TRAINING_AUDIO_DIR, filename, conditional=True)
+
+
+@app.get("/api/practice/<user_name>")
+def list_practice_items(user_name):
+    items = build_practice_items_for_user(user_name)
+    return jsonify({"user": user_name, "items": items})
 
 
 @app.post("/api/audio/upload")
@@ -1483,6 +1601,7 @@ def list_reflection_files_for_user_session(user, session):
         if row.get("wearer_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
             results.append({
                 "reflection_tree_file": row.get("reflection_tree_file", ""),
+                "wearer_agent": row.get("wearer_agent", ""),
                 "startms": row.get("startms", ""),
                 "endms": row.get("endms", ""),
                 "practice": row.get("practice", "null"),
