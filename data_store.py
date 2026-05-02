@@ -23,6 +23,8 @@ REFLECTION_DB_FIELDNAMES = [
     "audio_filename",
     "journal_entry",
     "intent_filename",
+    "tree_type",
+    "has_journaling",
 ]
 
 TRAINING_CSV_FIELDNAMES = [
@@ -40,6 +42,9 @@ TRAINING_CSV_FIELDNAMES = [
     "transcription",
     "summary",
     "suggestions",
+    "tree_type",
+    "startms",
+    "endms",
 ]
 
 AUDIO_RECORD_REQUIRED_KEYS = {
@@ -260,6 +265,9 @@ def load_training_rows():
             "transcription": str(row.get("transcription", "") or "").strip(),
             "summary": str(row.get("summary", "") or "").strip(),
             "suggestions": str(row.get("suggestions", "") or "").strip(),
+            "tree_type": str(row.get("tree_type", "") or "").strip(),
+            "startms": str(row.get("startms", "") or "").strip(),
+            "endms": str(row.get("endms", "") or "").strip(),
         })
     return normalized_rows
 
@@ -283,5 +291,8 @@ def write_training_rows(rows) -> None:
             "transcription": str(row.get("transcription", "") or "").strip(),
             "summary": str(row.get("summary", "") or "").strip(),
             "suggestions": str(row.get("suggestions", "") or "").strip(),
+            "tree_type": str(row.get("tree_type", "") or "").strip(),
+            "startms": str(row.get("startms", "") or "").strip(),
+            "endms": str(row.get("endms", "") or "").strip(),
         })
     write_csv_rows(TRAINING_CSV_PATH, normalized_rows, TRAINING_CSV_FIELDNAMES)

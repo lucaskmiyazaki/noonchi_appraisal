@@ -250,6 +250,17 @@ def _parse_bool(value):
     return None
 
 
+def _tree_has_journaling(tree: dict) -> bool:
+    nodes = tree.get("nodes") or {}
+    if isinstance(nodes, dict):
+        return any(
+            str(n.get("type", "") or "").strip().lower() == "journaling"
+            for n in nodes.values()
+            if isinstance(n, dict)
+        )
+    return False
+
+
 def format_reflection_type_label(tree_type: str) -> str:
     normalized = str(tree_type or "").strip().lower()
     if normalized == "incoherent intensity":
@@ -361,6 +372,10 @@ def build_journaling_items_for_user(user_name: str):
         if not is_json_filename(reflection_file):
             continue
 
+        # Skip trees known to have no journaling nodes (avoids opening JSON)
+        if row.get("has_journaling") == "false":
+            continue
+
         try:
             tree = read_data_json_file(reflection_file)
         except (OSError, json.JSONDecodeError):
@@ -386,7 +401,7 @@ def build_journaling_items_for_user(user_name: str):
             if not str(entry_value or "").strip():
                 continue
 
-            title_type = format_reflection_type_label(tree.get("type", ""))
+            title_type = format_reflection_type_label(row.get("tree_type", "") or tree.get("type", ""))
             title = f"{title_type} on {display_name.replace('_', ' ')}"
             if len(journaling_paths) > 1:
                 title = f"{title} ({index + 1})"
@@ -435,10 +450,11 @@ def build_practice_items_for_user(user_name: str):
         ]
 
         tree = {}
-        start_ms = ""
-        end_ms = ""
-        tree_type = ""
-        if is_json_filename(reflection_id):
+        start_ms = str(row.get("startms", "") or "")
+        end_ms = str(row.get("endms", "") or "")
+        tree_type = str(row.get("tree_type", "") or "")
+        # Fallback: open JSON only for rows written before metadata columns were added
+        if not (start_ms or end_ms or tree_type) and is_json_filename(reflection_id):
             try:
                 tree = read_data_json_file(reflection_id) or {}
             except (OSError, json.JSONDecodeError):
@@ -970,6 +986,8 @@ def generate_reflections_from_intent(intent_filename):
             "practice": "null",
             "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
             "intent_filename": "",
+            "tree_type": str(reflection_tree.get("type", "") or ""),
+            "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })
 
         results.append({
@@ -1182,6 +1200,8 @@ def play_graph():
             "practice": "null",
             "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
             "intent_filename": "",
+            "tree_type": str(reflection_tree.get("type", "") or ""),
+            "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })
         write_reflection_db_rows(rows, fieldnames)
 

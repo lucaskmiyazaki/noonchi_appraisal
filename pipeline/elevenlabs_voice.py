@@ -8,8 +8,10 @@ from elevenlabs.client import ElevenLabs
 from data_store import (
     DATA_DIR,
     TRAINING_AUDIO_DIR,
+    is_json_filename,
     load_training_rows,
     normalize_training_type_str,
+    read_data_json_file,
     write_training_rows,
 )
 
@@ -49,7 +51,7 @@ def _resolve_source_category(emotion: str, valence: float | None, arousal: float
     return category, resolved_emotion
 
 
-def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None) -> None:
+def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, tree_type: str = "", startms: str = "", endms: str = "") -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     existing_rows = load_training_rows()
     existing_rows.append({
@@ -67,6 +69,9 @@ def _append_training_csv_row(training_id: str, session_name: str, training_files
         "transcription": transcription,
         "summary": summary,
         "suggestions": "|".join(suggestions) if suggestions else "",
+        "tree_type": tree_type,
+        "startms": startms,
+        "endms": endms,
     })
     write_training_rows(existing_rows)
 
@@ -163,6 +168,19 @@ def generate_tagged_voice(
     clean_reflection_id = str(reflection_id or "").strip()
     clean_wearer_agent = str(wearer_agent or "").strip()
 
+    # Read reflection tree metadata once so listing never needs to open JSON
+    _tree_type = ""
+    _startms = ""
+    _endms = ""
+    if clean_reflection_id and is_json_filename(clean_reflection_id):
+        try:
+            _ref_tree = read_data_json_file(clean_reflection_id) or {}
+            _tree_type = str(_ref_tree.get("type", "") or "")
+            _startms = str(_ref_tree.get("startMs", "") or "")
+            _endms = str(_ref_tree.get("endMs", "") or "")
+        except Exception:
+            pass
+
     _append_training_csv_row(
         training_id=training_id,
         session_name=clean_session_name,
@@ -176,6 +194,9 @@ def generate_tagged_voice(
         valence=valence,
         arousal=arousal,
         dominance=dominance,
+        tree_type=_tree_type,
+        startms=_startms,
+        endms=_endms,
     )
 
     return {
