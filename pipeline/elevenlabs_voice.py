@@ -9,6 +9,7 @@ from data_store import (
     normalize_training_type_str,
     read_data_json_file,
     save_training_audio_variants,
+    update_training_row_files,
 )
 
 from models.constants import EMOTION_CATEGORY_BY_EMOTION, UNIFIED_TAGS_BY_CATEGORY, SUGGESTIONS_BY_CATEGORY, OPPOSITE_CATEGORY, classify_emotion_from_vad
@@ -55,6 +56,7 @@ def generate_tagged_voice(
     valence: float | None = None,
     arousal: float | None = None,
     dominance: float | None = None,
+    existing_training_id: str | None = None,
 ) -> dict:
     """Generate multiple ElevenLabs audio files for an emotion-specific tag set.
 
@@ -85,7 +87,7 @@ def generate_tagged_voice(
     if not clean_emotion:
         raise ValueError("emotion must be a non-empty string")
 
-    training_id = uuid.uuid4().hex
+    training_id = str(existing_training_id or "").strip() or uuid.uuid4().hex
     clean_training_type = normalize_training_type_str(training_type)
     category = ""
     target_category = ""
@@ -147,23 +149,27 @@ def generate_tagged_voice(
         except Exception:
             pass
 
-    append_training_row(
-        training_id=training_id,
-        meeting_id=clean_meeting_id,
-        reflection_id=clean_reflection_id,
-        user_id=clean_user_id,
-        training_type=clean_training_type,
-        valence=valence,
-        arousal=arousal,
-        dominance=dominance,
-        training_files=output_files,
-        transcription=clean_transcript,
-        summary=clean_summary,
-        suggestions=list(suggestions),
-        tree_type=_tree_type,
-        startms=_startms,
-        endms=_endms,
-    )
+    if existing_training_id:
+        # Row was pre-saved; just fill in the generated files and suggestions.
+        update_training_row_files(training_id, output_files, list(suggestions))
+    else:
+        append_training_row(
+            training_id=training_id,
+            meeting_id=clean_meeting_id,
+            reflection_id=clean_reflection_id,
+            user_id=clean_user_id,
+            training_type=clean_training_type,
+            valence=valence,
+            arousal=arousal,
+            dominance=dominance,
+            training_files=output_files,
+            transcription=clean_transcript,
+            summary=clean_summary,
+            suggestions=list(suggestions),
+            tree_type=_tree_type,
+            startms=_startms,
+            endms=_endms,
+        )
 
     return {
         "training_id": training_id,

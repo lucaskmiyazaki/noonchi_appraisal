@@ -428,6 +428,7 @@ def build_practice_items_for_user(user_name: str):
         title = f"{format_reflection_type_label(tree_type)} on {display_name.replace('_', ' ')}"
         items.append({
             "training_id": str(row.get("training_id", "") or "").strip(),
+            "created_at": str(row.get("created_at", "") or "").strip(),
             "session_name": session_name,
             "display_name": display_name,
             "reflection_id": reflection_id,
@@ -444,7 +445,7 @@ def build_practice_items_for_user(user_name: str):
             "ai_practice": ai_practice,
         })
 
-    items.sort(key=lambda item: item.get("training_id", ""), reverse=True)
+    items.sort(key=lambda item: item.get("created_at", ""), reverse=True)
     return items
 
 

@@ -50,6 +50,7 @@ REFLECTION_DB_FIELDNAMES = [
 
 TRAINING_CSV_FIELDNAMES = [
     "training_id",
+    "created_at",
     "meeting_id",
     "user_id",
     "reflection_id",
@@ -1179,6 +1180,7 @@ def load_training_rows():
             user_id = lookup_user_id_by_username(row.get("wearer_agent", ""))
         normalized_rows.append({
             "training_id": str(row.get("training_id", "") or "").strip(),
+            "created_at": str(row.get("created_at", "") or "").strip(),
             "meeting_id": meeting_id,
             "user_id": user_id,
             "session_name": session_name,
@@ -1204,6 +1206,7 @@ def write_training_rows(rows) -> None:
     for row in rows:
         normalized_rows.append({
             "training_id": str(row.get("training_id", "") or "").strip(),
+            "created_at": str(row.get("created_at", "") or "").strip(),
             "meeting_id": str(row.get("meeting_id", "") or "").strip(),
             "user_id": str(row.get("user_id", "") or "").strip(),
             "reflection_id": str(row.get("reflection_id", "") or "").strip(),
@@ -1228,6 +1231,7 @@ def append_training_row(training_id: str, meeting_id: str, reflection_id: str = 
     existing_rows = load_training_rows()
     existing_rows.append({
         "training_id": str(training_id or "").strip(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "meeting_id": str(meeting_id or "").strip(),
         "user_id": str(user_id or "").strip(),
         "reflection_id": str(reflection_id or "").strip(),
@@ -1245,6 +1249,17 @@ def append_training_row(training_id: str, meeting_id: str, reflection_id: str = 
         "endms": str(endms or "").strip(),
     })
     write_training_rows(existing_rows)
+
+
+def update_training_row_files(training_id: str, training_files: list[str], suggestions: list[str]) -> None:
+    """Update the training_files and suggestions of an existing training row in-place."""
+    rows = load_training_rows()
+    for row in rows:
+        if str(row.get("training_id", "") or "").strip() == str(training_id or "").strip():
+            row["training_files"] = ";".join(training_files or [])
+            row["suggestions"] = "|".join(suggestions or [])
+            break
+    write_training_rows(rows)
 
 
 def _sanitize_storage_name(value: str, fallback: str) -> str:

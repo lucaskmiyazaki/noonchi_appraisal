@@ -71,6 +71,20 @@
     .practice-item-title { font-size: 14px; font-weight: 600; color: var(--text-dark); }
     .practice-empty { padding: 16px; border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 14px; }
 
+    .voice-gen-notice {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 10px;
+      background: #fef9ec; border: 1px solid #fcd34d; color: #92400e;
+      font-size: 14px; margin-top: 16px;
+    }
+    .voice-gen-notice[hidden] { display: none; }
+    .voice-gen-spinner {
+      width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid #fcd34d; border-top-color: #b45309;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     @media (max-width: 1180px) {
       body { overflow: auto; }
       .practice-layout { grid-template-columns: 1fr; }
@@ -105,6 +119,10 @@
         <div id="practiceRecordings" class="practice-recordings"></div>
         <button id="practiceRecordButton" class="practice-record-button" type="button">Start recording</button>
         <p id="practiceRecordStatus" class="practice-record-status" aria-live="polite"></p>
+        <div id="voiceGenNotice" class="voice-gen-notice" hidden>
+          <span class="voice-gen-spinner"></span>
+          <span id="voiceGenMessage">Generating AI voice…</span>
+        </div>
       </section>
     </main>
 
@@ -135,6 +153,8 @@
     const practiceRecordings = document.getElementById('practiceRecordings');
     const practiceRecordButton = document.getElementById('practiceRecordButton');
     const practiceRecordStatus = document.getElementById('practiceRecordStatus');
+    const voiceGenNotice = document.getElementById('voiceGenNotice');
+    const voiceGenMessage = document.getElementById('voiceGenMessage');
     let practiceReflectionsState = [];
     let selectedPracticeKey = '';
     let activePracticeSegment = null;
@@ -561,6 +581,53 @@
     });
 
     updateRecordButtonUi();
+
+    // ── Voice generation progress ──────────────────────────────────────────────────
+    let _voiceEs = null;
+
+    function _startVoiceStream(jobId) {
+      if (_voiceEs) { _voiceEs.close(); _voiceEs = null; }
+      voiceGenMessage.textContent = 'Generating AI voice…';
+      voiceGenNotice.style.cssText = '';
+      voiceGenNotice.querySelector('.voice-gen-spinner').style.display = '';
+      voiceGenNotice.hidden = false;
+
+      const es = new EventSource(`/api/voice/job/${encodeURIComponent(jobId)}/stream`);
+      _voiceEs = es;
+
+      es.addEventListener('message', (event) => {
+        let data;
+        try { data = JSON.parse(event.data); } catch { return; }
+
+        if (data.status === 'done') {
+          voiceGenNotice.hidden = true;
+          localStorage.removeItem('pendingVoiceJobId');
+          es.close(); _voiceEs = null;
+          loadPracticeReflections().catch(() => {});
+          return;
+        }
+        if (data.status === 'error') {
+          voiceGenMessage.textContent = `AI voice failed: ${data.message || 'unknown error'}`;
+          voiceGenNotice.style.background = '#fef2f2';
+          voiceGenNotice.style.borderColor = '#fca5a5';
+          voiceGenNotice.style.color = '#991b1b';
+          voiceGenNotice.querySelector('.voice-gen-spinner').style.display = 'none';
+          localStorage.removeItem('pendingVoiceJobId');
+          es.close(); _voiceEs = null;
+          return;
+        }
+        if (data.message) voiceGenMessage.textContent = data.message;
+      });
+
+      es.addEventListener('error', () => {
+        voiceGenNotice.hidden = true;
+        localStorage.removeItem('pendingVoiceJobId');
+        es.close(); _voiceEs = null;
+      });
+    }
+
+    const _pendingJob = localStorage.getItem('pendingVoiceJobId');
+    if (_pendingJob) _startVoiceStream(_pendingJob);
 
     loadPracticeReflections().catch((error) => {
       console.error('Failed to load practice reflections', error);

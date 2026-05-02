@@ -762,20 +762,30 @@
                   ? String(firstNode?.text || '')
                   : String(summaryNode?.text || '');
                 if (transcription && (dominantEmotion || avgVad)) {
-                  fetch('/api/voice/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      session_name: currentSession,
-                      reflection_id: reflection.reflectionKey || '',
-                      wearer_agent: reflection.wearer_agent || currentUser,
-                      type: isArousalPractice ? 'arousal' : 'valence',
-                      transcription,
-                      summary,
-                      emotion: dominantEmotion,
-                      ...(avgVad || {}),
-                    }),
-                  }).catch(() => {});
+                  try {
+                    const voiceResp = await fetch('/api/voice/generate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        session_name: currentSession,
+                        reflection_id: reflection.reflectionKey || '',
+                        wearer_agent: reflection.wearer_agent || currentUser,
+                        type: isArousalPractice ? 'arousal' : 'valence',
+                        transcription,
+                        summary,
+                        emotion: dominantEmotion,
+                        ...(avgVad || {}),
+                      }),
+                    });
+                    if (voiceResp.ok) {
+                      const voiceData = await voiceResp.json().catch(() => null);
+                      if (voiceData?.job_id) {
+                        localStorage.setItem('pendingVoiceJobId', voiceData.job_id);
+                      }
+                    }
+                  } catch (_voiceErr) {
+                    // Voice generation is non-critical; suppress errors
+                  }
                 }
               } catch (_voiceErr) {
                 // Voice generation is non-critical; suppress errors

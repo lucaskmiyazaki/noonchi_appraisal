@@ -606,6 +606,9 @@ def delete_reflection(reflection_filename):
 
 # ── Voice generation ──────────────────────────────────────────────────────────
 
+_voice_jobs: dict = {}  # job_id -> {status, progress, message, [result]}
+
+
 @app.post("/api/voice/generate")
 def voice_generate():
     payload = request.get_json(silent=True) or {}
@@ -635,29 +638,97 @@ def voice_generate():
     if not emotion and not all(v is not None for v in (valence, arousal, dominance)):
         return jsonify({"error": "Provide either emotion or valence+arousal+dominance"}), 400
 
-    from data_store import lookup_meeting_id_by_session_name
+    from data_store import (
+        append_training_row,
+        is_json_filename,
+        lookup_meeting_id_by_session_name,
+        read_data_json_file,
+    )
     meeting_id = lookup_meeting_id_by_session_name(session_name)
 
-    try:
-        from pipeline.elevenlabs_voice import generate_tagged_voice
-        result = generate_tagged_voice(
-            transcript=transcription,
-            meeting_id=meeting_id,
-            emotion=emotion,
-            summary=summary,
-            reflection_id=reflection_id,
-            user_id=user_id,
-            training_type=training_type,
-            valence=valence,
-            arousal=arousal,
-            dominance=dominance,
-        )
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-    except Exception as exc:
-        return jsonify({"error": f"Voice generation failed: {exc}"}), 500
+    # Pre-save the training row immediately (empty audio files) so the
+    # practice item appears in the list right away while generation runs.
+    training_id = uuid.uuid4().hex
+    _tree_type = _startms = _endms = ""
+    if reflection_id and is_json_filename(reflection_id):
+        try:
+            _ref_tree = read_data_json_file(reflection_id) or {}
+            _tree_type = str(_ref_tree.get("type", "") or "")
+            _startms = str(_ref_tree.get("startMs", "") or "")
+            _endms = str(_ref_tree.get("endMs", "") or "")
+        except Exception:
+            pass
 
-    return jsonify(result)
+    append_training_row(
+        training_id=training_id,
+        meeting_id=meeting_id,
+        reflection_id=reflection_id,
+        user_id=user_id,
+        training_type=training_type,
+        valence=valence,
+        arousal=arousal,
+        dominance=dominance,
+        training_files=[],
+        transcription=transcription,
+        summary=summary,
+        suggestions=[],
+        tree_type=_tree_type,
+        startms=_startms,
+        endms=_endms,
+    )
+
+    job_id = str(uuid.uuid4())
+    _voice_jobs[job_id] = {"status": "pending", "progress": 0, "message": "Starting voice generation…"}
+
+    def _run():
+        try:
+            _voice_jobs[job_id].update({"progress": 20, "message": "Generating AI voice…"})
+            from pipeline.elevenlabs_voice import generate_tagged_voice
+            result = generate_tagged_voice(
+                transcript=transcription,
+                meeting_id=meeting_id,
+                emotion=emotion,
+                summary=summary,
+                reflection_id=reflection_id,
+                user_id=user_id,
+                training_type=training_type,
+                valence=valence,
+                arousal=arousal,
+                dominance=dominance,
+                existing_training_id=training_id,
+            )
+            _voice_jobs[job_id] = {"status": "done", "progress": 100, "message": "Voice ready.", "result": result}
+        except ValueError as exc:
+            _voice_jobs[job_id] = {"status": "error", "message": str(exc)}
+        except Exception as exc:
+            _voice_jobs[job_id] = {"status": "error", "message": f"Voice generation failed: {exc}"}
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"job_id": job_id, "training_id": training_id}), 202
+
+
+@app.get("/api/voice/job/<job_id>/stream")
+def voice_job_stream(job_id):
+    import json as _json, time as _time
+    safe_job_id = str(job_id or "").strip()
+
+    def _generate():
+        for _ in range(600):
+            job = _voice_jobs.get(safe_job_id)
+            if not job:
+                yield f"data: {_json.dumps({'status': 'error', 'message': 'Job not found'})}\n\n"
+                return
+            yield f"data: {_json.dumps(job)}\n\n"
+            if job["status"] in ("done", "error"):
+                _voice_jobs.pop(safe_job_id, None)
+                return
+            _time.sleep(1)
+
+    return Response(
+        _generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Graph play (live diagram evaluation) ──────────────────────────────────────
