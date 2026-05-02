@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -655,6 +656,116 @@ def lookup_username_by_user_id(user_id: str) -> str:
     return row.get("username", "") if row else ""
 
 
+def nudge_fieldnames() -> list[str]:
+    return [field for field in USERS_CSV_FIELDNAMES if field.startswith("nudge_")]
+
+
+def normalize_user_updates(updates: dict | None) -> dict:
+    payload = updates or {}
+    allowed = set(USERS_CSV_FIELDNAMES) - {"id"}
+    normalized: dict[str, str] = {}
+    for field in allowed:
+        if field not in payload:
+            continue
+        value = payload[field]
+        if field.startswith("nudge_"):
+            normalized[field] = "true" if str(value).strip().lower() in {"true", "1", "yes", "on"} else "false"
+        else:
+            normalized[field] = str(value).strip() if not isinstance(value, bool) else str(value).lower()
+    return normalized
+
+
+def create_user(username: str, name: str = "", updates: dict | None = None) -> dict:
+    clean_username = str(username or "").strip()
+    clean_name = str(name or "").strip() or clean_username
+    if not clean_username:
+        raise ValueError("username is required")
+    payload = {
+        "username": clean_username,
+        "name": clean_name,
+    }
+    payload.update(normalize_user_updates(updates))
+    return save_user(payload)
+
+
+def update_user(username: str, updates: dict | None = None) -> dict | None:
+    existing = lookup_user_by_username(username)
+    if existing is None:
+        return None
+    existing.update(normalize_user_updates(updates))
+    return save_user(existing)
+
+
+def enrich_meeting_user_fields(record: dict, meeting_id: str = "") -> dict:
+    if not isinstance(record, dict):
+        return record
+
+    resolved_meeting_id = str(meeting_id or record.get("id", "") or "").strip()
+    user_id = str(record.get("userId", "") or record.get("user_id", "") or "").strip()
+
+    if not user_id and resolved_meeting_id:
+        rows, _ = load_meeting_rows()
+        for row in rows:
+            if str(row.get("id", "") or "").strip() == resolved_meeting_id:
+                user_id = str(row.get("user_id", "") or "").strip()
+                break
+
+    if user_id:
+        record["userId"] = user_id
+        record["user_id"] = user_id
+
+    record["username"] = lookup_username_by_user_id(user_id)
+    return record
+
+
+def iter_meetings_for_username(username: str = "") -> list[dict]:
+    user_id_filter = ""
+    clean_username = str(username or "").strip()
+    if clean_username:
+        user = lookup_user_by_username(clean_username)
+        user_id_filter = user.get("id", "") if user else ""
+    return [
+        record for record in iter_meetings()
+        if not user_id_filter or record.get("userId", "") == user_id_filter
+    ]
+
+
+def list_meeting_sessions_for_user(username: str) -> list[dict]:
+    user_record = lookup_user_by_username(username)
+    user_id = user_record.get("id", "") if user_record else ""
+    rows, _ = load_meeting_rows()
+    sessions = []
+    for row in rows:
+        if user_id and row.get("user_id", "") != user_id:
+            continue
+        session_name = row.get("session_name", "").strip()
+        display_name = row.get("display_name", "").strip() or session_name
+        if session_name:
+            sessions.append({"sessionName": session_name, "displayName": display_name})
+    sessions.sort(key=lambda item: item["sessionName"])
+    return sessions
+
+
+def list_reflection_rows_for_session(session_name: str) -> list[dict]:
+    rows, _ = load_reflection_db_rows()
+    return [row for row in rows if row.get("session_name", "") == session_name]
+
+
+def list_reflection_rows_for_audio(meeting_id: str) -> list[dict]:
+    rows, _ = load_reflection_db_rows()
+    return [row for row in rows if row.get("meeting_id", "") == meeting_id]
+
+
+def list_reflection_rows_for_user_session(username: str, session_name: str) -> list[dict]:
+    user_record = lookup_user_by_username(username)
+    user_id = user_record.get("id", "") if user_record else ""
+    rows, _ = load_reflection_db_rows()
+    return [
+        row for row in rows
+        if (not user_id or row.get("user_id", "") == user_id) and row.get("session_name", "") == session_name
+    ]
+
+
 def save_user(user: dict) -> dict:
     """Create or update a user row. Generates an id if missing."""
     import uuid as _uuid
@@ -1110,3 +1221,51 @@ def write_training_rows(rows) -> None:
             "endms": str(row.get("endms", "") or "").strip(),
         })
     write_csv_rows(TRAINING_CSV_PATH, normalized_rows, TRAINING_CSV_FIELDNAMES)
+
+
+def append_training_row(training_id: str, meeting_id: str, reflection_id: str = "", user_id: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, training_files: list[str] | None = None, transcription: str = "", summary: str = "", suggestions: list[str] | None = None, tree_type: str = "", startms: str = "", endms: str = "", done: str = "false") -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    existing_rows = load_training_rows()
+    existing_rows.append({
+        "training_id": str(training_id or "").strip(),
+        "meeting_id": str(meeting_id or "").strip(),
+        "user_id": str(user_id or "").strip(),
+        "reflection_id": str(reflection_id or "").strip(),
+        "type": normalize_training_type_str(training_type),
+        "valence": "" if valence is None else str(valence),
+        "arousal": "" if arousal is None else str(arousal),
+        "dominance": "" if dominance is None else str(dominance),
+        "done": normalize_done_str(done),
+        "training_files": ";".join(training_files or []),
+        "transcription": str(transcription or "").strip(),
+        "summary": str(summary or "").strip(),
+        "suggestions": "|".join(suggestions or []),
+        "tree_type": str(tree_type or "").strip(),
+        "startms": str(startms or "").strip(),
+        "endms": str(endms or "").strip(),
+    })
+    write_training_rows(existing_rows)
+
+
+def _sanitize_storage_name(value: str, fallback: str) -> str:
+    normalized = "".join(char if char.isalnum() or char in "-_" else "_" for char in str(value or ""))
+    normalized = "_".join(part for part in normalized.split("_") if part)
+    return normalized or fallback
+
+
+def save_training_audio_variants(training_id: str, meeting_id: str, emotion: str, tagged_audio: list[tuple[str, bytes]], output_dir: str | Path | None = None) -> list[str]:
+    output_root = Path(output_dir) if output_dir else TRAINING_AUDIO_DIR
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe_session = _sanitize_storage_name(meeting_id, "session")
+    safe_emotion = _sanitize_storage_name(emotion, "emotion")
+
+    output_files: list[str] = []
+    for index, (tag, audio_bytes) in enumerate(tagged_audio, start=1):
+        safe_tag = _sanitize_storage_name(tag, f"tag{index}")
+        filename = f"{training_id}_{safe_session}_{safe_emotion}_{safe_tag}_{timestamp}_{index}.mp3"
+        (output_root / filename).write_bytes(audio_bytes)
+        output_files.append(filename)
+
+    return output_files

@@ -1,18 +1,14 @@
 import os
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from data_store import (
-    DATA_DIR,
-    TRAINING_AUDIO_DIR,
+    append_training_row,
     is_json_filename,
-    load_training_rows,
     normalize_training_type_str,
     read_data_json_file,
-    write_training_rows,
+    save_training_audio_variants,
 )
 
 from models.constants import EMOTION_CATEGORY_BY_EMOTION, UNIFIED_TAGS_BY_CATEGORY, SUGGESTIONS_BY_CATEGORY, OPPOSITE_CATEGORY, classify_emotion_from_vad
@@ -30,12 +26,6 @@ EMOTION_CATEGORY_ALIASES = {
 }
 
 
-def _sanitize_name(value: str, fallback: str) -> str:
-    normalized = "".join(char if char.isalnum() or char in "-_" else "_" for char in str(value or ""))
-    normalized = "_".join(part for part in normalized.split("_") if part)
-    return normalized or fallback
-
-
 def _resolve_source_category(emotion: str, valence: float | None, arousal: float | None, dominance: float | None) -> tuple[str, str]:
     normalized_emotion = str(emotion or "").strip().lower()
 
@@ -49,30 +39,6 @@ def _resolve_source_category(emotion: str, valence: float | None, arousal: float
         category = EMOTION_CATEGORY_BY_EMOTION.get(resolved_emotion, "")
 
     return category, resolved_emotion
-
-
-def _append_training_csv_row(training_id: str, meeting_id: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, user_id: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, tree_type: str = "", startms: str = "", endms: str = "") -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    existing_rows = load_training_rows()
-    existing_rows.append({
-        "training_id": training_id,
-        "meeting_id": meeting_id,
-        "reflection_id": reflection_id,
-        "user_id": user_id,
-        "type": normalize_training_type_str(training_type),
-        "valence": "" if valence is None else str(valence),
-        "arousal": "" if arousal is None else str(arousal),
-        "dominance": "" if dominance is None else str(dominance),
-        "done": "false",
-        "training_files": ";".join(training_files),
-        "transcription": transcription,
-        "summary": summary,
-        "suggestions": "|".join(suggestions) if suggestions else "",
-        "tree_type": tree_type,
-        "startms": startms,
-        "endms": endms,
-    })
-    write_training_rows(existing_rows)
 
 
 def generate_tagged_voice(
@@ -141,13 +107,10 @@ def generate_tagged_voice(
         if not api_key:
             raise ValueError("ELEVENLABS_API_KEY is not set")
 
-        output_root = Path(output_dir) if output_dir else TRAINING_AUDIO_DIR
-        output_root.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        safe_session = _sanitize_name(clean_meeting_id, "session")
         client = ElevenLabs(api_key=api_key)
+        tagged_audio: list[tuple[str, bytes]] = []
 
-        for index, tag in enumerate(tags, start=1):
+        for tag in tags:
             tagged_text = f"[{tag}] {clean_transcript}"
             response = client.text_to_speech.convert(
                 voice_id=voice_id,
@@ -157,11 +120,15 @@ def generate_tagged_voice(
             )
 
             audio_bytes = b"".join(chunk for chunk in response if chunk)
-            safe_tag = _sanitize_name(tag, f"tag{index}")
-            filename = f"{training_id}_{safe_session}_{clean_emotion}_{safe_tag}_{timestamp}_{index}.mp3"
-            file_path = output_root / filename
-            file_path.write_bytes(audio_bytes)
-            output_files.append(filename)
+            tagged_audio.append((tag, audio_bytes))
+
+        output_files = save_training_audio_variants(
+            training_id=training_id,
+            meeting_id=clean_meeting_id,
+            emotion=clean_emotion,
+            tagged_audio=tagged_audio,
+            output_dir=output_dir,
+        )
 
     clean_summary = str(summary or "").strip()
     clean_reflection_id = str(reflection_id or "").strip()
@@ -180,19 +147,19 @@ def generate_tagged_voice(
         except Exception:
             pass
 
-    _append_training_csv_row(
+    append_training_row(
         training_id=training_id,
         meeting_id=clean_meeting_id,
-        training_files=output_files,
-        transcription=clean_transcript,
-        summary=clean_summary,
         reflection_id=clean_reflection_id,
-        suggestions=list(suggestions),
         user_id=clean_user_id,
         training_type=clean_training_type,
         valence=valence,
         arousal=arousal,
         dominance=dominance,
+        training_files=output_files,
+        transcription=clean_transcript,
+        summary=clean_summary,
+        suggestions=list(suggestions),
         tree_type=_tree_type,
         startms=_startms,
         endms=_endms,

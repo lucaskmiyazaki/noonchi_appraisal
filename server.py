@@ -41,9 +41,13 @@ from data_store import (
     load_meeting,
     load_intent_rows,
     load_journal_entry_raw,
-    load_meeting_rows,
     load_reflection_db_rows as _load_reflection_db_rows,
     load_user_rows,
+    iter_meetings_for_username,
+    list_meeting_sessions_for_user,
+    list_reflection_rows_for_session,
+    list_reflection_rows_for_audio,
+    list_reflection_rows_for_user_session,
     lookup_meeting_id_by_session_name,
     lookup_user_by_id,
     lookup_user_by_username,
@@ -51,6 +55,9 @@ from data_store import (
     lookup_username_by_user_id,
     read_data_json_file,
     load_training_rows,
+    create_user as ds_create_user,
+    update_user as ds_update_user,
+    enrich_meeting_user_fields,
     normalize_done_str,
     normalize_practice_value,
     normalize_training_type_str,
@@ -1423,23 +1430,11 @@ def create_user():
     payload = request.get_json() or {}
     username = str(payload.get("username", "") or "").strip()
     name = str(payload.get("name", "") or "").strip()
-    if not username:
-        return jsonify({"error": "username is required"}), 400
-    if not name:
-        name = username
-    user = {
-        "username": username,
-        "name": name,
-    }
-    # Copy nudge fields if provided
-    from data_store import USERS_CSV_FIELDNAMES
-    for field in USERS_CSV_FIELDNAMES:
-        if field.startswith("nudge_") and field in payload:
-            user[field] = str(payload[field]).lower()
     try:
-        saved = save_user(user)
+        saved = ds_create_user(username=username, name=name, updates=payload)
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 409
+        status = 400 if "required" in str(exc).lower() else 409
+        return jsonify({"error": str(exc)}), status
     return jsonify(saved), 201
 
 
@@ -1453,19 +1448,16 @@ def get_user(username):
 
 @app.patch("/api/users/<username>")
 def update_user(username):
-    user = lookup_user_by_username(username)
-    if user is None:
+    existing = lookup_user_by_username(username)
+    if existing is None:
         return jsonify({"error": "User not found"}), 404
     payload = request.get_json() or {}
-    from data_store import USERS_CSV_FIELDNAMES
-    allowed = set(USERS_CSV_FIELDNAMES) - {"id"}
-    for field in allowed:
-        if field in payload:
-            user[field] = str(payload[field]).strip() if not isinstance(payload[field], bool) else str(payload[field]).lower()
     try:
-        saved = save_user(user)
+        saved = ds_update_user(username, payload)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 409
+    if saved is None:
+        return jsonify({"error": "User not found"}), 404
     return jsonify(saved)
 
 
@@ -1605,14 +1597,9 @@ def get_latest_audio():
 @app.get("/api/audio/sessions")
 def list_audio_sessions():
     username = request.args.get("username", "").strip()
-    user_id_filter = ""
-    if username:
-        user = lookup_user_by_username(username)
-        user_id_filter = user.get("id", "") if user else ""
     sessions = [
         summarize_audio_record(record)
-        for record in iter_meetings()
-        if not user_id_filter or record.get("userId", "") == user_id_filter
+        for record in iter_meetings_for_username(username)
     ]
     return jsonify({"sessions": sessions})
 
@@ -1620,10 +1607,7 @@ def list_audio_sessions():
 @app.get("/api/audio/session/<session_name>/reflections")
 def list_session_reflection_trees(session_name):
     reflections = []
-    rows, _ = load_reflection_db_rows()
-    for row in rows:
-        if row.get("session_name", "") != session_name:
-            continue
+    for row in list_reflection_rows_for_session(session_name):
 
         reflection_file = row.get("reflection_tree_file", "")
         if not reflection_file:
@@ -1690,18 +1674,7 @@ def get_audio(audio_id):
         return jsonify({"error": "Not found"}), 404
 
     record.setdefault("displayName", record.get("sessionName"))
-    user_id = str(record.get("userId", "") or record.get("user_id", "") or "").strip()
-    if not user_id:
-        # Older transcript JSON files may not include userId; fall back to meetings.csv
-        meeting_rows, _ = load_meeting_rows()
-        for meeting_row in meeting_rows:
-            if str(meeting_row.get("id", "") or "").strip() == str(audio_id or "").strip():
-                user_id = str(meeting_row.get("user_id", "") or "").strip()
-                if user_id:
-                    record["userId"] = user_id
-                    record["user_id"] = user_id
-                break
-    record["username"] = lookup_username_by_user_id(user_id)
+    enrich_meeting_user_fields(record, audio_id)
     return jsonify(record)
 
 
@@ -1778,11 +1751,7 @@ def list_reflections_for_audio(audio_id):
 
     session_name = str(record.get("sessionName", "") or "").strip()
     reflections = []
-    rows, _ = load_reflection_db_rows()
-
-    for row in rows:
-        if row.get("meeting_id", "") != audio_id:
-            continue
+    for row in list_reflection_rows_for_audio(audio_id):
 
         reflection_file = row.get("reflection_tree_file", "")
         if not reflection_file:
@@ -1801,36 +1770,16 @@ def list_reflections_for_audio(audio_id):
 # Place the /reflection/<user> endpoint here, after all other route functions
 @app.get("/reflection/<user>")
 def list_reflections_for_user(user):
-    # Resolve username -> user record
-    user_record = lookup_user_by_username(user)
-    user_id = user_record.get("id", "") if user_record else ""
-
-    # List meetings from meetings.csv filtered by user_id
-    rows, _ = load_meeting_rows()
-    sessions = []
-    for row in rows:
-        if user_id and row.get("user_id", "") != user_id:
-            continue
-        sn = row.get("session_name", "").strip()
-        display = row.get("display_name", "").strip() or sn
-        if sn:
-            sessions.append({"sessionName": sn, "displayName": display})
-    sessions.sort(key=lambda s: s["sessionName"])
+    sessions = list_meeting_sessions_for_user(user)
     return jsonify({"user": user, "session_names": [s["sessionName"] for s in sessions], "sessions": sessions})
 
 
 # Place the /reflection/<user>/<session> endpoint here, after all other route functions
 @app.get("/reflection/<user>/<session>")
 def list_reflection_files_for_user_session(user, session):
-    user_record = lookup_user_by_username(user)
-    user_id = user_record.get("id", "") if user_record else ""
     results = []
-    rows, _ = load_reflection_db_rows()
-    for row in rows:
+    for row in list_reflection_rows_for_user_session(user, session):
         row_user_id = row.get("user_id", "")
-        row_session = row.get("session_name", "")
-        if (user_id and row_user_id != user_id) or row_session != session:
-            continue
         results.append({
             "reflection_tree_file": row.get("reflection_tree_file", ""),
             "user_id": row_user_id,
