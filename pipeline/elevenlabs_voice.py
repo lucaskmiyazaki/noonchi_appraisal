@@ -51,13 +51,12 @@ def _resolve_source_category(emotion: str, valence: float | None, arousal: float
     return category, resolved_emotion
 
 
-def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, tree_type: str = "", startms: str = "", endms: str = "") -> None:
+def _append_training_csv_row(training_id: str, meeting_id: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, tree_type: str = "", startms: str = "", endms: str = "") -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     existing_rows = load_training_rows()
     existing_rows.append({
         "training_id": training_id,
-        "session": session_name,
-        "session_name": session_name,
+        "meeting_id": meeting_id,
         "reflection_id": reflection_id,
         "wearer_agent": wearer_agent,
         "type": normalize_training_type_str(training_type),
@@ -78,7 +77,7 @@ def _append_training_csv_row(training_id: str, session_name: str, training_files
 
 def generate_tagged_voice(
     transcript: str,
-    session_name: str,
+    meeting_id: str,
     emotion: str,
     voice_id: str = "b3tuFWghbXYRa9Cs9MJf",
     model_id: str = "eleven_v3",
@@ -108,14 +107,14 @@ def generate_tagged_voice(
         ValueError: If required values are missing or emotion is unsupported.
     """
     clean_transcript = str(transcript or "").strip()
-    clean_session_name = str(session_name or "").strip()
+    clean_meeting_id = str(meeting_id or "").strip()
     clean_emotion = str(emotion or "").strip().lower()
 
     if not clean_transcript:
         raise ValueError("transcript must be a non-empty string")
 
-    if not clean_session_name:
-        raise ValueError("session_name must be a non-empty string")
+    if not clean_meeting_id:
+        raise ValueError("meeting_id must be a non-empty string")
 
     if not clean_emotion:
         raise ValueError("emotion must be a non-empty string")
@@ -145,7 +144,7 @@ def generate_tagged_voice(
         output_root = Path(output_dir) if output_dir else TRAINING_AUDIO_DIR
         output_root.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        safe_session = _sanitize_name(clean_session_name, "session")
+        safe_session = _sanitize_name(clean_meeting_id, "session")
         client = ElevenLabs(api_key=api_key)
 
         for index, tag in enumerate(tags, start=1):
@@ -183,7 +182,7 @@ def generate_tagged_voice(
 
     _append_training_csv_row(
         training_id=training_id,
-        session_name=clean_session_name,
+        meeting_id=clean_meeting_id,
         training_files=output_files,
         transcription=clean_transcript,
         summary=clean_summary,
@@ -201,7 +200,7 @@ def generate_tagged_voice(
 
     return {
         "training_id": training_id,
-        "session_name": clean_session_name,
+        "meeting_id": clean_meeting_id,
         "reflection_id": clean_reflection_id,
         "wearer_agent": clean_wearer_agent,
         "type": clean_training_type,

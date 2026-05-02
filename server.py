@@ -28,23 +28,29 @@ from data_store import (
     UPLOAD_DIR,
     audio_record_path,
     delete_audio_record,
+    delete_meeting,
     delete_data_json_file,
     delete_intent_row,
     delete_journal_entry_row,
     ensure_data_layout,
     find_data_recording_file,
     iter_audio_records,
+    iter_meetings,
     is_json_filename,
     load_audio_record,
+    load_meeting,
     load_intent_rows,
     load_journal_entry_raw,
+    load_meeting_rows,
     load_reflection_db_rows as _load_reflection_db_rows,
+    lookup_meeting_id_by_session_name,
     read_data_json_file,
     load_training_rows,
     normalize_done_str,
     normalize_practice_value,
     normalize_training_type_str,
     save_audio_record,
+    save_meeting,
     upsert_journal_entry_raw,
     write_reflection_db_rows,
     write_data_json_file,
@@ -186,12 +192,8 @@ def find_latest_audio_record(session_name=""):
 
 
 def load_reflection_db_rows():
-    rows, fieldnames = _load_reflection_db_rows()
-    for row in rows:
-        if not row.get("audio_filename"):
-            record = find_latest_audio_record(row.get("session_name", ""))
-            row["audio_filename"] = record.get("audioFilename", "") if record else ""
-    return rows, fieldnames
+    # session_name is now hydrated from meetings inside data_store.load_reflection_db_rows
+    return _load_reflection_db_rows()
 
 
 def build_emotion_session_payload(session_name=""):
@@ -238,7 +240,7 @@ def build_reflection_response_row(row, reflection_file):
         "startms": row.get("startms", ""),
         "endms": row.get("endms", ""),
         "practice": row.get("practice", "null"),
-        "audio_filename": row.get("audio_filename", ""),
+        "meeting_id": row.get("meeting_id", ""),
         "tree": tree,
     }
 
@@ -438,7 +440,8 @@ def build_practice_items_for_user(user_name: str):
         if normalized_user and wearer_agent.lower() != normalized_user:
             continue
 
-        session_name = str(row.get("session", "") or row.get("session_name", "") or "").strip()
+        session_name = str(row.get("session_name", "") or "").strip()
+        meeting_id = str(row.get("meeting_id", "") or "").strip()
         reflection_id = str(row.get("reflection_id", "") or "").strip()
         transcription = str(row.get("transcription", "") or "").strip()
         summary = str(row.get("summary", "") or "").strip()
@@ -468,7 +471,7 @@ def build_practice_items_for_user(user_name: str):
             end_ms = str(tree.get("endMs", "") or "")
             tree_type = str(tree.get("type", "") or "")
 
-        record = find_latest_audio_record(session_name) if session_name else None
+        record = load_meeting(meeting_id) if meeting_id else None
         display_name = (record.get("displayName") if record else None) or session_name or "Untitled session"
         original_audio_url = record.get("audioUrl", "") if record else ""
 
@@ -662,11 +665,16 @@ def save_intent():
     except Exception as e:
         return jsonify({"error": f"Failed to save intent file: {e}"}), 500
 
-    # Update reflections.csv via centralized data store logic.
+    # Look up meeting_id for this session
+    meeting_record = find_latest_audio_record(session_name)
+    meeting_id = meeting_record.get("id", "") if meeting_record else ""
+
+    # Update intents.csv via centralized data store logic.
     upsert_intent_reflection_row(
         session_name=session_name,
         intent_file=intent_file,
         wearer_agent=wearer_agent,
+        meeting_id=meeting_id,
     )
 
     return jsonify({"message": "Intent saved.", "intent_file": intent_file})
@@ -942,6 +950,7 @@ def generate_reflections_from_intent(intent_filename):
     rows, fieldnames = load_reflection_db_rows()
 
     latest_audio_record = find_latest_audio_record(session_name)
+    meeting_id = latest_audio_record.get("id", "") if latest_audio_record else ""
 
     for diagram in diagrams:
         reflection_tree, wearer_id, wearer_agent = evaluate_diagram_for_reflection(diagram, session_name)
@@ -976,7 +985,7 @@ def generate_reflections_from_intent(intent_filename):
             "startms": reflection_tree.get("startMs", ""),
             "endms": reflection_tree.get("endMs", ""),
             "practice": "null",
-            "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
+            "meeting_id": meeting_id,
             "tree_type": str(reflection_tree.get("type", "") or ""),
             "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })
@@ -1306,11 +1315,13 @@ def voice_generate():
     if not emotion and not all(v is not None for v in (valence, arousal, dominance)):
         return jsonify({"error": "Provide either emotion or valence+arousal+dominance"}), 400
 
+    meeting_id = lookup_meeting_id_by_session_name(session_name)
+
     try:
         from pipeline.elevenlabs_voice import generate_tagged_voice
         result = generate_tagged_voice(
             transcript=transcription,
-            session_name=session_name,
+            meeting_id=meeting_id,
             emotion=emotion,
             summary=summary,
             reflection_id=reflection_id,
@@ -1481,7 +1492,7 @@ def upload_audio():
         "uploadedAt": datetime.now(timezone.utc).isoformat(),
         "transcript": transcript,
     }
-    save_audio_record(record)
+    save_meeting(record)
 
     return jsonify(record)
 
@@ -1499,7 +1510,7 @@ def get_latest_audio():
 
 @app.get("/api/audio/sessions")
 def list_audio_sessions():
-    sessions = [summarize_audio_record(record) for record in iter_audio_records()]
+    sessions = [summarize_audio_record(record) for record in iter_meetings()]
     return jsonify({"sessions": sessions})
 
 
@@ -1546,7 +1557,7 @@ def list_session_intent_files(session_name):
             "wearer_agent": row.get("wearer_agent", ""),
             "startms": row.get("startms", ""),
             "endms": row.get("endms", ""),
-            "audio_filename": row.get("audio_filename", ""),
+            "meeting_id": row.get("meeting_id", ""),
             "data": intent_data,
         })
 
@@ -1570,7 +1581,7 @@ def get_session_emotion(session_name):
 
 @app.get("/api/audio/<audio_id>")
 def get_audio(audio_id):
-    record = load_audio_record(audio_id)
+    record = load_meeting(audio_id)
 
     if record is None:
         return jsonify({"error": "Not found"}), 404
@@ -1581,7 +1592,7 @@ def get_audio(audio_id):
 
 @app.patch("/api/audio/<audio_id>")
 def patch_audio(audio_id):
-    record = load_audio_record(audio_id)
+    record = load_meeting(audio_id)
     if record is None:
         return jsonify({"error": "Not found"}), 404
 
@@ -1591,13 +1602,13 @@ def patch_audio(audio_id):
         return jsonify({"error": "displayName is required"}), 400
 
     record["displayName"] = new_name
-    save_audio_record(record)
+    save_meeting(record)
     return jsonify({"displayName": record["displayName"]})
 
 
 @app.delete("/api/audio/<audio_id>")
 def delete_audio(audio_id):
-    record = load_audio_record(audio_id)
+    record = load_meeting(audio_id)
 
     if record is None:
         return jsonify({"error": "Not found"}), 404
@@ -1608,7 +1619,7 @@ def delete_audio(audio_id):
     rows, fieldnames = load_reflection_db_rows()
     remaining_rows = []
     for row in rows:
-        if audio_filename and row.get("audio_filename", "") == audio_filename:
+        if audio_id and row.get("meeting_id", "") == audio_id:
             reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
             if reflection_file:
                 delete_data_json_file(reflection_file)
@@ -1626,7 +1637,7 @@ def delete_audio(audio_id):
             audio_path.unlink()
             deleted_audio_file = True
 
-    delete_audio_record(audio_id)
+    delete_meeting(audio_id)
 
     return jsonify({
         "message": "audio deleted",
@@ -1639,18 +1650,17 @@ def delete_audio(audio_id):
 
 @app.get("/api/audio/<audio_id>/reflections")
 def list_reflections_for_audio(audio_id):
-    record = load_audio_record(audio_id)
+    record = load_meeting(audio_id)
 
     if record is None:
         return jsonify({"error": "Not found"}), 404
 
-    audio_filename = str(record.get("audioFilename", "") or "").strip()
     session_name = str(record.get("sessionName", "") or "").strip()
     reflections = []
     rows, _ = load_reflection_db_rows()
 
     for row in rows:
-        if audio_filename and row.get("audio_filename", "") != audio_filename:
+        if row.get("meeting_id", "") != audio_id:
             continue
 
         reflection_file = row.get("reflection_tree_file", "")
