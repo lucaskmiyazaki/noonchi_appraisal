@@ -460,8 +460,4 @@ def serve_recording(session_name):
 
 if __name__ == "__main__":
     debug_enabled = str(os.environ.get("DEBUG", "true")).strip().lower() in {"1", "true", "yes", "on"}
-    should_start_ngrok = not debug_enabled or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
-    if should_start_ngrok:
-        atexit.register(stop_ngrok)
-        start_ngrok(port=5001)
     app.run(debug=debug_enabled, port=5001)

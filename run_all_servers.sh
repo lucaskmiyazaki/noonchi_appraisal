@@ -12,6 +12,7 @@ stop_all() {
     echo ""
     echo "Stopping servers..."
     kill "$PID_BANGLE" "$PID_PROCESSING" "$PID_UI" 2>/dev/null || true
+    [[ -n "$NGROK_PID" ]] && kill "$NGROK_PID" 2>/dev/null || true
     wait "$PID_BANGLE" "$PID_PROCESSING" "$PID_UI" 2>/dev/null || true
     echo "All servers stopped."
 }
@@ -19,6 +20,28 @@ stop_all() {
 trap stop_all INT TERM
 
 cd "$SCRIPT_DIR"
+
+# Kill any lingering processes on our ports
+for PORT in 5001 5002 5007; do
+    PIDS=$(lsof -ti:"$PORT" 2>/dev/null) || true
+    if [[ -n "$PIDS" ]]; then
+        echo "Killing existing process on port $PORT..."
+        kill -9 $PIDS 2>/dev/null || true
+        sleep 1
+    fi
+done
+
+# Start ngrok tunnel pointing at nginx (port 5000) if ngrok is available
+NGROK_PID=""
+if command -v ngrok &>/dev/null; then
+    # Kill any existing ngrok processes first
+    pkill -x ngrok 2>/dev/null || true
+    sleep 0.5
+    NGROK_STATIC_URL="${NGROK_URL:-https://noonchi.ngrok.io}"
+    echo "Starting ngrok tunnel -> port 5000 ($NGROK_STATIC_URL)..."
+    ngrok http 5000 --scheme=http,https --url "$NGROK_STATIC_URL" >"$LOG_DIR/ngrok.log" 2>&1 &
+    NGROK_PID=$!
+fi
 
 echo "Starting bangle_server.py (port 5007)..."
 "$PYTHON" bangle_server.py >"$LOG_DIR/bangle_server.log" 2>&1 &
