@@ -43,7 +43,12 @@ from data_store import (
     load_journal_entry_raw,
     load_meeting_rows,
     load_reflection_db_rows as _load_reflection_db_rows,
+    load_user_rows,
     lookup_meeting_id_by_session_name,
+    lookup_user_by_id,
+    lookup_user_by_username,
+    lookup_user_id_by_username,
+    lookup_username_by_user_id,
     read_data_json_file,
     load_training_rows,
     normalize_done_str,
@@ -51,6 +56,7 @@ from data_store import (
     normalize_training_type_str,
     save_audio_record,
     save_meeting,
+    save_user,
     upsert_journal_entry_raw,
     write_reflection_db_rows,
     write_data_json_file,
@@ -143,6 +149,7 @@ def summarize_audio_record(record):
     last_segment = transcript[-1] if transcript else {}
     return {
         "id": record.get("id"),
+        "userId": record.get("userId", ""),
         "sessionName": record.get("sessionName"),
         "displayName": record.get("displayName") or record.get("sessionName"),
         "safeSessionName": record.get("safeSessionName"),
@@ -236,7 +243,8 @@ def build_reflection_response_row(row, reflection_file):
 
     return {
         "reflection_tree_file": reflection_file,
-        "wearer_agent": row.get("wearer_agent", ""),
+        "user_id": row.get("user_id", ""),
+        "username": lookup_username_by_user_id(row.get("user_id", "")),
         "startms": row.get("startms", ""),
         "endms": row.get("endms", ""),
         "practice": row.get("practice", "null"),
@@ -368,11 +376,13 @@ def _collect_journaling_paths(tree):
 def build_journaling_items_for_user(user_name: str):
     rows, _ = load_reflection_db_rows()
     items = []
-    normalized_user = str(user_name or "").strip().lower()
+    # Accept both username and user_id
+    user = lookup_user_by_username(user_name) or lookup_user_by_id(user_name)
+    target_user_id = user.get("id", "") if user else ""
 
     for row in rows:
-        wearer_agent = str(row.get("wearer_agent", "") or "").strip()
-        if normalized_user and wearer_agent.lower() != normalized_user:
+        row_user_id = str(row.get("user_id", "") or "").strip()
+        if target_user_id and row_user_id != target_user_id:
             continue
 
         reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
@@ -419,7 +429,8 @@ def build_journaling_items_for_user(user_name: str):
                 "node_id": node_id,
                 "session_name": session_name,
                 "display_name": display_name,
-                "wearer_agent": wearer_agent,
+                "user_id": row_user_id,
+                "username": lookup_username_by_user_id(row_user_id),
                 "title": title,
                 "journaling_prompt": node_text,
                 "qa_path": path_pairs,
@@ -433,11 +444,13 @@ def build_journaling_items_for_user(user_name: str):
 def build_practice_items_for_user(user_name: str):
     rows = load_training_rows()
     items = []
-    normalized_user = str(user_name or "").strip().lower()
+    # Accept both username and user_id
+    user = lookup_user_by_username(user_name) or lookup_user_by_id(user_name)
+    target_user_id = user.get("id", "") if user else ""
 
     for row in rows:
-        wearer_agent = str(row.get("wearer_agent", "") or "").strip()
-        if normalized_user and wearer_agent.lower() != normalized_user:
+        row_user_id = str(row.get("user_id", "") or "").strip()
+        if target_user_id and row_user_id != target_user_id:
             continue
 
         session_name = str(row.get("session_name", "") or "").strip()
@@ -493,7 +506,8 @@ def build_practice_items_for_user(user_name: str):
             "session_name": session_name,
             "display_name": display_name,
             "reflection_id": reflection_id,
-            "wearer_agent": wearer_agent,
+            "user_id": row_user_id,
+            "username": lookup_username_by_user_id(row_user_id),
             "type": normalize_training_type_str(row.get("type", "valence")),
             "done": normalize_done_str(row.get("done", "false")) == "true",
             "title": title,
@@ -653,7 +667,8 @@ def delete_intent(intent_filename):
 def save_intent():
     payload = request.get_json() or {}
     session_name = payload.get("session_name", "").strip()
-    wearer_agent = payload.get("wearer_agent", "").strip()
+    # Accept user_id or wearer_agent (legacy) from client
+    user_id = str(payload.get("user_id", "") or payload.get("wearer_agent", "") or "").strip()
     intent_file = payload.get("intent_file", "").strip()
     intent_data = payload.get("intent_data")
     if not session_name or not intent_file or intent_data is None:
@@ -669,11 +684,14 @@ def save_intent():
     meeting_record = find_latest_audio_record(session_name)
     meeting_id = meeting_record.get("id", "") if meeting_record else ""
 
-    # Update intents.csv via centralized data store logic.
+    # Resolve user_id if a username was passed
+    if user_id and not lookup_user_by_id(user_id):
+        user_id = lookup_user_id_by_username(user_id)
+
     upsert_intent_reflection_row(
         session_name=session_name,
         intent_file=intent_file,
-        wearer_agent=wearer_agent,
+        user_id=user_id,
         meeting_id=meeting_id,
     )
 
@@ -834,9 +852,11 @@ def user_interface():
 def user_session_detail(user_name, session_name):
     record = find_latest_audio_record(session_name)
     display_name = (record.get("displayName") if record else None) or session_name
+    current_user_record = lookup_user_by_username(user_name) or {}
     return render_template(
         "session.html",
         current_user=user_name,
+        current_user_record=current_user_record,
         current_session=session_name,
         display_name=display_name,
     )
@@ -860,28 +880,34 @@ def user_intent_detail(session_name):
 
 @app.get("/<user_name>/practice")
 def user_practice(user_name):
-    return render_template("practice.html", current_user=user_name)
+    current_user_record = lookup_user_by_username(user_name) or {}
+    return render_template("practice.html", current_user=user_name, current_user_record=current_user_record)
 
 
 @app.get("/<user_name>/journaling")
 def user_journaling(user_name):
-    return render_template("journaling.html", current_user=user_name)
+    current_user_record = lookup_user_by_username(user_name) or {}
+    return render_template("journaling.html", current_user=user_name, current_user_record=current_user_record)
 
 @app.get("/<user_name>/analysis")
 def user_analysis(user_name):
-    return render_template("analysis.html", current_user=user_name)
+    current_user_record = lookup_user_by_username(user_name) or {}
+    return render_template("analysis.html", current_user=user_name, current_user_record=current_user_record)
 
 @app.get("/<user_name>/nudges")
 def user_nudges(user_name):
-    return render_template("nudge_settings.html", current_user=user_name)
+    current_user_record = lookup_user_by_username(user_name) or {}
+    return render_template("nudge_settings.html", current_user=user_name, current_user_record=current_user_record)
 
 @app.get("/<user_name>/nudges/custom")
 def user_custom_nudge(user_name):
-    return render_template("custom_nudge.html", current_user=user_name)
+    current_user_record = lookup_user_by_username(user_name) or {}
+    return render_template("custom_nudge.html", current_user=user_name, current_user_record=current_user_record)
 
 @app.get("/<user_name>")
 def user_sessions(user_name):
-    return render_template("dashboard.html", current_user=user_name)
+    current_user_record = lookup_user_by_username(user_name) or {}
+    return render_template("dashboard.html", current_user=user_name, current_user_record=current_user_record)
 
 def evaluate_diagram_for_reflection(diagram, session_name="", wearer_agent_override=None):
     """Evaluate one intent diagram and return a reflection_tree dict or None."""
@@ -978,9 +1004,10 @@ def generate_reflections_from_intent(intent_filename):
             getattr(wearer_agent, 'name', None) or getattr(wearer_agent, 'role', None) or wearer_id
             if wearer_agent is not None else wearer_id
         )
+        # Map the diagram agent name to a user_id
+        resolved_user_id = lookup_user_id_by_username(wearer_agent_name) if wearer_agent_name else ""
         rows.append({
-            "wearer_agent": wearer_agent_name,
-            "session_name": session_name,
+            "user_id": resolved_user_id,
             "reflection_tree_file": reflection_filename,
             "startms": reflection_tree.get("startMs", ""),
             "endms": reflection_tree.get("endMs", ""),
@@ -993,7 +1020,8 @@ def generate_reflections_from_intent(intent_filename):
         results.append({
             "reflection_tree": reflection_tree,
             "reflection_tree_file": reflection_filename,
-            "wearer_agent": wearer_agent_name,
+            "user_id": resolved_user_id,
+            "username": wearer_agent_name,
             "startms": diagram.get("startms"),
             "endms": diagram.get("endms"),
         })
@@ -1167,6 +1195,7 @@ def play_graph():
     reflection_filename = None
 
     wearer_agent_name = None
+    resolved_user_id = ""
     if reflection_tree:
         reflection_tree["timestamp"] = timestamp
         reflection_tree["startMs"] = payload.get("startMs")
@@ -1188,12 +1217,12 @@ def play_graph():
             wearer_agent_name = getattr(wearer_agent, 'name', None) or getattr(wearer_agent, 'role', None) or wearer_id
         else:
             wearer_agent_name = wearer_id
+        resolved_user_id = lookup_user_id_by_username(wearer_agent_name) if wearer_agent_name else ""
         latest_audio_record = find_latest_audio_record(reflection_tree.get("session_name", ""))
         rows, fieldnames = load_reflection_db_rows()
 
         rows.append({
-            "wearer_agent": wearer_agent_name,
-            "session_name": reflection_tree.get("session_name", ""),
+            "user_id": resolved_user_id,
             "reflection_tree_file": str(reflection_path.name),
             "startms": reflection_tree.get("startMs", ""),
             "endms": reflection_tree.get("endMs", ""),
@@ -1206,7 +1235,8 @@ def play_graph():
 
     return jsonify({
         "message": "ok",
-        "wearer_agent": wearer_agent_name,
+        "user_id": resolved_user_id if reflection_tree else None,
+        "username": wearer_agent_name,
         "agents": {k: repr(v) for k, v in built["agents"].items()},
         "goals": {k: repr(v) for k, v in built["goals"].items()},
         "blockers": {k: repr(v) for k, v in built["blockers"].items()},
@@ -1293,7 +1323,11 @@ def voice_generate():
     payload = request.get_json(silent=True) or {}
     session_name = str(payload.get("session_name", "") or "").strip()
     reflection_id = str(payload.get("reflection_id", "") or "").strip()
-    wearer_agent = str(payload.get("wearer_agent", "") or "").strip()
+    # Accept user_id or wearer_agent (legacy)
+    user_id = str(payload.get("user_id", "") or payload.get("wearer_agent", "") or "").strip()
+    # Resolve to user_id if a username was passed
+    if user_id and not lookup_user_by_id(user_id):
+        user_id = lookup_user_id_by_username(user_id)
     training_type = str(payload.get("type", "") or "").strip()
     transcription = str(payload.get("transcription", "") or "").strip()
     summary = str(payload.get("summary", "") or "").strip()
@@ -1325,7 +1359,7 @@ def voice_generate():
             emotion=emotion,
             summary=summary,
             reflection_id=reflection_id,
-            wearer_agent=wearer_agent,
+            user_id=user_id,
             training_type=training_type,
             valence=valence,
             arousal=arousal,
@@ -1373,6 +1407,65 @@ def serve_uploaded_audio(filename):
 @app.get("/training_audio/<path:filename>")
 def serve_training_audio(filename):
     return send_from_directory(TRAINING_AUDIO_DIR, filename, conditional=True)
+
+
+# ── User CRUD endpoints ──────────────────────────────────────────────────────
+
+@app.get("/api/users")
+def list_users():
+    rows, _ = load_user_rows()
+    return jsonify({"users": rows})
+
+
+@app.post("/api/users")
+def create_user():
+    payload = request.get_json() or {}
+    username = str(payload.get("username", "") or "").strip()
+    name = str(payload.get("name", "") or "").strip()
+    if not username:
+        return jsonify({"error": "username is required"}), 400
+    if not name:
+        name = username
+    user = {
+        "username": username,
+        "name": name,
+    }
+    # Copy nudge fields if provided
+    from data_store import USERS_CSV_FIELDNAMES
+    for field in USERS_CSV_FIELDNAMES:
+        if field.startswith("nudge_") and field in payload:
+            user[field] = str(payload[field]).lower()
+    try:
+        saved = save_user(user)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 409
+    return jsonify(saved), 201
+
+
+@app.get("/api/users/<username>")
+def get_user(username):
+    user = lookup_user_by_username(username)
+    if user is None:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(user)
+
+
+@app.patch("/api/users/<username>")
+def update_user(username):
+    user = lookup_user_by_username(username)
+    if user is None:
+        return jsonify({"error": "User not found"}), 404
+    payload = request.get_json() or {}
+    from data_store import USERS_CSV_FIELDNAMES
+    allowed = set(USERS_CSV_FIELDNAMES) - {"id"}
+    for field in allowed:
+        if field in payload:
+            user[field] = str(payload[field]).strip() if not isinstance(payload[field], bool) else str(payload[field]).lower()
+    try:
+        saved = save_user(user)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 409
+    return jsonify(saved)
 
 
 @app.get("/api/practice/<user_name>")
@@ -1510,7 +1603,16 @@ def get_latest_audio():
 
 @app.get("/api/audio/sessions")
 def list_audio_sessions():
-    sessions = [summarize_audio_record(record) for record in iter_meetings()]
+    username = request.args.get("username", "").strip()
+    user_id_filter = ""
+    if username:
+        user = lookup_user_by_username(username)
+        user_id_filter = user.get("id", "") if user else ""
+    sessions = [
+        summarize_audio_record(record)
+        for record in iter_meetings()
+        if not user_id_filter or record.get("userId", "") == user_id_filter
+    ]
     return jsonify({"sessions": sessions})
 
 
@@ -1680,36 +1782,44 @@ def list_reflections_for_audio(audio_id):
 # Place the /reflection/<user> endpoint here, after all other route functions
 @app.get("/reflection/<user>")
 def list_reflections_for_user(user):
-    session_names = set()
-    rows, _ = load_reflection_db_rows()
-    for row in rows:
-        session = row.get("session_name", "")
-        if row.get("wearer_agent", "").lower() == user.lower() and session:
-            session_names.add(session)
-    sorted_names = sorted(session_names)
+    # Resolve username -> user record
+    user_record = lookup_user_by_username(user)
+    user_id = user_record.get("id", "") if user_record else ""
+
+    # List meetings from meetings.csv filtered by user_id
+    rows, _ = load_meeting_rows()
     sessions = []
-    for sn in sorted_names:
-        record = find_latest_audio_record(sn)
-        display = (record.get("displayName") if record else None) or sn
-        sessions.append({"sessionName": sn, "displayName": display})
-    return jsonify({"user": user, "session_names": sorted_names, "sessions": sessions})
+    for row in rows:
+        if user_id and row.get("user_id", "") != user_id:
+            continue
+        sn = row.get("session_name", "").strip()
+        display = row.get("display_name", "").strip() or sn
+        if sn:
+            sessions.append({"sessionName": sn, "displayName": display})
+    sessions.sort(key=lambda s: s["sessionName"])
+    return jsonify({"user": user, "session_names": [s["sessionName"] for s in sessions], "sessions": sessions})
 
 
 # Place the /reflection/<user>/<session> endpoint here, after all other route functions
 @app.get("/reflection/<user>/<session>")
 def list_reflection_files_for_user_session(user, session):
+    user_record = lookup_user_by_username(user)
+    user_id = user_record.get("id", "") if user_record else ""
     results = []
     rows, _ = load_reflection_db_rows()
     for row in rows:
-        if row.get("wearer_agent", "").lower() == user.lower() and row.get("session_name", "") == session:
-            results.append({
-                "reflection_tree_file": row.get("reflection_tree_file", ""),
-                "wearer_agent": row.get("wearer_agent", ""),
-                "startms": row.get("startms", ""),
-                "endms": row.get("endms", ""),
-                "practice": row.get("practice", "null"),
-                "audio_filename": row.get("audio_filename", ""),
-            })
+        row_user_id = row.get("user_id", "")
+        row_session = row.get("session_name", "")
+        if (user_id and row_user_id != user_id) or row_session != session:
+            continue
+        results.append({
+            "reflection_tree_file": row.get("reflection_tree_file", ""),
+            "user_id": row_user_id,
+            "username": user,
+            "startms": row.get("startms", ""),
+            "endms": row.get("endms", ""),
+            "practice": row.get("practice", "null"),
+        })
     return jsonify({
         "user": user,
         "session": session,

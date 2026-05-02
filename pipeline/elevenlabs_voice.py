@@ -51,14 +51,14 @@ def _resolve_source_category(emotion: str, valence: float | None, arousal: float
     return category, resolved_emotion
 
 
-def _append_training_csv_row(training_id: str, meeting_id: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, tree_type: str = "", startms: str = "", endms: str = "") -> None:
+def _append_training_csv_row(training_id: str, meeting_id: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, user_id: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, tree_type: str = "", startms: str = "", endms: str = "") -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     existing_rows = load_training_rows()
     existing_rows.append({
         "training_id": training_id,
         "meeting_id": meeting_id,
         "reflection_id": reflection_id,
-        "wearer_agent": wearer_agent,
+        "user_id": user_id,
         "type": normalize_training_type_str(training_type),
         "valence": "" if valence is None else str(valence),
         "arousal": "" if arousal is None else str(arousal),
@@ -84,7 +84,7 @@ def generate_tagged_voice(
     output_dir: str | None = None,
     summary: str = "",
     reflection_id: str = "",
-    wearer_agent: str = "",
+    user_id: str = "",
     training_type: str = "valence",
     valence: float | None = None,
     arousal: float | None = None,
@@ -165,7 +165,7 @@ def generate_tagged_voice(
 
     clean_summary = str(summary or "").strip()
     clean_reflection_id = str(reflection_id or "").strip()
-    clean_wearer_agent = str(wearer_agent or "").strip()
+    clean_user_id = str(user_id or "").strip()
 
     # Read reflection tree metadata once so listing never needs to open JSON
     _tree_type = ""
@@ -188,7 +188,7 @@ def generate_tagged_voice(
         summary=clean_summary,
         reflection_id=clean_reflection_id,
         suggestions=list(suggestions),
-        wearer_agent=clean_wearer_agent,
+        user_id=clean_user_id,
         training_type=clean_training_type,
         valence=valence,
         arousal=arousal,
@@ -202,7 +202,7 @@ def generate_tagged_voice(
         "training_id": training_id,
         "meeting_id": clean_meeting_id,
         "reflection_id": clean_reflection_id,
-        "wearer_agent": clean_wearer_agent,
+        "user_id": clean_user_id,
         "type": clean_training_type,
         "emotion": clean_emotion,
         "category": category,

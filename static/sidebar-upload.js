@@ -472,7 +472,11 @@ async function loadReflectionTabsForAudio(audioId, sessionName) {
 
 async function loadSessions() {
   try {
-    const response = await fetch("/api/audio/sessions");
+    const currentUser = document.body?.dataset?.currentUser || '';
+    const url = currentUser
+      ? `/api/audio/sessions?username=${encodeURIComponent(currentUser)}`
+      : '/api/audio/sessions';
+    const response = await fetch(url);
     const data = await response.json();
 
     if (!response.ok) {

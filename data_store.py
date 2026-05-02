@@ -23,9 +23,21 @@ INTENTS_CSV_PATH = DATA_DIR / "intents.csv"
 JOURNAL_ENTRIES_CSV_PATH = DATA_DIR / "journal_entries.csv"
 MEETINGS_CSV_PATH = DATA_DIR / "meetings.csv"
 TRAINING_CSV_PATH = DATA_DIR / "training.csv"
+USERS_CSV_PATH = DATA_DIR / "users.csv"
+
+USERS_CSV_FIELDNAMES = [
+    "id",
+    "username",
+    "name",
+    "nudge_tone_difference",
+    "nudge_elevation",
+    "nudge_unclear_intent",
+    "nudge_excellent_tone",
+    "nudge_need_for_clarification",
+]
 
 REFLECTION_DB_FIELDNAMES = [
-    "wearer_agent",
+    "user_id",
     "reflection_tree_file",
     "startms",
     "endms",
@@ -38,8 +50,8 @@ REFLECTION_DB_FIELDNAMES = [
 TRAINING_CSV_FIELDNAMES = [
     "training_id",
     "meeting_id",
+    "user_id",
     "reflection_id",
-    "wearer_agent",
     "type",
     "valence",
     "arousal",
@@ -56,7 +68,7 @@ TRAINING_CSV_FIELDNAMES = [
 
 INTENTS_CSV_FIELDNAMES = [
     "intent_filename",
-    "wearer_agent",
+    "user_id",
     "startms",
     "endms",
     "meeting_id",
@@ -69,6 +81,7 @@ JOURNAL_ENTRIES_CSV_FIELDNAMES = [
 
 MEETINGS_CSV_FIELDNAMES = [
     "id",
+    "user_id",
     "session_name",
     "display_name",
     "safe_session_name",
@@ -100,6 +113,34 @@ def ensure_data_layout() -> None:
     migrate_audio_records_to_csv()
     migrate_audio_filename_to_meeting_id()
     migrate_training_to_meeting_id()
+    migrate_wearer_agent_to_user_id()
+    migrate_meeting_user_id()
+
+
+def migrate_meeting_user_id() -> None:
+    """One-time migration: populate user_id in meetings.csv by parsing the
+    '- Username' suffix from display_name (e.g. 'Sexism - Karlotta' → 'karlotta')."""
+    if not MEETINGS_CSV_PATH.exists():
+        return
+    rows, fieldnames = load_meeting_rows()
+    changed = False
+    for row in rows:
+        if str(row.get("user_id", "")).strip():
+            continue
+        display_name = str(row.get("display_name", "") or "").strip()
+        # Convention: "<session_name> - <username>"
+        if " - " in display_name:
+            suffix = display_name.rsplit(" - ", 1)[-1].strip()
+            if suffix:
+                user_id = lookup_user_id_by_username(suffix)
+                if not user_id:
+                    # Try lowercase
+                    user_id = lookup_user_id_by_username(suffix.lower())
+                if user_id:
+                    row["user_id"] = user_id
+                    changed = True
+    if changed:
+        write_meeting_rows(rows, fieldnames)
 
 
 def reflection_csv_path() -> Path:
@@ -220,6 +261,7 @@ def save_meeting(record) -> None:
     last_segment = transcript[-1] if transcript else {}
     meeting_row = {
         "id": record_id,
+        "user_id": record.get("userId", record.get("user_id", "")),
         "session_name": record.get("sessionName", ""),
         "display_name": record.get("displayName", ""),
         "safe_session_name": record.get("safeSessionName", ""),
@@ -307,6 +349,7 @@ def iter_meetings():
         # Build record from CSV + loaded transcript
         record = {
             "id": record_id,
+            "userId": row.get("user_id", ""),
             "sessionName": row.get("session_name", ""),
             "displayName": row.get("display_name", ""),
             "safeSessionName": row.get("safe_session_name", ""),
@@ -363,7 +406,7 @@ def normalize_training_type_str(value) -> str:
 def reflection_db_fieldnames(fieldnames=None):
     ordered = []
     for name in list(fieldnames or []) + REFLECTION_DB_FIELDNAMES:
-        if name in {"intent_filename", "journal_entry", "audio_filename", "session_name"}:
+        if name in {"intent_filename", "journal_entry", "audio_filename", "session_name", "wearer_agent"}:
             continue
         if name and name not in ordered:
             ordered.append(name)
@@ -373,7 +416,7 @@ def reflection_db_fieldnames(fieldnames=None):
 def intents_fieldnames(fieldnames=None):
     ordered = []
     for name in list(fieldnames or []) + INTENTS_CSV_FIELDNAMES:
-        if name in {"audio_filename", "session_name"}:
+        if name in {"audio_filename", "session_name", "wearer_agent"}:
             continue
         if name and name not in ordered:
             ordered.append(name)
@@ -399,6 +442,9 @@ def load_reflection_db_rows():
     for row in raw_rows:
         normalized_row = {field: row.get(field, "") for field in fieldnames}
         normalized_row["practice"] = normalize_practice_value(normalized_row.get("practice"))
+        # Migrate legacy wearer_agent -> user_id (FK to users.csv)
+        if not str(normalized_row.get("user_id", "")).strip() and str(row.get("wearer_agent", "")).strip():
+            normalized_row["user_id"] = lookup_user_id_by_username(row.get("wearer_agent", ""))
         # Derive session_name from meetings (authoritative)
         meeting_id = str(normalized_row.get("meeting_id", "") or "").strip()
         if meeting_id:
@@ -421,6 +467,9 @@ def load_intent_rows():
     rows = []
     for row in raw_rows:
         normalized = {field: str(row.get(field, "") or "").strip() for field in fieldnames}
+        # Migrate legacy wearer_agent -> user_id (FK to users.csv)
+        if not normalized.get("user_id") and str(row.get("wearer_agent", "")).strip():
+            normalized["user_id"] = lookup_user_id_by_username(row.get("wearer_agent", ""))
         # Derive session_name from meetings (authoritative)
         meeting_id = normalized.get("meeting_id", "")
         if meeting_id:
@@ -541,6 +590,165 @@ def lookup_session_name_by_meeting_id(meeting_id: str) -> str:
         if row.get("id", "").strip() == target:
             return row.get("session_name", "")
     return ""
+
+
+# ---------------------------------------------------------------------------
+# Users
+# ---------------------------------------------------------------------------
+
+def load_user_rows():
+    if not USERS_CSV_PATH.exists():
+        return [], list(USERS_CSV_FIELDNAMES)
+    raw_rows, raw_fieldnames = read_csv_rows(USERS_CSV_PATH)
+    fieldnames = _users_fieldnames(raw_fieldnames)
+    rows = []
+    for row in raw_rows:
+        rows.append({field: str(row.get(field, "") or "").strip() for field in fieldnames})
+    return rows, fieldnames
+
+
+def _users_fieldnames(fieldnames=None):
+    ordered = []
+    for name in list(fieldnames or []) + USERS_CSV_FIELDNAMES:
+        if name and name not in ordered:
+            ordered.append(name)
+    return ordered
+
+
+def write_user_rows(rows, fieldnames=None) -> None:
+    resolved = _users_fieldnames(fieldnames)
+    normalized = []
+    for row in rows:
+        normalized.append({field: str(row.get(field, "") or "").strip() for field in resolved})
+    write_csv_rows(USERS_CSV_PATH, normalized, resolved)
+
+
+def lookup_user_by_id(user_id: str) -> dict | None:
+    target = str(user_id or "").strip()
+    if not target:
+        return None
+    rows, _ = load_user_rows()
+    for row in rows:
+        if row.get("id", "").strip() == target:
+            return row
+    return None
+
+
+def lookup_user_by_username(username: str) -> dict | None:
+    target = str(username or "").strip().lower()
+    if not target:
+        return None
+    rows, _ = load_user_rows()
+    for row in rows:
+        if row.get("username", "").strip().lower() == target:
+            return row
+    return None
+
+
+def lookup_user_id_by_username(username: str) -> str:
+    row = lookup_user_by_username(username)
+    return row.get("id", "") if row else ""
+
+
+def lookup_username_by_user_id(user_id: str) -> str:
+    row = lookup_user_by_id(user_id)
+    return row.get("username", "") if row else ""
+
+
+def save_user(user: dict) -> dict:
+    """Create or update a user row. Generates an id if missing."""
+    import uuid as _uuid
+    rows, fieldnames = load_user_rows()
+    user_id = str(user.get("id", "") or "").strip()
+    if not user_id:
+        user_id = _uuid.uuid4().hex
+        user = dict(user, id=user_id)
+    # Validate username uniqueness
+    username = str(user.get("username", "") or "").strip().lower()
+    if not username:
+        raise ValueError("username is required")
+    for row in rows:
+        if row.get("id") != user_id and row.get("username", "").strip().lower() == username:
+            raise ValueError(f"username '{username}' is already taken")
+    rows = [r for r in rows if r.get("id") != user_id]
+    rows.append({field: str(user.get(field, "") or "").strip() for field in fieldnames})
+    write_user_rows(rows, fieldnames)
+    return lookup_user_by_id(user_id) or user
+
+
+def migrate_wearer_agent_to_user_id() -> None:
+    """One-time migration: create a user row for each unique wearer_agent value and
+    replace wearer_agent with user_id in reflections, intents, and training rows."""
+    import uuid as _uuid
+
+    # Collect all unique wearer_agent names from existing CSVs
+    wearer_names: set[str] = set()
+
+    csv_path = reflection_csv_path()
+    if csv_path.exists():
+        raw_rows, _ = read_csv_rows(csv_path)
+        for row in raw_rows:
+            wa = str(row.get("wearer_agent", "") or "").strip()
+            if wa:
+                wearer_names.add(wa)
+
+    if INTENTS_CSV_PATH.exists():
+        raw_rows, _ = read_csv_rows(INTENTS_CSV_PATH)
+        for row in raw_rows:
+            wa = str(row.get("wearer_agent", "") or "").strip()
+            if wa:
+                wearer_names.add(wa)
+
+    if TRAINING_CSV_PATH.exists():
+        raw_rows, _ = read_csv_rows(TRAINING_CSV_PATH)
+        for row in raw_rows:
+            wa = str(row.get("wearer_agent", "") or "").strip()
+            if wa:
+                wearer_names.add(wa)
+
+    if not wearer_names:
+        return
+
+    # Create user rows for any wearer_agent not yet in users.csv
+    user_rows, user_fieldnames = load_user_rows()
+    existing_usernames = {r.get("username", "").strip().lower() for r in user_rows}
+    for name in sorted(wearer_names):
+        slug = name.strip().lower()
+        if slug not in existing_usernames:
+            user_rows.append({
+                "id": _uuid.uuid4().hex,
+                "username": slug,
+                "name": name,
+                "nudge_tone_difference": "true",
+                "nudge_elevation": "true",
+                "nudge_unclear_intent": "false",
+                "nudge_excellent_tone": "false",
+                "nudge_need_for_clarification": "true",
+            })
+            existing_usernames.add(slug)
+    write_user_rows(user_rows, user_fieldnames)
+
+    # Reload to get ids
+    user_rows, _ = load_user_rows()
+    by_name = {r.get("username", "").strip().lower(): r.get("id", "") for r in user_rows}
+
+    def _replace_in_csv(path, read_fn, write_fn):
+        if not path.exists():
+            return
+        raw_rows, _ = read_csv_rows(path)
+        changed = False
+        for row in raw_rows:
+            if not str(row.get("user_id", "")).strip():
+                wa = str(row.get("wearer_agent", "") or "").strip().lower()
+                if wa and wa in by_name:
+                    row["user_id"] = by_name[wa]
+                    changed = True
+        if changed:
+            write_fn(list(raw_rows))
+
+    _replace_in_csv(csv_path, None, lambda rows: write_reflection_db_rows(rows))
+    _replace_in_csv(INTENTS_CSV_PATH, None, lambda rows: write_intent_rows(rows))
+    _replace_in_csv(TRAINING_CSV_PATH, None, lambda rows: write_training_rows(rows))
 
 
 def load_journal_entry_raw(reflection_tree_file: str) -> str:
@@ -777,7 +985,7 @@ def migrate_legacy_reflection_embedded_tables() -> None:
         if intent_filename and intent_filename not in intents_by_filename:
             intent_rows.append({
                 "intent_filename": intent_filename,
-                "wearer_agent": str(row.get("wearer_agent", "") or "").strip(),
+                "user_id": str(row.get("user_id", "") or row.get("wearer_agent", "") or "").strip(),
                 "startms": str(row.get("startms", "") or "").strip(),
                 "endms": str(row.get("endms", "") or "").strip(),
                 "meeting_id": str(row.get("meeting_id", "") or row.get("audio_filename", "") or "").strip(),
@@ -814,7 +1022,7 @@ def migrate_legacy_reflection_embedded_tables() -> None:
     write_reflection_db_rows(migrated_rows, fieldnames)
 
 
-def upsert_intent_reflection_row(session_name: str, intent_file: str, wearer_agent: str = "", meeting_id: str = "") -> None:
+def upsert_intent_reflection_row(session_name: str, intent_file: str, user_id: str = "", meeting_id: str = "") -> None:
     intent_rows, fieldnames = load_intent_rows()
     safe_intent = str(intent_file or "").strip()
     if not safe_intent:
@@ -825,7 +1033,7 @@ def upsert_intent_reflection_row(session_name: str, intent_file: str, wearer_age
     ]
     intent_rows.append({
         "intent_filename": safe_intent,
-        "wearer_agent": str(wearer_agent or "").strip(),
+        "user_id": str(user_id or "").strip(),
         "startms": "",
         "endms": "",
         "meeting_id": str(meeting_id or "").strip(),
@@ -848,12 +1056,16 @@ def load_training_rows():
                 meeting_id = lookup_meeting_id_by_session_name(legacy_session)
         # Derive session_name from meetings (authoritative)
         session_name = lookup_session_name_by_meeting_id(meeting_id) if meeting_id else ""
+        # Migrate legacy wearer_agent -> user_id
+        user_id = str(row.get("user_id", "") or "").strip()
+        if not user_id and str(row.get("wearer_agent", "")).strip():
+            user_id = lookup_user_id_by_username(row.get("wearer_agent", ""))
         normalized_rows.append({
             "training_id": str(row.get("training_id", "") or "").strip(),
             "meeting_id": meeting_id,
+            "user_id": user_id,
             "session_name": session_name,
             "reflection_id": str(row.get("reflection_id", "") or "").strip(),
-            "wearer_agent": str(row.get("wearer_agent", "") or "").strip(),
             "type": normalize_training_type_str(row.get("type", "valence")),
             "valence": str(row.get("valence", "") or "").strip(),
             "arousal": str(row.get("arousal", "") or "").strip(),
@@ -876,8 +1088,8 @@ def write_training_rows(rows) -> None:
         normalized_rows.append({
             "training_id": str(row.get("training_id", "") or "").strip(),
             "meeting_id": str(row.get("meeting_id", "") or "").strip(),
+            "user_id": str(row.get("user_id", "") or "").strip(),
             "reflection_id": str(row.get("reflection_id", "") or "").strip(),
-            "wearer_agent": str(row.get("wearer_agent", "") or "").strip(),
             "type": normalize_training_type_str(row.get("type", "valence")),
             "valence": str(row.get("valence", "") or "").strip(),
             "arousal": str(row.get("arousal", "") or "").strip(),
