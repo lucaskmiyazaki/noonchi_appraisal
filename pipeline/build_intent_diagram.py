@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from data_store import read_json, upsert_intent_reflection_row, write_json
+from data_store import read_json, upsert_intent_reflection_row, write_data_json_file
 
 
 def _resolve_role(speaker, wearer, participants):
@@ -106,12 +106,12 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
             if k in data:
                 intent[k] = data[k]
 
-    intent_path = Path(json_path).with_suffix(".intent.json")
-    write_json(intent_path, intent, ensure_ascii=False)
+    intent_filename = f"{Path(json_path).stem}.intent.json"
+    intent_path = write_data_json_file(intent_filename, intent, ensure_ascii=False)
     print(f"Wrote intent file: {intent_path}")
 
-    upsert_intent_reflection_row(intent.get("sessionName", ""), intent_path.name)
-    print(f"Added {intent_path.name} to db.csv")
+    upsert_intent_reflection_row(intent.get("sessionName", ""), intent_filename)
+    print(f"Added {intent_filename} to intents.csv")
 
 
 if __name__ == "__main__":

@@ -29,11 +29,15 @@ from data_store import (
     audio_record_path,
     delete_audio_record,
     delete_data_json_file,
+    delete_intent_row,
+    delete_journal_entry_row,
     ensure_data_layout,
     find_data_recording_file,
     iter_audio_records,
     is_json_filename,
     load_audio_record,
+    load_intent_rows,
+    load_journal_entry_raw,
     load_reflection_db_rows as _load_reflection_db_rows,
     read_data_json_file,
     load_training_rows,
@@ -41,6 +45,7 @@ from data_store import (
     normalize_practice_value,
     normalize_training_type_str,
     save_audio_record,
+    upsert_journal_entry_raw,
     write_reflection_db_rows,
     write_data_json_file,
     write_training_rows,
@@ -390,7 +395,7 @@ def build_journaling_items_for_user(user_name: str):
         session_name = str(row.get("session_name", "") or "").strip()
         record = find_latest_audio_record(session_name) if session_name else None
         display_name = (record.get("displayName") if record else None) or session_name or "Untitled session"
-        entry_map = _parse_journal_entry_map(row.get("journal_entry", ""))
+        entry_map = _parse_journal_entry_map(load_journal_entry_raw(reflection_file))
         fallback_entry = entry_map.get("_single", "")
 
         for index, journaling_path in enumerate(journaling_paths):
@@ -629,19 +634,11 @@ def delete_intent(intent_filename):
     if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid intent filename."}), 400
 
-    rows, fieldnames = load_reflection_db_rows()
-    remaining_rows = []
-    deleted_row = None
-    for row in rows:
-        if row.get("intent_filename", "") == safe_filename and deleted_row is None:
-            deleted_row = row
-            continue
-        remaining_rows.append(row)
-    write_reflection_db_rows(remaining_rows, fieldnames)
+    deleted_row = delete_intent_row(safe_filename)
 
     file_deleted = delete_data_json_file(safe_filename)
 
-    if deleted_row is None and not file_deleted:
+    if not deleted_row and not file_deleted:
         return jsonify({"error": "Intent not found."}), 404
 
     return jsonify({
@@ -665,7 +662,7 @@ def save_intent():
     except Exception as e:
         return jsonify({"error": f"Failed to save intent file: {e}"}), 500
 
-    # Update db.csv via centralized data store logic.
+    # Update reflections.csv via centralized data store logic.
     upsert_intent_reflection_row(
         session_name=session_name,
         intent_file=intent_file,
@@ -943,11 +940,6 @@ def generate_reflections_from_intent(intent_filename):
     results = []
 
     rows, fieldnames = load_reflection_db_rows()
-    if "intent_filename" not in fieldnames:
-        fieldnames.append("intent_filename")
-        for row in rows:
-            if "intent_filename" not in row:
-                row["intent_filename"] = ""
 
     latest_audio_record = find_latest_audio_record(session_name)
 
@@ -985,7 +977,6 @@ def generate_reflections_from_intent(intent_filename):
             "endms": reflection_tree.get("endMs", ""),
             "practice": "null",
             "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
-            "intent_filename": "",
             "tree_type": str(reflection_tree.get("type", "") or ""),
             "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })
@@ -1199,7 +1190,6 @@ def play_graph():
             "endms": reflection_tree.get("endMs", ""),
             "practice": "null",
             "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
-            "intent_filename": "",
             "tree_type": str(reflection_tree.get("type", "") or ""),
             "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })
@@ -1244,14 +1234,7 @@ def delete_reflection(reflection_filename):
     write_reflection_db_rows(remaining_rows, fieldnames)
 
     file_deleted = delete_data_json_file(safe_filename)
-
-    # Delete intent file if it exists and is not referenced by any other row
-    if deleted_row is not None:
-        intent_filename = deleted_row.get("intent_filename")
-        if intent_filename:
-            still_used = any(r.get("intent_filename") == intent_filename for r in remaining_rows)
-            if not still_used:
-                delete_data_json_file(intent_filename)
+    delete_journal_entry_row(safe_filename)
 
     if deleted_row is None and not file_deleted:
         return jsonify({"error": "Reflection not found."}), 404
@@ -1405,26 +1388,17 @@ def update_journal_entry(reflection_filename, node_id):
     payload = request.get_json(silent=True) or {}
     journal_entry = str(payload.get("journal_entry", "") or "").strip()
 
-    rows, fieldnames = load_reflection_db_rows()
-    if "journal_entry" not in fieldnames:
-        fieldnames.append("journal_entry")
-        for row in rows:
-            row.setdefault("journal_entry", "")
-
-    updated_row = None
-    for row in rows:
-        if str(row.get("reflection_tree_file", "") or "").strip() != safe_filename:
-            continue
-        entry_map = _parse_journal_entry_map(row.get("journal_entry", ""))
-        entry_map[safe_node_id] = journal_entry
-        row["journal_entry"] = _serialize_journal_entry_map(entry_map)
-        updated_row = row
-        break
-
-    if updated_row is None:
+    rows, _ = load_reflection_db_rows()
+    row_exists = any(
+        str(row.get("reflection_tree_file", "") or "").strip() == safe_filename
+        for row in rows
+    )
+    if not row_exists:
         return jsonify({"error": "Reflection row not found."}), 404
 
-    write_reflection_db_rows(rows, fieldnames)
+    entry_map = _parse_journal_entry_map(load_journal_entry_raw(safe_filename))
+    entry_map[safe_node_id] = journal_entry
+    upsert_journal_entry_raw(safe_filename, _serialize_journal_entry_map(entry_map))
     return jsonify({
         "reflection_tree_file": safe_filename,
         "node_id": safe_node_id,
@@ -1555,7 +1529,7 @@ def list_session_reflection_trees(session_name):
 @app.get("/api/audio/session/<session_name>/intents")
 def list_session_intent_files(session_name):
     intents = []
-    rows, _ = load_reflection_db_rows()
+    rows, _ = load_intent_rows()
     for row in rows:
         if row.get("session_name", "") != session_name:
             continue
@@ -1638,6 +1612,7 @@ def delete_audio(audio_id):
             reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
             if reflection_file:
                 delete_data_json_file(reflection_file)
+                delete_journal_entry_row(reflection_file)
                 deleted_reflection_files.append(reflection_file)
             continue
         remaining_rows.append(row)
