@@ -667,6 +667,12 @@ def save_user(user: dict) -> dict:
     username = str(user.get("username", "") or "").strip().lower()
     if not username:
         raise ValueError("username is required")
+
+    # Default all nudge flags to false for newly created users.
+    for field in fieldnames:
+        if field.startswith("nudge_") and str(user.get(field, "") or "").strip() == "":
+            user[field] = "false"
+
     for row in rows:
         if row.get("id") != user_id and row.get("username", "").strip().lower() == username:
             raise ValueError(f"username '{username}' is already taken")
@@ -719,11 +725,11 @@ def migrate_wearer_agent_to_user_id() -> None:
                 "id": _uuid.uuid4().hex,
                 "username": slug,
                 "name": name,
-                "nudge_tone_difference": "true",
-                "nudge_elevation": "true",
+                "nudge_tone_difference": "false",
+                "nudge_elevation": "false",
                 "nudge_unclear_intent": "false",
                 "nudge_excellent_tone": "false",
-                "nudge_need_for_clarification": "true",
+                "nudge_need_for_clarification": "false",
             })
             existing_usernames.add(slug)
     write_user_rows(user_rows, user_fieldnames)

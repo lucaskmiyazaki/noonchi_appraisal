@@ -10,6 +10,7 @@ const sessionList = document.getElementById("sessionList");
 const transcriptList = document.getElementById("transcriptList");
 const sessionNameInput = document.getElementById("sessionNameInput");
 const saveSessionNameBtn = document.getElementById("saveSessionNameBtn");
+const sessionUserInput = document.getElementById("sessionUserInput");
 const emotionSessionBtn = document.getElementById("emotionSessionBtn");
 const intentSessionBtn = document.getElementById("intentSessionBtn");
 
@@ -75,6 +76,11 @@ function syncSessionNameInput(value) {
   }
 
   sessionNameInput.value = value || "audio";
+}
+
+function syncSessionUserInput(value) {
+  if (!sessionUserInput) return;
+  sessionUserInput.value = value || '';
 }
 
 function setSidebarView(view) {
@@ -151,7 +157,7 @@ function renderSessionList() {
     const metaParts = [session.originalName, `${session.segmentCount || 0} transcript boxes`, formatSessionTimestamp(session.uploadedAt)].filter(Boolean);
     item.innerHTML = `
       <button class="session-item-main" type="button">
-        <span class="session-item-title">${escapeHtml(session.displayName || session.sessionName || session.originalName || "Untitled session")}</span>
+        <span class="session-item-title">${escapeHtml((session.displayName || session.sessionName || session.originalName || "Untitled session") + (session.username ? ' — ' + session.username : ''))}</span>
         <span class="session-item-meta">${escapeHtml(metaParts.join(" • "))}</span>
       </button>
       <button class="session-item-delete" type="button" aria-label="Delete recording" title="Delete recording">
@@ -234,6 +240,7 @@ function setLoadedAudio(data) {
   if (data?.sessionName) {
     syncSessionNameInput(data.displayName || data.sessionName);
   }
+  syncSessionUserInput(data?.username || '');
 
   if (!data) {
     renderSessionList();
@@ -624,6 +631,10 @@ export function getSessionName() {
   return audioData?.sessionName || getCurrentSessionName();
 }
 
+export function getAudioUserId() {
+  return audioData?.userId || '';
+}
+
 if (saveSessionNameBtn) {
   saveSessionNameBtn.addEventListener("click", async () => {
     if (!audioData?.id) {
@@ -637,15 +648,41 @@ if (saveSessionNameBtn) {
     }
     saveSessionNameBtn.disabled = true;
     try {
+      const newUsername = sessionUserInput?.value.trim();
+      let userId = audioData.userId || '';
+
+      if (newUsername) {
+        // Resolve or create user by username
+        const userRes = await fetch(`/api/users/${encodeURIComponent(newUsername)}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          userId = userData.id || '';
+        } else {
+          const createRes = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: newUsername, name: newUsername }),
+          });
+          if (createRes.ok) {
+            const created = await createRes.json();
+            userId = created.id || '';
+          }
+        }
+      }
+
+      const patchBody = { displayName: newName };
+      if (userId) patchBody.userId = userId;
       const res = await fetch(`/api/audio/${encodeURIComponent(audioData.id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: newName }),
+        body: JSON.stringify(patchBody),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       audioData.displayName = data.displayName;
+      if (data.userId) { audioData.userId = data.userId; audioData.username = newUsername; }
       syncSessionNameInput(data.displayName);
+      if (newUsername) syncSessionUserInput(newUsername);
       syncSessionNavBtns();
       await loadSessions();
       setTranscriptStatus("Session name saved.");

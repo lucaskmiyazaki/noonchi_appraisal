@@ -145,23 +145,23 @@
             <div class="dashboard-card-body">
               <div id="nudgeCount" class="dashboard-nudge-count">0</div>
               <div class="dashboard-nudge-list">
-                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle data-nudge-key="nudge_tone_difference" aria-pressed="false">
                   <span>Tone Difference</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
-                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle data-nudge-key="nudge_elevation" aria-pressed="false">
                   <span>Elevation</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
-                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle data-nudge-key="nudge_unclear_intent" aria-pressed="false">
                   <span>Unclear Intent</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
-                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle data-nudge-key="nudge_excellent_tone" aria-pressed="false">
                   <span>Excellent Tone</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
-                <button class="dashboard-nudge-item" type="button" data-nudge-toggle aria-pressed="false">
+                <button class="dashboard-nudge-item" type="button" data-nudge-toggle data-nudge-key="nudge_need_for_clarification" aria-pressed="false">
                   <span>Need for Clarification</span>
                   <span class="dashboard-switch is-off"></span>
                 </button>
@@ -234,6 +234,29 @@
       nudgeCount.textContent = String(activeCount);
     }
 
+    async function loadNudges() {
+      const user = currentUser.trim();
+      if (!user) {
+        return;
+      }
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(user)}`);
+        if (!response.ok) {
+          return;
+        }
+        const userData = await response.json();
+        nudgeToggleButtons.forEach((button) => {
+          const nudgeKey = button.dataset.nudgeKey;
+          const isOn = nudgeKey ? String(userData?.[nudgeKey] || 'false') === 'true' : false;
+          setSwitchState(button, isOn);
+        });
+      } catch (error) {
+        console.error('Failed to load nudge settings', error);
+      } finally {
+        syncNudgeCount();
+      }
+    }
+
     practiceToneCard?.addEventListener('click', () => {
       const user = currentUser.trim();
       if (!user) {
@@ -264,9 +287,28 @@
 
     nudgeToggleButtons.forEach((button) => {
       setSwitchState(button, false);
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const isActive = button.getAttribute('aria-pressed') === 'true';
-        setSwitchState(button, !isActive);
+        const nextState = !isActive;
+        setSwitchState(button, nextState);
+        const nudgeKey = button.dataset.nudgeKey;
+        const user = currentUser.trim();
+        if (nudgeKey && user) {
+          try {
+            const response = await fetch(`/api/users/${encodeURIComponent(user)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ [nudgeKey]: String(nextState) }),
+            });
+            if (!response.ok) {
+              throw new Error('Failed to save nudge state');
+            }
+          } catch (error) {
+            // Revert if persistence fails.
+            setSwitchState(button, isActive);
+            console.error(error);
+          }
+        }
         syncNudgeCount();
       });
     });
@@ -299,7 +341,7 @@
         upcomingOpen.textContent = 'Empty';
       }
 
-      syncNudgeCount();
+      await loadNudges();
       emotionToday.style.height = '28px';
     }
 

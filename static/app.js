@@ -6,6 +6,7 @@ import { serializeGraph } from './serialize.js';
 import { getActiveBoard } from './board.js';
 import { initTabs, createReflectionTab, syncIntentTabs } from './tabs.js';
 import { clearSelectedTranscriptSegments, getSelectedTimeRange, getSessionName } from './sidebar-upload.js';
+import { getAudioUserId } from './sidebar-upload.js';
 
 const toolbarActions = document.getElementById('toolbarActions');
 const reflectionMeta = document.getElementById('reflectionMeta');
@@ -132,7 +133,7 @@ playBtn.onclick = async () => {
     if (result?.reflection_tree) {
       createReflectionTab(result.reflection_tree, {
         ...(timeRange || {}),
-        wearerName: result.wearer_agent || '',
+        wearerName: result.username || '',
         reflectionFile: result.reflection_tree_file || '',
       });
       clearSelectedTranscriptSegments();
@@ -148,7 +149,7 @@ saveIntentBtn.onclick = async () => {
   if (!board || (board.kind !== 'graph' && board.kind !== 'intent')) return;
   const intentData = serializeGraph();
   const sessionName = getSessionName();
-  const wearerAgent = board.metadata?.wearerName || '';
+  const userId = getAudioUserId() || board.metadata?.userId || '';
   const existingFile = board.metadata?.intentFile || '';
 
   try {
@@ -171,7 +172,7 @@ saveIntentBtn.onclick = async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_name: sessionName,
-          wearer_agent: wearerAgent,
+          user_id: userId,
           intent_file: intentFile,
           intent_data: intentData,
         }),

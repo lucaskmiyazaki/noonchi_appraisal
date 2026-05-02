@@ -346,7 +346,7 @@
                 <h2 class="nudge-card-title">Tone Difference</h2>
                 <p class="nudge-card-copy">Get notified when your tone lands sharper or harsher than the context suggests.</p>
               </div>
-              <button class="nudge-toggle{% if current_user_record.get('nudge_tone_difference', 'true') == 'false' %} is-off{% endif %}" type="button" data-nudge-key="nudge_tone_difference" aria-label="Toggle Tone Difference" aria-pressed="{{ 'false' if current_user_record.get('nudge_tone_difference', 'true') == 'false' else 'true' }}"></button>
+              <button class="nudge-toggle{{ ' is-off' if current_user_record.get('nudge_tone_difference', 'false') in ('false', '') else '' }}" type="button" data-nudge-key="nudge_tone_difference" aria-label="Toggle Tone Difference" aria-pressed="{{ 'false' if current_user_record.get('nudge_tone_difference', 'false') in ('false', '') else 'true' }}"></button>
             </div>
             <div class="nudge-card-body">
               <div class="nudge-label">Sensitivity</div>
@@ -364,7 +364,7 @@
                 <h2 class="nudge-card-title">Elevation</h2>
                 <p class="nudge-card-copy">Get notified when your emotional intensity rises enough to affect how your message lands.</p>
               </div>
-              <button class="nudge-toggle{% if current_user_record.get('nudge_elevation', 'true') == 'false' %} is-off{% endif %}" type="button" data-nudge-key="nudge_elevation" aria-label="Toggle Elevation" aria-pressed="{{ 'false' if current_user_record.get('nudge_elevation', 'true') == 'false' else 'true' }}"></button>
+              <button class="nudge-toggle{{ ' is-off' if current_user_record.get('nudge_elevation', 'false') in ('false', '') else '' }}" type="button" data-nudge-key="nudge_elevation" aria-label="Toggle Elevation" aria-pressed="{{ 'false' if current_user_record.get('nudge_elevation', 'false') in ('false', '') else 'true' }}"></button>
             </div>
             <div class="nudge-card-body">
               <div class="nudge-label">Sensitivity</div>
@@ -418,7 +418,7 @@
                 <h2 class="nudge-card-title">Need for Clarification</h2>
                 <p class="nudge-card-copy">Get notified when a participant sounds concerned or upset and it is not yet clear what needs clarification.</p>
               </div>
-              <button class="nudge-toggle{% if current_user_record.get('nudge_need_for_clarification', 'true') == 'false' %} is-off{% endif %}" type="button" data-nudge-key="nudge_need_for_clarification" aria-label="Toggle Need for Clarification" aria-pressed="{{ 'false' if current_user_record.get('nudge_need_for_clarification', 'true') == 'false' else 'true' }}"></button>
+              <button class="nudge-toggle{{ ' is-off' if current_user_record.get('nudge_need_for_clarification', 'false') in ('false', '') else '' }}" type="button" data-nudge-key="nudge_need_for_clarification" aria-label="Toggle Need for Clarification" aria-pressed="{{ 'false' if current_user_record.get('nudge_need_for_clarification', 'false') in ('false', '') else 'true' }}"></button>
             </div>
             <div class="nudge-card-body">
               <div class="nudge-label">Sensitivity</div>
@@ -455,17 +455,27 @@
     }
 
     toggleButtons.forEach((button) => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const nextPressed = button.getAttribute('aria-pressed') !== 'true';
         button.setAttribute('aria-pressed', String(nextPressed));
         button.classList.toggle('is-off', !nextPressed);
         const nudgeKey = button.dataset.nudgeKey;
         if (nudgeKey && currentUser) {
-          fetch(`/api/users/${encodeURIComponent(currentUser)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [nudgeKey]: String(nextPressed) }),
-          });
+          try {
+            const res = await fetch(`/api/users/${encodeURIComponent(currentUser)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ [nudgeKey]: String(nextPressed) }),
+            });
+            if (!res.ok) {
+              throw new Error('Failed to save nudge toggle');
+            }
+          } catch (err) {
+            // Revert UI state if persistence failed.
+            button.setAttribute('aria-pressed', String(!nextPressed));
+            button.classList.toggle('is-off', nextPressed);
+            console.error(err);
+          }
         }
       });
     });

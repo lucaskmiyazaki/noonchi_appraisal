@@ -150,6 +150,7 @@ def summarize_audio_record(record):
     return {
         "id": record.get("id"),
         "userId": record.get("userId", ""),
+        "username": lookup_username_by_user_id(record.get("userId", "")),
         "sessionName": record.get("sessionName"),
         "displayName": record.get("displayName") or record.get("sessionName"),
         "safeSessionName": record.get("safeSessionName"),
@@ -1689,6 +1690,18 @@ def get_audio(audio_id):
         return jsonify({"error": "Not found"}), 404
 
     record.setdefault("displayName", record.get("sessionName"))
+    user_id = str(record.get("userId", "") or record.get("user_id", "") or "").strip()
+    if not user_id:
+        # Older transcript JSON files may not include userId; fall back to meetings.csv
+        meeting_rows, _ = load_meeting_rows()
+        for meeting_row in meeting_rows:
+            if str(meeting_row.get("id", "") or "").strip() == str(audio_id or "").strip():
+                user_id = str(meeting_row.get("user_id", "") or "").strip()
+                if user_id:
+                    record["userId"] = user_id
+                    record["user_id"] = user_id
+                break
+    record["username"] = lookup_username_by_user_id(user_id)
     return jsonify(record)
 
 
@@ -1700,12 +1713,18 @@ def patch_audio(audio_id):
 
     body = request.get_json(force=True, silent=True) or {}
     new_name = str(body.get("displayName", "") or "").strip()
-    if not new_name:
-        return jsonify({"error": "displayName is required"}), 400
+    new_user_id = str(body.get("userId", "") or "").strip()
 
-    record["displayName"] = new_name
+    if not new_name and not new_user_id:
+        return jsonify({"error": "displayName or userId is required"}), 400
+
+    if new_name:
+        record["displayName"] = new_name
+    if new_user_id:
+        record["userId"] = new_user_id
+        record["user_id"] = new_user_id
     save_meeting(record)
-    return jsonify({"displayName": record["displayName"]})
+    return jsonify({"displayName": record.get("displayName", ""), "userId": record.get("userId", "")})
 
 
 @app.delete("/api/audio/<audio_id>")
