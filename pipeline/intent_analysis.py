@@ -9,8 +9,7 @@ from tqdm import tqdm
 import re
 import argparse
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR.parent / "data"
+from data_store import audio_record_path, iter_data_json_files, read_json, write_json
 LABELS = [
     "request", "question", "desire", "apology", "state",
     "positive evaluation", "negative evaluation",
@@ -166,7 +165,7 @@ def classify_intents(sentences, client, batch_size=25):
     return labels
 
 def process_record(record_path, client):
-    record = json.loads(Path(record_path).read_text(encoding="utf-8"))
+    record = read_json(Path(record_path))
     transcript = record.get("transcript", [])
     sentences = [chunk["text"] for chunk in transcript]
     if not sentences:
@@ -176,7 +175,7 @@ def process_record(record_path, client):
         raise ValueError(f"Mismatch: expected {len(transcript)} labels, got {len(labels)}")
     for chunk, label in zip(transcript, labels):
         chunk["intent_label"] = label
-    Path(record_path).write_text(json.dumps(record, indent=2), encoding="utf-8")
+    write_json(Path(record_path), record)
     return True
 
 def main():
@@ -187,9 +186,9 @@ def main():
     parser.add_argument("--all", action="store_true", help="Process all saved audio records.")
     args = parser.parse_args()
     if args.all:
-        paths = sorted(DATA_DIR.glob("*.json"))
+        paths = sorted(iter_data_json_files())
     elif args.record_id:
-        paths = [DATA_DIR / f"{args.record_id}.json"]
+        paths = [audio_record_path(args.record_id)]
     else:
         print("Specify --all or --record-id.")
         return
@@ -208,7 +207,7 @@ def main():
 def run(record_id, log=print):
     load_dotenv()
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    path = DATA_DIR / f"{record_id}.json"
+    path = audio_record_path(record_id)
     if not path.exists():
         raise FileNotFoundError(f"Record not found: {path}")
     updated = process_record(path, client)

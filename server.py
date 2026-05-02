@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import atexit
-import csv
 import json
 import os
 import queue
@@ -23,6 +22,30 @@ from pathlib import Path
 from werkzeug.utils import secure_filename
 
 from models.reflection import ReflectionTree
+from data_store import (
+    DATA_DIR,
+    TRAINING_AUDIO_DIR,
+    UPLOAD_DIR,
+    audio_record_path,
+    delete_audio_record,
+    delete_data_json_file,
+    ensure_data_layout,
+    find_data_recording_file,
+    iter_audio_records,
+    is_json_filename,
+    load_audio_record,
+    load_reflection_db_rows as _load_reflection_db_rows,
+    read_data_json_file,
+    load_training_rows,
+    normalize_done_str,
+    normalize_practice_value,
+    normalize_training_type_str,
+    save_audio_record,
+    write_reflection_db_rows,
+    write_data_json_file,
+    write_training_rows,
+    upsert_intent_reflection_row,
+)
 from rules.business_rules import (
     detect_participant_unclear_feedback,
     detect_participant_unclear_concern,
@@ -41,25 +64,7 @@ from rules.business_rules import (
 app = Flask(__name__)
 CORS(app)
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-UPLOAD_DIR = DATA_DIR
-AUDIO_DATA_DIR = DATA_DIR
-TRAINING_AUDIO_DIR = DATA_DIR / "training_audio"
-DATA_DIR.mkdir(exist_ok=True)
-UPLOAD_DIR.mkdir(exist_ok=True)
-TRAINING_AUDIO_DIR.mkdir(exist_ok=True)
-
-REFLECTION_DB_FIELDNAMES = [
-    "wearer_agent",
-    "session_name",
-    "reflection_tree_file",
-    "startms",
-    "endms",
-    "practice",
-    "audio_filename",
-    "journal_entry",
-]
+ensure_data_layout()
 
 NGROK_API_URL = "http://127.0.0.1:4040/api/tunnels"
 NGROK_URL = (os.environ.get("NGROK_URL") or "https://noonchi.ngrok.io").strip()
@@ -122,49 +127,6 @@ def transcribe_audio_file(file_path: Path):
     return transcript
 
 
-def save_audio_record(record):
-    record_path = AUDIO_DATA_DIR / f"{record['id']}.json"
-    record_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
-
-
-def load_audio_record(record_id):
-    record_path = AUDIO_DATA_DIR / f"{record_id}.json"
-    if not record_path.exists():
-        return None
-    return json.loads(record_path.read_text(encoding="utf-8"))
-
-
-def delete_audio_record(record_id):
-    record_path = AUDIO_DATA_DIR / f"{record_id}.json"
-    if not record_path.exists():
-        return False
-    record_path.unlink()
-    return True
-
-
-def is_audio_record(record):
-    return isinstance(record, dict) and {
-        "id",
-        "audioUrl",
-        "audioFilename",
-        "transcript",
-    }.issubset(record.keys())
-
-
-def iter_audio_records():
-    records = []
-    for path in sorted(DATA_DIR.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
-        try:
-            record = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-
-        if is_audio_record(record):
-            records.append(record)
-
-    return records
-
-
 def summarize_audio_record(record):
     transcript = record.get("transcript") or []
     last_segment = transcript[-1] if transcript else {}
@@ -218,6 +180,15 @@ def find_latest_audio_record(session_name=""):
     return None
 
 
+def load_reflection_db_rows():
+    rows, fieldnames = _load_reflection_db_rows()
+    for row in rows:
+        if not row.get("audio_filename"):
+            record = find_latest_audio_record(row.get("session_name", ""))
+            row["audio_filename"] = record.get("audioFilename", "") if record else ""
+    return rows, fieldnames
+
+
 def build_emotion_session_payload(session_name=""):
     record = find_latest_audio_record(session_name)
     if record is None:
@@ -249,13 +220,11 @@ def build_emotion_session_payload(session_name=""):
 
 
 def build_reflection_response_row(row, reflection_file):
-    reflection_path = DATA_DIR / reflection_file
-    if not reflection_path.exists() or reflection_path.suffix != ".json":
-        return None
-
     try:
-        tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+        tree = read_data_json_file(reflection_file)
     except (OSError, json.JSONDecodeError):
+        return None
+    if tree is None:
         return None
 
     return {
@@ -269,92 +238,6 @@ def build_reflection_response_row(row, reflection_file):
     }
 
 
-def normalize_practice_value(value):
-    normalized = str(value or "").strip().lower()
-    if normalized in {"done", "todo", "null"}:
-        return normalized
-    return "null"
-
-
-def get_reflection_db_fieldnames(fieldnames=None):
-    ordered = []
-    for name in list(fieldnames or []) + REFLECTION_DB_FIELDNAMES:
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
-
-
-def load_reflection_db_rows():
-    db_path = DATA_DIR / "db.csv"
-    if not db_path.exists():
-        return [], list(REFLECTION_DB_FIELDNAMES)
-
-    with open(db_path, newline="", encoding="utf-8") as csvfile:
-        reader = csv.DictReader(csvfile)
-        fieldnames = get_reflection_db_fieldnames(reader.fieldnames)
-        rows = []
-
-        for row in reader:
-            normalized_row = {field: row.get(field, "") for field in fieldnames}
-            normalized_row["practice"] = normalize_practice_value(normalized_row.get("practice"))
-
-            if not normalized_row.get("audio_filename"):
-                record = find_latest_audio_record(normalized_row.get("session_name", ""))
-                normalized_row["audio_filename"] = record.get("audioFilename", "") if record else ""
-
-            rows.append(normalized_row)
-
-    return rows, fieldnames
-
-
-def write_reflection_db_rows(rows, fieldnames=None):
-    db_path = DATA_DIR / "db.csv"
-    resolved_fieldnames = get_reflection_db_fieldnames(fieldnames)
-    with open(db_path, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=resolved_fieldnames)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({field: row.get(field, "") for field in resolved_fieldnames})
-
-
-def load_training_rows():
-    training_path = DATA_DIR / "training.csv"
-    if not training_path.exists():
-        return []
-
-    with open(training_path, newline="", encoding="utf-8") as csvfile:
-        reader = csv.DictReader(csvfile)
-        return list(reader)
-
-
-TRAINING_FIELDNAMES = [
-    "training_id",
-    "session",
-    "session_name",
-    "reflection_id",
-    "wearer_agent",
-    "type",
-    "valence",
-    "arousal",
-    "dominance",
-    "done",
-    "training_files",
-    "transcription",
-    "summary",
-    "suggestions",
-]
-
-
-def _normalize_done_str(value) -> str:
-    normalized = str(value or "").strip().lower()
-    return "true" if normalized in {"true", "1", "yes", "done"} else "false"
-
-
-def _normalize_training_type_str(value) -> str:
-    normalized = str(value or "").strip().lower()
-    return "arousal" if normalized == "arousal" else "valence"
-
-
 def _parse_bool(value):
     if isinstance(value, bool):
         return value
@@ -365,31 +248,6 @@ def _parse_bool(value):
         if normalized in {"false", "0", "no", "todo", ""}:
             return False
     return None
-
-
-def write_training_rows(rows):
-    training_path = DATA_DIR / "training.csv"
-    with open(training_path, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=TRAINING_FIELDNAMES)
-        writer.writeheader()
-        for row in rows:
-            session_value = str(row.get("session", "") or row.get("session_name", "") or "").strip()
-            writer.writerow({
-                "training_id": str(row.get("training_id", "") or "").strip(),
-                "session": session_value,
-                "session_name": str(row.get("session_name", "") or session_value),
-                "reflection_id": str(row.get("reflection_id", "") or "").strip(),
-                "wearer_agent": str(row.get("wearer_agent", "") or "").strip(),
-                "type": _normalize_training_type_str(row.get("type", "valence")),
-                "valence": str(row.get("valence", "") or "").strip(),
-                "arousal": str(row.get("arousal", "") or "").strip(),
-                "dominance": str(row.get("dominance", "") or "").strip(),
-                "done": _normalize_done_str(row.get("done", "false")),
-                "training_files": str(row.get("training_files", "") or "").strip(),
-                "transcription": str(row.get("transcription", "") or "").strip(),
-                "summary": str(row.get("summary", "") or "").strip(),
-                "suggestions": str(row.get("suggestions", "") or "").strip(),
-            })
 
 
 def format_reflection_type_label(tree_type: str) -> str:
@@ -500,16 +358,14 @@ def build_journaling_items_for_user(user_name: str):
             continue
 
         reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
-        if not reflection_file:
-            continue
-
-        reflection_path = DATA_DIR / reflection_file
-        if not reflection_path.exists() or reflection_path.suffix != ".json":
+        if not is_json_filename(reflection_file):
             continue
 
         try:
-            tree = json.loads(reflection_path.read_text(encoding="utf-8"))
+            tree = read_data_json_file(reflection_file)
         except (OSError, json.JSONDecodeError):
+            continue
+        if tree is None:
             continue
 
         journaling_paths = _collect_journaling_paths(tree)
@@ -582,13 +438,11 @@ def build_practice_items_for_user(user_name: str):
         start_ms = ""
         end_ms = ""
         tree_type = ""
-        if reflection_id:
-            reflection_path = DATA_DIR / reflection_id
-            if reflection_path.exists() and reflection_path.suffix == ".json":
-                try:
-                    tree = json.loads(reflection_path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
-                    tree = {}
+        if is_json_filename(reflection_id):
+            try:
+                tree = read_data_json_file(reflection_id) or {}
+            except (OSError, json.JSONDecodeError):
+                tree = {}
             start_ms = str(tree.get("startMs", "") or "")
             end_ms = str(tree.get("endMs", "") or "")
             tree_type = str(tree.get("type", "") or "")
@@ -616,8 +470,8 @@ def build_practice_items_for_user(user_name: str):
             "display_name": display_name,
             "reflection_id": reflection_id,
             "wearer_agent": wearer_agent,
-            "type": _normalize_training_type_str(row.get("type", "valence")),
-            "done": _normalize_done_str(row.get("done", "false")) == "true",
+            "type": normalize_training_type_str(row.get("type", "valence")),
+            "done": normalize_done_str(row.get("done", "false")) == "true",
             "title": title,
             "summary": summary,
             "transcription": transcription,
@@ -756,10 +610,9 @@ def build_session_analysis_payload(session_name=""):
 @app.delete("/api/audio/intent/<intent_filename>")
 def delete_intent(intent_filename):
     safe_filename = secure_filename(intent_filename or "")
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid intent filename."}), 400
 
-    db_path = DATA_DIR / "db.csv"
     rows, fieldnames = load_reflection_db_rows()
     remaining_rows = []
     deleted_row = None
@@ -770,11 +623,7 @@ def delete_intent(intent_filename):
         remaining_rows.append(row)
     write_reflection_db_rows(remaining_rows, fieldnames)
 
-    intent_path = DATA_DIR / safe_filename
-    file_deleted = False
-    if intent_path.exists() and intent_path.is_file():
-        intent_path.unlink()
-        file_deleted = True
+    file_deleted = delete_data_json_file(safe_filename)
 
     if deleted_row is None and not file_deleted:
         return jsonify({"error": "Intent not found."}), 404
@@ -795,44 +644,28 @@ def save_intent():
         return jsonify({"error": "Missing required fields."}), 400
 
     # Save intent JSON
-    intent_path = DATA_DIR / intent_file
     try:
-        intent_path.write_text(json.dumps(intent_data, indent=2), encoding="utf-8")
+        write_data_json_file(intent_file, intent_data)
     except Exception as e:
         return jsonify({"error": f"Failed to save intent file: {e}"}), 500
 
-    # Update db.csv
-    rows, fieldnames = load_reflection_db_rows()
-    if "intent_filename" not in fieldnames:
-        fieldnames.append("intent_filename")
-        for row in rows:
-            if "intent_filename" not in row:
-                row["intent_filename"] = ""
-
-    # Add new row for intent
-    new_row = {
-        "wearer_agent": wearer_agent,
-        "session_name": session_name,
-        "reflection_tree_file": "",
-        "startms": "",
-        "endms": "",
-        "practice": "null",
-        "audio_filename": "",
-        "intent_filename": intent_file,
-    }
-    rows.append(new_row)
-    write_reflection_db_rows(rows, fieldnames)
+    # Update db.csv via centralized data store logic.
+    upsert_intent_reflection_row(
+        session_name=session_name,
+        intent_file=intent_file,
+        wearer_agent=wearer_agent,
+    )
 
     return jsonify({"message": "Intent saved.", "intent_file": intent_file})
 
 @app.put("/api/audio/intent/<intent_filename>")
 def update_intent(intent_filename):
     safe_filename = secure_filename(intent_filename or "")
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid intent filename."}), 400
 
-    intent_path = DATA_DIR / safe_filename
-    if not intent_path.exists():
+    full = read_data_json_file(safe_filename)
+    if full is None:
         return jsonify({"error": "Intent file not found."}), 404
 
     payload = request.get_json() or {}
@@ -840,11 +673,6 @@ def update_intent(intent_filename):
     startms = payload.get("startms")
     if diagram_data is None:
         return jsonify({"error": "Missing diagram_data."}), 400
-
-    try:
-        full = json.loads(intent_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        return jsonify({"error": f"Failed to read intent file: {e}"}), 500
 
     diagrams = full.get("diagrams", [])
     matched = False
@@ -863,7 +691,7 @@ def update_intent(intent_filename):
     full["diagrams"] = diagrams
 
     try:
-        intent_path.write_text(json.dumps(full, indent=2), encoding="utf-8")
+        write_data_json_file(safe_filename, full)
     except Exception as e:
         return jsonify({"error": f"Failed to update intent file: {e}"}), 500
 
@@ -873,17 +701,12 @@ def update_intent(intent_filename):
 @app.get("/api/audio/intent/<intent_filename>")
 def get_intent(intent_filename):
     safe_filename = secure_filename(intent_filename or "")
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid intent filename."}), 400
 
-    intent_path = DATA_DIR / safe_filename
-    if not intent_path.exists():
+    intent_data = read_data_json_file(safe_filename)
+    if intent_data is None:
         return jsonify({"error": "Intent file not found."}), 404
-
-    try:
-        intent_data = json.loads(intent_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        return jsonify({"error": f"Failed to read intent file: {e}"}), 500
 
     return jsonify({"intent_file": safe_filename, "data": intent_data})
 
@@ -909,7 +732,7 @@ def run_pipeline_sse(record_id):
     if not safe_id:
         return jsonify({"error": "Invalid record id."}), 400
 
-    json_path = DATA_DIR / f"{safe_id}.json"
+    json_path = audio_record_path(safe_id)
     if not json_path.exists():
         return jsonify({"error": "Record not found."}), 404
 
@@ -1092,17 +915,12 @@ def evaluate_diagram_for_reflection(diagram, session_name="", wearer_agent_overr
 @app.post("/api/audio/intent/<intent_filename>/generate_reflections")
 def generate_reflections_from_intent(intent_filename):
     safe_filename = secure_filename(intent_filename or "")
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid intent filename."}), 400
 
-    intent_path = DATA_DIR / safe_filename
-    if not intent_path.exists():
+    intent_data = read_data_json_file(safe_filename)
+    if intent_data is None:
         return jsonify({"error": "Intent file not found."}), 404
-
-    try:
-        intent_data = json.loads(intent_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        return jsonify({"error": f"Failed to read intent file: {e}"}), 500
 
     diagrams = intent_data.get("diagrams", [])
     session_name = intent_data.get("sessionName", "")
@@ -1137,8 +955,7 @@ def generate_reflections_from_intent(intent_filename):
             post_tip_to_bangle(first_message)
 
         reflection_filename = f"reflection_{safe_ts}.json"
-        reflection_path = DATA_DIR / reflection_filename
-        reflection_path.write_text(json.dumps(reflection_tree, indent=2), encoding="utf-8")
+        write_data_json_file(reflection_filename, reflection_tree)
 
         wearer_agent_name = (
             getattr(wearer_agent, 'name', None) or getattr(wearer_agent, 'role', None) or wearer_id
@@ -1346,8 +1163,7 @@ def play_graph():
             post_tip_to_bangle(first_message)
 
         reflection_filename = f"reflection_{safe_ts}.json"
-        reflection_path = DATA_DIR / reflection_filename
-        reflection_path.write_text(json.dumps(reflection_tree, indent=2))
+        reflection_path = write_data_json_file(reflection_filename, reflection_tree)
 
         wearer_agent_name = None
         if wearer_agent is not None:
@@ -1392,7 +1208,7 @@ def play_graph():
 @app.delete("/api/audio/reflection/<reflection_filename>")
 def delete_reflection(reflection_filename):
     safe_filename = secure_filename(reflection_filename or "")
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid reflection filename."}), 400
 
     remaining_rows = []
@@ -1407,20 +1223,15 @@ def delete_reflection(reflection_filename):
 
     write_reflection_db_rows(remaining_rows, fieldnames)
 
-    reflection_path = DATA_DIR / safe_filename
-    file_deleted = False
-    if reflection_path.exists() and reflection_path.is_file():
-        reflection_path.unlink()
-        file_deleted = True
+    file_deleted = delete_data_json_file(safe_filename)
 
     # Delete intent file if it exists and is not referenced by any other row
     if deleted_row is not None:
         intent_filename = deleted_row.get("intent_filename")
         if intent_filename:
             still_used = any(r.get("intent_filename") == intent_filename for r in remaining_rows)
-            intent_path = DATA_DIR / intent_filename
-            if not still_used and intent_path.exists():
-                intent_path.unlink()
+            if not still_used:
+                delete_data_json_file(intent_filename)
 
     if deleted_row is None and not file_deleted:
         return jsonify({"error": "Reflection not found."}), 404
@@ -1434,7 +1245,7 @@ def delete_reflection(reflection_filename):
 @app.post("/api/audio/reflection/<reflection_filename>/practice")
 def update_reflection_practice(reflection_filename):
     safe_filename = secure_filename(reflection_filename or "")
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid reflection filename."}), 400
 
     payload = request.get_json(silent=True) or {}
@@ -1566,7 +1377,7 @@ def list_journaling_items(user_name):
 def update_journal_entry(reflection_filename, node_id):
     safe_filename = secure_filename(reflection_filename or "")
     safe_node_id = str(node_id or "").strip()
-    if not safe_filename or Path(safe_filename).suffix != ".json":
+    if not is_json_filename(safe_filename):
         return jsonify({"error": "Invalid reflection filename."}), 400
     if not safe_node_id:
         return jsonify({"error": "Invalid journaling node id."}), 400
@@ -1627,7 +1438,7 @@ def update_practice_done(training_id):
     write_training_rows(rows)
     return jsonify({
         "training_id": safe_training_id,
-        "done": _normalize_done_str(updated.get("done", "false")) == "true",
+        "done": normalize_done_str(updated.get("done", "false")) == "true",
     })
 
 
@@ -1730,15 +1541,10 @@ def list_session_intent_files(session_name):
             continue
 
         intent_file = row.get("intent_filename", "")
-        if not intent_file:
+        if not is_json_filename(intent_file):
             continue
-
-        intent_path = DATA_DIR / intent_file
-        if not intent_path.exists() or intent_path.suffix != ".json":
-            continue
-        try:
-            intent_data = json.loads(intent_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        intent_data = read_data_json_file(intent_file)
+        if intent_data is None:
             continue
 
         intents.append({
@@ -1811,9 +1617,7 @@ def delete_audio(audio_id):
         if audio_filename and row.get("audio_filename", "") == audio_filename:
             reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
             if reflection_file:
-                reflection_path = DATA_DIR / reflection_file
-                if reflection_path.exists() and reflection_path.is_file():
-                    reflection_path.unlink()
+                delete_data_json_file(reflection_file)
                 deleted_reflection_files.append(reflection_file)
             continue
         remaining_rows.append(row)
@@ -1909,22 +1713,21 @@ def list_reflection_files_for_user_session(user, session):
 
 @app.get("/recording/<session_name>")
 def serve_recording(session_name):
-    # Try to find a file in DATA_DIR with the session_name as prefix
-    for file in DATA_DIR.iterdir():
-        if file.name.startswith(session_name) and file.suffix in {'.webm', '.ogg'}:
-            mimetype = "audio/webm" if file.suffix == ".webm" else "audio/ogg"
-            return send_from_directory(DATA_DIR, file.name, mimetype=mimetype, conditional=True)
+    file = find_data_recording_file(session_name, suffixes={'.webm', '.ogg'})
+    if file is not None:
+        mimetype = "audio/webm" if file.suffix == ".webm" else "audio/ogg"
+        return send_from_directory(DATA_DIR, file.name, mimetype=mimetype, conditional=True)
     abort(404, description="Recording not found")
 
 # Endpoint to return reflection tree JSON by file name
 @app.get("/reflection_tree/<filename>")
 def get_reflection_tree(filename):
-    file_path = DATA_DIR / filename
-    if not file_path.exists() or not file_path.suffix == '.json':
+    if not is_json_filename(filename):
         abort(404, description="Reflection tree not found")
-    with open(file_path, 'r', encoding='utf-8') as f:
-        data = f.read()
-    return data, 200, {'Content-Type': 'application/json'}
+    data = read_data_json_file(filename)
+    if data is None:
+        abort(404, description="Reflection tree not found")
+    return jsonify(data)
 
 if __name__ == "__main__":
     debug_enabled = True

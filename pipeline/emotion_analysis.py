@@ -7,9 +7,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from tqdm import tqdm
+from data_store import DATA_DIR, iter_data_json_files, read_json, write_json
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR.parent / "data"
 TARGET_SR = 16000
 PAD_MODEL = "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim"
 EMOTION_MODEL = "superb/wav2vec2-base-superb-er"
@@ -294,11 +293,11 @@ def analyze_audio_segments(audio_path, transcript_segments, on_progress=None):
 
 
 def load_audio_record(record_path):
-    return json.loads(Path(record_path).read_text(encoding="utf-8"))
+    return read_json(Path(record_path))
 
 
 def save_audio_record(record_path, record):
-    Path(record_path).write_text(json.dumps(record, indent=2), encoding="utf-8")
+    write_json(Path(record_path), record)
 
 
 def is_audio_record(record):
@@ -311,7 +310,7 @@ def is_audio_record(record):
 
 
 def iter_audio_record_paths():
-    for path in sorted(DATA_DIR.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+    for path in iter_data_json_files():
         try:
             record = load_audio_record(path)
         except (OSError, json.JSONDecodeError):

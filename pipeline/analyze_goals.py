@@ -1,7 +1,7 @@
 import sys
-import json
 from pathlib import Path
 from dotenv import load_dotenv
+from data_store import read_json, write_json
 
 from pipeline import goal_analysis, evaluation_analysis
 
@@ -14,12 +14,12 @@ def reset_goal_fields(transcript):
 
 
 def main(json_path):
-    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    data = read_json(Path(json_path))
     transcript = data.get("transcript", data)
 
     print("Resetting goal fields...")
     reset_goal_fields(transcript)
-    Path(json_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(Path(json_path), data, ensure_ascii=False)
 
     print("\n--- Goal analysis (desire) ---")
     goal_indices, goal_sentences = goal_analysis.extract_goal_sentences(transcript)
@@ -48,7 +48,7 @@ def main(json_path):
     else:
         print("No evaluation sentences found.")
 
-    Path(json_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(Path(json_path), data, ensure_ascii=False)
     print(f"\nDone. Annotated {json_path}.")
 
 

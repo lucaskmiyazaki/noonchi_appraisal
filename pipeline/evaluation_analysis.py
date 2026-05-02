@@ -5,6 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from tqdm import tqdm
+from data_store import read_json, write_json
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -167,7 +168,7 @@ def classify_evaluation_goals(sentences, batch_size=10):
 
 
 def main(json_path):
-    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    data = read_json(Path(json_path))
     transcript = data.get("transcript", data)
 
     indices, sentences = extract_evaluation_sentences(transcript)
@@ -190,10 +191,7 @@ def main(json_path):
         goal_str = f'"{rephrased_goal}"' if rephrased_goal else "(none)"
         print(f"  [{clarity}] {goal_str}  ←  {sentence}")
 
-    Path(json_path).write_text(
-        json.dumps(data, indent=2, ensure_ascii=False),
-        encoding="utf-8"
-    )
+    write_json(Path(json_path), data, ensure_ascii=False)
 
     print(f"Annotated {json_path} with evaluation_goal_clarity.")
 

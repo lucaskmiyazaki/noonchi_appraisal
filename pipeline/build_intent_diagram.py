@@ -1,56 +1,7 @@
-import csv
 import sys
-import json
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR.parent / "data"
-DB_PATH = DATA_DIR / "db.csv"
-
-FIELDNAMES = [
-    "wearer_agent",
-    "session_name",
-    "reflection_tree_file",
-    "startms",
-    "endms",
-    "practice",
-    "audio_filename",
-    "intent_filename",
-]
-
-
-def _add_to_db(session_name, intent_file):
-    rows = []
-    fieldnames = list(FIELDNAMES)
-    if DB_PATH.exists():
-        with DB_PATH.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            existing = list(reader.fieldnames or [])
-            for name in existing:
-                if name not in fieldnames:
-                    fieldnames.append(name)
-            for row in reader:
-                rows.append({field: row.get(field, "") for field in fieldnames})
-
-    # Remove any existing row for this intent file
-    rows = [r for r in rows if r.get("intent_filename", "") != intent_file]
-
-    rows.append({
-        "wearer_agent": "",
-        "session_name": session_name,
-        "reflection_tree_file": "",
-        "startms": "",
-        "endms": "",
-        "practice": "null",
-        "audio_filename": "",
-        "intent_filename": intent_file,
-    })
-
-    with DB_PATH.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({field: row.get(field, "") for field in fieldnames})
+from data_store import read_json, upsert_intent_reflection_row, write_json
 
 
 def _resolve_role(speaker, wearer, participants):
@@ -66,7 +17,7 @@ def _resolve_role(speaker, wearer, participants):
 
 def build_intent_diagram(json_path, wearer="wearer", participants=None):
     participants = participants or []
-    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    data = read_json(Path(json_path))
     transcript = data.get("transcript", data)
 
     diagrams = []
@@ -156,10 +107,10 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
                 intent[k] = data[k]
 
     intent_path = Path(json_path).with_suffix(".intent.json")
-    intent_path.write_text(json.dumps(intent, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(intent_path, intent, ensure_ascii=False)
     print(f"Wrote intent file: {intent_path}")
 
-    _add_to_db(intent.get("sessionName", ""), intent_path.name)
+    upsert_intent_reflection_row(intent.get("sessionName", ""), intent_path.name)
     print(f"Added {intent_path.name} to db.csv")
 
 

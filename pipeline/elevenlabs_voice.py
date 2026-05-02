@@ -1,38 +1,22 @@
 import os
-import csv
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
+from data_store import (
+    DATA_DIR,
+    TRAINING_AUDIO_DIR,
+    load_training_rows,
+    normalize_training_type_str,
+    write_training_rows,
+)
 
 from models.constants import EMOTION_CATEGORY_BY_EMOTION, UNIFIED_TAGS_BY_CATEGORY, SUGGESTIONS_BY_CATEGORY, OPPOSITE_CATEGORY, classify_emotion_from_vad
 
 
 load_dotenv()
-
-
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR.parent / "data"
-TRAINING_AUDIO_DIR = DATA_DIR / "training_audio"
-TRAINING_CSV_PATH = DATA_DIR / "training.csv"
-TRAINING_CSV_FIELDNAMES = [
-    "training_id",
-    "session",
-    "session_name",
-    "reflection_id",
-    "wearer_agent",
-    "type",
-    "valence",
-    "arousal",
-    "dominance",
-    "done",
-    "training_files",
-    "transcription",
-    "summary",
-    "suggestions",
-]
 
 EMOTION_CATEGORY_ALIASES = {
     "hap": "positive",
@@ -50,16 +34,6 @@ def _sanitize_name(value: str, fallback: str) -> str:
     return normalized or fallback
 
 
-def _normalize_done(value: str) -> str:
-    normalized = str(value or "").strip().lower()
-    return "true" if normalized in {"true", "1", "yes", "done"} else "false"
-
-
-def _normalize_training_type(value: str) -> str:
-    normalized = str(value or "").strip().lower()
-    return "arousal" if normalized == "arousal" else "valence"
-
-
 def _resolve_source_category(emotion: str, valence: float | None, arousal: float | None, dominance: float | None) -> tuple[str, str]:
     normalized_emotion = str(emotion or "").strip().lower()
 
@@ -75,66 +49,26 @@ def _resolve_source_category(emotion: str, valence: float | None, arousal: float
     return category, resolved_emotion
 
 
-def _ensure_training_csv_schema() -> None:
-    if not TRAINING_CSV_PATH.exists():
-        return
-
-    with TRAINING_CSV_PATH.open("r", newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        existing_fieldnames = list(reader.fieldnames or [])
-        existing_rows = list(reader)
-
-    if existing_fieldnames == TRAINING_CSV_FIELDNAMES:
-        return
-
-    with TRAINING_CSV_PATH.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=TRAINING_CSV_FIELDNAMES)
-        writer.writeheader()
-        for row in existing_rows:
-            session_value = str(row.get("session", "") or row.get("session_name", "") or "").strip()
-            writer.writerow({
-                "training_id": row.get("training_id", ""),
-                "session": session_value,
-                "session_name": str(row.get("session_name", "") or session_value),
-                "reflection_id": row.get("reflection_id", ""),
-                "wearer_agent": row.get("wearer_agent", ""),
-                "type": _normalize_training_type(row.get("type", "valence")),
-                "valence": row.get("valence", ""),
-                "arousal": row.get("arousal", ""),
-                "dominance": row.get("dominance", ""),
-                "done": _normalize_done(row.get("done", "false")),
-                "training_files": row.get("training_files", ""),
-                "transcription": row.get("transcription", ""),
-                "summary": row.get("summary", ""),
-                "suggestions": row.get("suggestions", ""),
-            })
-
-
 def _append_training_csv_row(training_id: str, session_name: str, training_files: list[str], transcription: str, summary: str = "", reflection_id: str = "", suggestions: list[str] | None = None, wearer_agent: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    _ensure_training_csv_schema()
-    csv_exists = TRAINING_CSV_PATH.exists()
-
-    with TRAINING_CSV_PATH.open("a", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=TRAINING_CSV_FIELDNAMES)
-        if not csv_exists:
-            writer.writeheader()
-        writer.writerow({
-            "training_id": training_id,
-            "session": session_name,
-            "session_name": session_name,
-            "reflection_id": reflection_id,
-            "wearer_agent": wearer_agent,
-            "type": _normalize_training_type(training_type),
-            "valence": "" if valence is None else str(valence),
-            "arousal": "" if arousal is None else str(arousal),
-            "dominance": "" if dominance is None else str(dominance),
-            "done": "false",
-            "training_files": ";".join(training_files),
-            "transcription": transcription,
-            "summary": summary,
-            "suggestions": "|".join(suggestions) if suggestions else "",
-        })
+    existing_rows = load_training_rows()
+    existing_rows.append({
+        "training_id": training_id,
+        "session": session_name,
+        "session_name": session_name,
+        "reflection_id": reflection_id,
+        "wearer_agent": wearer_agent,
+        "type": normalize_training_type_str(training_type),
+        "valence": "" if valence is None else str(valence),
+        "arousal": "" if arousal is None else str(arousal),
+        "dominance": "" if dominance is None else str(dominance),
+        "done": "false",
+        "training_files": ";".join(training_files),
+        "transcription": transcription,
+        "summary": summary,
+        "suggestions": "|".join(suggestions) if suggestions else "",
+    })
+    write_training_rows(existing_rows)
 
 
 def generate_tagged_voice(
@@ -182,7 +116,7 @@ def generate_tagged_voice(
         raise ValueError("emotion must be a non-empty string")
 
     training_id = uuid.uuid4().hex
-    clean_training_type = _normalize_training_type(training_type)
+    clean_training_type = normalize_training_type_str(training_type)
     category = ""
     target_category = ""
     tags: list[str] = []

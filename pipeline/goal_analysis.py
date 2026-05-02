@@ -5,6 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from tqdm import tqdm
+from data_store import read_json, write_json
 
 # Load environment variables
 load_dotenv()
@@ -81,7 +82,7 @@ def classify_goals(sentences, batch_size=10):
 
 
 def main(json_path):
-    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    data = read_json(Path(json_path))
     transcript = data.get("transcript", data)
     indices, sentences = extract_goal_sentences(transcript)
     if not sentences:
@@ -92,7 +93,7 @@ def main(json_path):
         print(f"Mismatch: expected {len(sentences)} results, got {len(results)}")
         return
     annotate_transcript(transcript, indices, results)
-    Path(json_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(Path(json_path), data, ensure_ascii=False)
     print(f"Annotated {json_path} with goal_clarity.")
 
 if __name__ == "__main__":
