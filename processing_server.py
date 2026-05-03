@@ -339,6 +339,9 @@ def run_pipeline_start(record_id):
         import re as _re
         step = [0]
         _seg_pattern = _re.compile(r"^Emotion analysis: (\d+)/(\d+) segments$")
+        # Any "Emotion analysis: …" message that isn't a segment count keeps the
+        # current step counter so model/audio loading doesn't skip a step.
+        _emo_status_prefix = "Emotion analysis:"
 
         def log(msg):
             msg_str = str(msg)
@@ -349,6 +352,14 @@ def run_pipeline_start(record_id):
                     "progress": step[0],
                     "sub_progress": done,
                     "sub_total": total,
+                    "message": msg_str,
+                })
+            elif msg_str.startswith(_emo_status_prefix):
+                # Status update within emotion step — don't advance the step counter
+                _pipeline_jobs[job_id].update({
+                    "progress": step[0],
+                    "sub_progress": None,
+                    "sub_total": None,
                     "message": msg_str,
                 })
             else:

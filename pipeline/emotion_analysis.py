@@ -424,6 +424,12 @@ def run(record_id, log=print):
         raise RuntimeError(f"No audio record found for id: {record_id}")
     for record_path, record in targets:
         total_segments = len(record.get("transcript") or [])
+        log("Emotion analysis: loading models…")
+        load_pad_model_bundle()
+        load_emotion_model_bundle()
+        log("Emotion analysis: loading audio…")
+        # Fire 0/N immediately so the bar shows sub-progress from the start
+        log(f"Emotion analysis: 0/{total_segments} segments")
         def _on_progress(done, total, _total=total_segments):
             log(f"Emotion analysis: {done}/{_total} segments")
         count = process_record_file(record_path, record, on_progress=_on_progress)

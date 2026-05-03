@@ -30,6 +30,19 @@ if (!runPipelineBtn) {
     pipelineLog.scrollTop = pipelineLog.scrollHeight;
   }
 
+  function updateLastLog(message) {
+    const last = pipelineLog.lastElementChild;
+    if (last && last.dataset.live) {
+      last.textContent = message;
+    } else {
+      const line = document.createElement("div");
+      line.textContent = message;
+      line.dataset.live = "1";
+      pipelineLog.appendChild(line);
+    }
+    pipelineLog.scrollTop = pipelineLog.scrollHeight;
+  }
+
   function setProgress(done, total, subDone, subTotal) {
     const STEPS_TOTAL = total || 5;
     let pct;
@@ -58,8 +71,14 @@ if (!runPipelineBtn) {
         try {
           const data = JSON.parse(event.data);
           setProgress(data.progress ?? 0, data.total ?? 5, data.sub_progress, data.sub_total);
-          if (data.message && (data.sub_progress == null || data.sub_progress === data.sub_total)) {
-            appendLog(data.message);
+          if (data.message) {
+            // Always show step-level messages and status updates (sub_progress==null).
+            // For per-segment progress, only update the last log line instead of appending.
+            if (data.sub_progress == null || data.sub_progress === data.sub_total) {
+              appendLog(data.message);
+            } else {
+              updateLastLog(data.message);
+            }
           }
           if (data.status === "done") {
             setProgress(data.total ?? 5, data.total ?? 5);
