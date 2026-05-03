@@ -582,6 +582,22 @@ button:disabled {
   white-space: pre-line;
 }
 
+.transcript-status.status-transcribing {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+@keyframes transcribing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.transcript-status.status-transcribing::after {
+  content: " ⟳";
+  display: inline-block;
+  animation: transcribing-pulse 1.2s ease-in-out infinite;
+}
+
 .transcript-file-name {
   font-size: 12px;
   color: #374151;
@@ -591,7 +607,7 @@ button:disabled {
 
 .pipeline-progress-bar-wrap {
   margin-top: 8px;
-  height: 6px;
+  height: 10px;
   background: #e5e7eb;
   border-radius: 3px;
   overflow: hidden;

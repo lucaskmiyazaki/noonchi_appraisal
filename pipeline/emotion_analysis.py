@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from tqdm import tqdm
-from data_store import DATA_DIR, iter_data_json_files, read_json, write_json
+from data_store import DATA_DIR, MEETING_AUDIO_DIR, iter_data_json_files, read_json, write_json
 
 TARGET_SR = 16000
 PAD_MODEL = "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim"
@@ -369,9 +369,12 @@ def process_record_file(record_path, record, on_progress=None):
     if not audio_filename:
         raise FileNotFoundError(f"Audio filename missing in {record_path.name}")
 
-    audio_path = DATA_DIR / audio_filename
+    # Check meeting_audio/ first (current upload location), fall back to data/ for legacy files
+    audio_path = MEETING_AUDIO_DIR / audio_filename
     if not audio_path.exists():
-        raise FileNotFoundError(f"Audio file not found for {record_path.name}: {audio_path.name}")
+        audio_path = DATA_DIR / audio_filename
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Audio file not found for {record_path.name}: {audio_filename}")
 
     updated_record, count = enrich_record_with_pad(record, audio_path, on_progress=on_progress)
     save_audio_record(record_path, updated_record)

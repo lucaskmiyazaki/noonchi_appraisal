@@ -45,7 +45,68 @@ if (!runPipelineBtn) {
     pipelineProgressBar.style.width = `${Math.min(100, Math.round(pct))}%`;
   }
 
-  runPipelineBtn.addEventListener("click", () => {
+  /** Connect to an already-running pipeline job SSE stream. */
+  function followPipelineJob(jobId) {
+    if (activeSource) { activeSource.close(); activeSource = null; }
+    pipelinePanel.hidden = false;
+    runPipelineBtn.disabled = true;
+    appendLog("Reconnecting to pipeline job…");
+
+    const source = new EventSource(`/api/pipeline/job/${encodeURIComponent(jobId)}/stream`);
+    activeSource = source;
+
+    source.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setProgress(data.progress ?? 0, data.total ?? 5, data.sub_progress, data.sub_total);
+        if (data.message) {
+          if (data.sub_progress == null || data.sub_progress === data.sub_total) {
+            appendLog(data.message);
+          }
+        }
+        if (data.error) {
+          source.close();
+          activeSource = null;
+          runPipelineBtn.disabled = false;
+        }
+      } catch { /* ignore */ }
+    });
+
+    source.addEventListener("done", () => {
+      setProgress(1, 1);
+      source.close();
+      activeSource = null;
+      runPipelineBtn.disabled = false;
+    });
+
+    source.addEventListener("error", () => {
+      appendLog("Connection lost — pipeline may still be running.");
+      source.close();
+      activeSource = null;
+      runPipelineBtn.disabled = false;
+    });
+  }
+
+  // On page load, check if a pipeline job is already running and reconnect.
+  (async () => {
+    try {
+      const res = await fetch("/api/pipeline/jobs/active");
+      if (res.ok) {
+        const job = await res.json();
+        if (job.job_id && job.status === "running") {
+          // Restore record context so the button works after finishing
+          if (job.record_id) {
+            currentRecordId = job.record_id;
+            runPipelineBtn.hidden = false;
+          }
+          setProgress(job.progress ?? 0, job.total ?? 5);
+          followPipelineJob(job.job_id);
+        }
+      }
+    } catch { /* server unreachable — skip */ }
+  })();
+
+  runPipelineBtn.addEventListener("click", async () => {
     if (!currentRecordId) return;
     if (activeSource) {
       activeSource.close();
@@ -58,41 +119,23 @@ if (!runPipelineBtn) {
     pipelineLog.textContent = "";
     appendLog("Starting pipeline…");
 
-    const source = new EventSource(`/api/pipeline/run/${encodeURIComponent(currentRecordId)}`);
-    activeSource = source;
-
-    source.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setProgress(data.progress ?? 0, data.total ?? 5, data.sub_progress, data.sub_total);
-        if (data.message) {
-          // Only log step-level messages, not every segment tick
-          if (data.sub_progress == null || data.sub_progress === data.sub_total) {
-            appendLog(data.message);
-          }
-        }
-        if (data.error) {
-          source.close();
-          activeSource = null;
-          runPipelineBtn.disabled = false;
-        }
-      } catch {
-        appendLog(event.data);
+    let jobId;
+    try {
+      const resp = await fetch(`/api/pipeline/run/${encodeURIComponent(currentRecordId)}`, { method: "POST" });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        appendLog(`Failed to start pipeline: ${err.error || resp.statusText}`);
+        runPipelineBtn.disabled = false;
+        return;
       }
-    });
-
-    source.addEventListener("done", () => {
-      setProgress(1, 1);
-      source.close();
-      activeSource = null;
+      const data = await resp.json();
+      jobId = data.job_id;
+    } catch (err) {
+      appendLog(`Failed to start pipeline: ${err}`);
       runPipelineBtn.disabled = false;
-    });
+      return;
+    }
 
-    source.addEventListener("error", () => {
-      appendLog("Connection error — pipeline may still be running.");
-      source.close();
-      activeSource = null;
-      runPipelineBtn.disabled = false;
-    });
+    followPipelineJob(jobId);
   });
 }

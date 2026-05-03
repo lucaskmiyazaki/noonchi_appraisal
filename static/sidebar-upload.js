@@ -13,6 +13,9 @@ const saveSessionNameBtn = document.getElementById("saveSessionNameBtn");
 const sessionUserInput = document.getElementById("sessionUserInput");
 const emotionSessionBtn = document.getElementById("emotionSessionBtn");
 const intentSessionBtn = document.getElementById("intentSessionBtn");
+const uploadPanel = document.getElementById("uploadPanel");
+const uploadProgressBar = document.getElementById("uploadProgressBar");
+const uploadLog = document.getElementById("uploadLog");
 
 import { syncReflectionTabs } from "./tabs.js";
 
@@ -366,13 +369,108 @@ function updateActiveChunk() {
   }
 }
 
+function setUploadProgress(pct) {
+  if (!uploadPanel || !uploadProgressBar) return;
+  if (pct == null) {
+    uploadPanel.hidden = true;
+    uploadProgressBar.style.width = "0%";
+    if (uploadLog) uploadLog.textContent = "";
+    transcriptStatus?.classList.remove("status-transcribing");
+  } else {
+    uploadPanel.hidden = false;
+    uploadProgressBar.style.width = `${Math.min(100, Math.round(pct))}%`;
+    transcriptStatus?.classList.add("status-transcribing");
+  }
+}
+
+function appendUploadLog(text) {
+  if (!uploadLog || !text) return;
+  const line = document.createElement("div");
+  line.textContent = text;
+  uploadLog.appendChild(line);
+  uploadLog.scrollTop = uploadLog.scrollHeight;
+}
+
+const UPLOAD_JOB_KEY = "upload_pending_job_id";
+
+function saveUploadJob(jobId) {
+  try { localStorage.setItem(UPLOAD_JOB_KEY, jobId); } catch { /* ignore */ }
+}
+
+function clearUploadJob() {
+  try { localStorage.removeItem(UPLOAD_JOB_KEY); } catch { /* ignore */ }
+}
+
+function getSavedUploadJob() {
+  try { return localStorage.getItem(UPLOAD_JOB_KEY) || null; } catch { return null; }
+}
+
+/** Listen to an upload SSE stream and update UI. Returns a promise that resolves when done/error. */
+function followUploadJob(jobId, startPct = 50) {
+  return new Promise((resolve) => {
+    setUploadProgress(startPct);
+    setTranscriptStatus("Transcribing audio\u2026");
+    appendUploadLog("Transcribing audio with Whisper\u2026");
+
+    const es = new EventSource(`/api/audio/upload/job/${encodeURIComponent(jobId)}/stream`);
+    let settled = false;
+
+    // clearJob=true: server confirmed done/error → clear localStorage
+    // clearJob=false: connection dropped (page unload/refresh) → keep for reconnect
+    function finish(clearJob = true) {
+      if (!settled) { settled = true; es.close(); if (clearJob) clearUploadJob(); resolve(); }
+    }
+
+    es.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        // Job vanished (already finished before page reloaded)
+        if (data.status === "error" && data.message === "Job not found") {
+          clearUploadJob();
+          setUploadProgress(null);
+          finish(false);
+          return;
+        }
+        if (data.progress != null) {
+          setUploadProgress(startPct + data.progress * ((100 - startPct) / 100));
+        }
+        if (data.message) {
+          setTranscriptStatus(data.message);
+          appendUploadLog(data.message);
+        }
+        if (data.status === "done") {
+          setUploadProgress(100);
+          loadSessions()
+            .then(() => setLoadedAudio(data.record))
+            .catch(() => {})
+            .finally(() => { setUploadProgress(null); finish(true); });
+        } else if (data.status === "error") {
+          setTranscriptStatus(data.message || "Transcription failed.");
+          setUploadProgress(null);
+          finish(true);
+        }
+      } catch { /* ignore */ }
+    });
+
+    // Connection lost — page may be refreshing. Preserve localStorage so the
+    // next page load can reconnect via getSavedUploadJob().
+    es.addEventListener("error", () => {
+      setTranscriptStatus("Transcribing audio\u2026");
+      setUploadProgress(null);
+      finish(false);
+    });
+  });
+}
+
 async function uploadAudioFile(file) {
   if (!file) {
     setTranscriptStatus("Select an audio file first.");
     return;
   }
 
-  setTranscriptStatus("Uploading and transcribing audio...");
+  setTranscriptStatus("Uploading audio…");
+  setUploadProgress(10);
+  appendUploadLog("Uploading audio file…");
   sidebarUploadBtn.disabled = true;
   sidebarPlayBtn.disabled = true;
 
@@ -381,21 +479,40 @@ async function uploadAudioFile(file) {
   formData.append("session_name", getCurrentSessionName());
 
   try {
-    const response = await fetch("/api/audio/upload", {
-      method: "POST",
-      body: formData,
+    // Use XHR so we get upload progress events
+    const respData = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/audio/upload");
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          // Upload phase = 10–50% of the bar
+          setUploadProgress(10 + (e.loaded / e.total) * 40);
+        }
+      });
+
+      xhr.addEventListener("load", () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 400) reject(new Error(data.error || "Upload failed."));
+          else resolve(data);
+        } catch {
+          reject(new Error("Invalid server response."));
+        }
+      });
+
+      xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
+      xhr.send(formData);
     });
-    const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || "Upload failed.");
-    }
-
-    await loadSessions();
-    setLoadedAudio(data);
+    const jobId = respData.job_id;
+    saveUploadJob(jobId);
+    await followUploadJob(jobId, 50);
   } catch (error) {
     console.error(error);
     setTranscriptStatus(error.message || "Failed to upload audio.");
+    setUploadProgress(null);
+    clearUploadJob();
   } finally {
     sidebarUploadBtn.disabled = false;
     if (sidebarAudioInput) {
@@ -700,6 +817,26 @@ if (saveSessionNameBtn) {
   }
 
   await loadSessions();
+
+  // Reconnect to an in-progress transcription job that survived a page refresh.
+  // Ask the SERVER for any active job — more reliable than localStorage.
+  try {
+    const activeRes = await fetch("/api/audio/upload/jobs/active");
+    if (activeRes.ok) {
+      const activeJob = await activeRes.json();
+      if (activeJob.job_id && activeJob.status === "transcribing") {
+        setSidebarView("list");
+        renderSessionList();
+        setTranscriptStatus("Transcribing audio\u2026 (reconnecting)");
+        if (uploadPanel) uploadPanel.hidden = false;
+        if (uploadProgressBar) uploadProgressBar.style.width = `${activeJob.progress ?? 50}%`;
+        if (uploadLog) { uploadLog.textContent = ""; appendUploadLog("Reconnecting to transcription job\u2026"); }
+        transcriptStatus?.classList.add("status-transcribing");
+        await followUploadJob(activeJob.job_id, activeJob.progress ?? 50);
+        return;
+      }
+    }
+  } catch { /* server unreachable — continue normally */ }
 
   const autoloadSession = document.body.dataset.autoloadSession;
   if (autoloadSession) {

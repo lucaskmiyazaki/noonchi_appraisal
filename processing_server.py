@@ -10,7 +10,6 @@ from __future__ import annotations
 import atexit
 import json
 import os
-import queue
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -111,6 +110,13 @@ def get_whisper_model():
 
 
 def transcribe_audio_file(file_path: Path):
+    import whisper as _whisper
+    import numpy as _np
+    audio = _whisper.load_audio(str(file_path))
+    if audio is None or len(audio) == 0:
+        raise ValueError("Audio file appears to be empty or silent.")
+    # Whisper's internal STFT uses chunks of 3000 mel frames (30 s).
+    # Any non-zero length audio is safe to transcribe.
     result = get_whisper_model().transcribe(str(file_path), fp16=False)
     transcript = []
     for index, segment in enumerate(result.get("segments", []), start=1):
@@ -167,6 +173,9 @@ def wizard_intent_detail(session_name):
 
 # ── Audio upload ──────────────────────────────────────────────────────────────
 
+_upload_jobs: dict = {}  # job_id -> {status, message, [record]}
+
+
 @app.post("/api/audio/upload")
 def upload_audio():
     audio = request.files.get("audio")
@@ -189,35 +198,130 @@ def upload_audio():
 
     try:
         audio.save(output_path)
-        transcript = transcribe_audio_file(output_path)
-    except RuntimeError as exc:
-        if output_path.exists():
-            output_path.unlink()
-        return jsonify({"error": str(exc)}), 500
     except Exception as exc:
         if output_path.exists():
             output_path.unlink()
-        return jsonify({"error": f"Failed to process audio: {exc}"}), 500
+        return jsonify({"error": f"Failed to save audio: {exc}"}), 500
 
-    record = {
-        "id": audio_id,
-        "audioUrl": f"/uploads/{stored_filename}",
-        "audioFilename": stored_filename,
-        "originalName": audio.filename,
-        "sessionName": session_name,
-        "safeSessionName": secure_filename(session_name),
-        "uploadedAt": datetime.now(timezone.utc).isoformat(),
-        "transcript": transcript,
-    }
-    save_meeting(record)
-    return jsonify(record)
+    job_id = str(uuid.uuid4())
+    original_name = audio.filename
+    _upload_jobs[job_id] = {"status": "transcribing", "progress": 0, "message": "Transcribing audio…"}
+
+    def _run():
+        import time as _time
+        try:
+            # Send heartbeat progress ticks while Whisper runs (indeterminate)
+            import threading as _threading
+            _stop = _threading.Event()
+            _tick = [0]
+
+            def _heartbeat():
+                while not _stop.wait(2):
+                    # Oscillate progress 0–90 to show activity
+                    _tick[0] = (_tick[0] + 10) % 91
+                    if _upload_jobs.get(job_id, {}).get("status") == "transcribing":
+                        _upload_jobs[job_id]["progress"] = _tick[0]
+
+            _ht = _threading.Thread(target=_heartbeat, daemon=True)
+            _ht.start()
+
+            transcript = transcribe_audio_file(output_path)
+            _stop.set()
+            record = {
+                "id": audio_id,
+                "audioUrl": f"/uploads/{stored_filename}",
+                "audioFilename": stored_filename,
+                "originalName": original_name,
+                "sessionName": session_name,
+                "safeSessionName": secure_filename(session_name),
+                "uploadedAt": datetime.now(timezone.utc).isoformat(),
+                "transcript": transcript,
+            }
+            save_meeting(record)
+            _upload_jobs[job_id] = {"status": "done", "progress": 100, "message": "Transcription complete.", "record": record}
+        except RuntimeError as exc:
+            if output_path.exists():
+                output_path.unlink()
+            _upload_jobs[job_id] = {"status": "error", "progress": 0, "message": str(exc)}
+        except Exception as exc:
+            if output_path.exists():
+                output_path.unlink()
+            _upload_jobs[job_id] = {"status": "error", "progress": 0, "message": f"Failed to process audio: {exc}"}
+        finally:
+            # Keep the result in memory for 5 minutes so a page refresh can still reconnect
+            def _cleanup():
+                import time as _t
+                _t.sleep(300)
+                _upload_jobs.pop(job_id, None)
+            threading.Thread(target=_cleanup, daemon=True).start()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"job_id": job_id, "audio_id": audio_id}), 202
+
+
+@app.get("/api/audio/upload/job/<job_id>")
+def upload_job_status(job_id):
+    """Quick poll endpoint — returns current job state or 404 if not found."""
+    safe_job_id = str(job_id or "").strip()
+    job = _upload_jobs.get(safe_job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    # Don't send the full record (could be large); just status/progress/message
+    return jsonify({
+        "status": job.get("status"),
+        "progress": job.get("progress"),
+        "message": job.get("message"),
+    })
+
+
+@app.get("/api/audio/upload/jobs/active")
+def upload_jobs_active():
+    """Returns the most recent in-progress transcription job, if any."""
+    # Find the most recently created transcribing job (last inserted key in dict)
+    active = None
+    for jid, job in reversed(list(_upload_jobs.items())):
+        if job.get("status") == "transcribing":
+            active = {"job_id": jid, "status": job.get("status"), "progress": job.get("progress"), "message": job.get("message")}
+            break
+    if active:
+        return jsonify(active)
+    return jsonify({"job_id": None})
+
+
+@app.get("/api/audio/upload/job/<job_id>/stream")
+def upload_job_stream(job_id):
+    """SSE stream for a transcription job."""
+    import json as _json, time as _time
+    safe_job_id = str(job_id or "").strip()
+
+    def _generate():
+        for _ in range(7200):  # max 2 hours
+            job = _upload_jobs.get(safe_job_id)
+            if not job:
+                yield f"data: {_json.dumps({'status': 'error', 'message': 'Job not found'})}\n\n"
+                return
+            yield f"data: {_json.dumps(job)}\n\n"
+            if job["status"] in ("done", "error"):
+                # Don't pop here — let the delayed cleanup in _run() handle it
+                # so a page refresh can reconnect and still see the final state
+                return
+            _time.sleep(1)
+
+    return Response(
+        _generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Pipeline SSE ──────────────────────────────────────────────────────────────
 
-@app.get("/api/pipeline/run/<record_id>")
-def run_pipeline_sse(record_id):
-    """Stream pipeline progress as SSE. The client reads text/event-stream."""
+_pipeline_jobs: dict = {}  # job_id -> {status, progress, total, message, [error]}
+
+
+@app.post("/api/pipeline/run/<record_id>")
+def run_pipeline_start(record_id):
+    """Start pipeline in background, return job_id immediately."""
     safe_id = secure_filename(record_id or "")
     if not safe_id:
         return jsonify({"error": "Invalid record id."}), 400
@@ -226,54 +330,84 @@ def run_pipeline_sse(record_id):
     if not json_path.exists():
         return jsonify({"error": "Record not found."}), 404
 
-    log_queue = queue.Queue()
+    job_id = str(uuid.uuid4())
     STEPS_TOTAL = 5
+    _pipeline_jobs[job_id] = {"status": "running", "progress": 0, "total": STEPS_TOTAL, "message": "Starting pipeline…", "record_id": safe_id}
 
     def do_run():
-        try:
-            import pipeline as pl
-            import re as _re
-            step = [0]
-            _seg_pattern = _re.compile(r"^Emotion analysis: (\d+)/(\d+) segments$")
+        import pipeline as pl
+        import re as _re
+        step = [0]
+        _seg_pattern = _re.compile(r"^Emotion analysis: (\d+)/(\d+) segments$")
 
-            def log(msg):
-                msg_str = str(msg)
-                m = _seg_pattern.match(msg_str)
-                if m:
-                    done, total = int(m.group(1)), int(m.group(2))
-                    log_queue.put({
-                        "progress": step[0],
-                        "total": STEPS_TOTAL,
-                        "sub_progress": done,
-                        "sub_total": total,
-                        "message": msg_str,
-                    })
-                else:
-                    step[0] += 1
-                    log_queue.put({
-                        "progress": min(step[0], STEPS_TOTAL),
-                        "total": STEPS_TOTAL,
-                        "message": msg_str,
-                    })
+        def log(msg):
+            msg_str = str(msg)
+            m = _seg_pattern.match(msg_str)
+            if m:
+                done, total = int(m.group(1)), int(m.group(2))
+                _pipeline_jobs[job_id].update({
+                    "progress": step[0],
+                    "sub_progress": done,
+                    "sub_total": total,
+                    "message": msg_str,
+                })
+            else:
+                step[0] += 1
+                _pipeline_jobs[job_id].update({
+                    "progress": min(step[0], STEPS_TOTAL),
+                    "sub_progress": None,
+                    "sub_total": None,
+                    "message": msg_str,
+                })
+
+        try:
             pl.run_pipeline(str(json_path), log=log)
+            _pipeline_jobs[job_id] = {"status": "done", "progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": "Pipeline complete.", "record_id": safe_id}
         except Exception as exc:
-            log_queue.put({"progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": f"Error: {exc}", "error": True})
-        finally:
-            log_queue.put(None)  # sentinel
+            _pipeline_jobs[job_id] = {"status": "error", "progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": f"Error: {exc}", "error": True, "record_id": safe_id}
 
     threading.Thread(target=do_run, daemon=True).start()
+    return jsonify({"job_id": job_id}), 202
 
-    def generate():
-        while True:
-            item = log_queue.get()
-            if item is None:
+
+@app.get("/api/pipeline/jobs/active")
+def pipeline_jobs_active():
+    """Returns the most recent running pipeline job, if any."""
+    active = None
+    for jid, job in reversed(list(_pipeline_jobs.items())):
+        if job.get("status") == "running":
+            active = {"job_id": jid, "status": job.get("status"), "progress": job.get("progress"), "total": job.get("total"), "message": job.get("message"), "record_id": job.get("record_id")}
+            break
+    if active:
+        return jsonify(active)
+    return jsonify({"job_id": None})
+
+
+@app.get("/api/pipeline/job/<job_id>/stream")
+def pipeline_job_stream(job_id):
+    """SSE stream for a running pipeline job."""
+    import json as _json, time as _time
+    safe_job_id = str(job_id or "").strip()
+
+    def _generate():
+        for _ in range(7200):  # max 2 hours
+            job = _pipeline_jobs.get(safe_job_id)
+            if not job:
+                yield f"data: {_json.dumps({'status': 'error', 'message': 'Job not found', 'error': True})}\n\n"
                 yield "event: done\ndata: {}\n\n"
-                break
-            import json as _json
-            yield f"data: {_json.dumps(item)}\n\n"
+                return
+            yield f"data: {_json.dumps(job)}\n\n"
+            if job["status"] in ("done", "error"):
+                _pipeline_jobs.pop(safe_job_id, None)
+                yield "event: done\ndata: {}\n\n"
+                return
+            _time.sleep(1)
 
-    return Response(generate(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return Response(
+        _generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Audio record access (needed by sidebar-upload.js) ─────────────────────────

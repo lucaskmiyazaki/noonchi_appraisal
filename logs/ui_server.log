@@ -6,426 +6,60 @@ Press CTRL+C to quit
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 117-539-364
-127.0.0.1 - - [02/May/2026 17:27:19] "GET /wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:19] "GET /static/styles.css HTTP/1.1" 304 -
-127.0.0.1 - - [02/May/2026 17:27:19] "GET /reflection/wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:19] "GET /favicon.ico HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:19] "GET /api/users/wizard HTTP/1.1" 404 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /static/styles.css HTTP/1.1" 304 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /favicon.ico HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /reflection/wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /api/users/wizard HTTP/1.1" 404 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:20] "GET /static/styles.css HTTP/1.1" 304 -
-127.0.0.1 - - [02/May/2026 17:27:21] "GET /reflection/wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:21] "GET /favicon.ico HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:21] "GET /api/users/wizard HTTP/1.1" 404 -
-127.0.0.1 - - [02/May/2026 17:27:28] "GET /wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /static/styles.css HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /reflection/wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /favicon.ico HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /api/users/wizard HTTP/1.1" 404 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /static/styles.css HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /reflection/wizard HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /favicon.ico HTTP/1.1" 200 -
-127.0.0.1 - - [02/May/2026 17:27:29] "GET /api/users/wizard HTTP/1.1" 404 -
-127.0.0.1 - - [02/May/2026 17:29:43] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:43] "GET /static/app.js HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:29:43] "GET /static/sidebar-upload.js HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/state.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/nodes.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/edges.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/tabs.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/board.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/serialize.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/nodes/agent.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/nodes/goal.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/node-base.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/utils.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/nodes/blocker.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/nodes/followup.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/nodes/reflection.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /static/connection.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /api/audio/sessions HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:29:44] "GET /favicon.ico HTTP/1.0" 200 -
- * Detected change in '/home/lucas/Projects/idep/codesign2/processing_server.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:07] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_angry_and_explosive_20260502T210953Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_sobbing_and_depressed_20260502T210953Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_concerned_and_anxious_20260502T210953Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:11] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:20] "GET /karlotta/analysis HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:20] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:45:20] "GET /reflection/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:20] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /api/audio/latest?session_name=sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection/karlotta/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T13-32-21.832714Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T13-58-20.259424Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T15-07-49.832317Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T14-59-51.495109Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T15-12-44.333470Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T15-10-13.544415Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T15-14-02.027488Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-22T15-18-19.981467Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /reflection_tree/reflection_2026-04-30T17-21-49.704842Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:21] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:26] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:26] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:37] "POST /api/audio/reflection/reflection_2026-04-22T15-10-13.544415Z00-00.json/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /api/voice/job/83f465f2-d914-49c1-b301-026cd2f1df5d/stream HTTP/1.0" 404 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:40] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:45:43] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:19] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:20] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /training_audio/0b0a48350cb647378f7bb867bda5fad5_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_sobbing_and_depressed_20260502T214553Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /training_audio/0b0a48350cb647378f7bb867bda5fad5_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_angry_and_explosive_20260502T214553Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /training_audio/0b0a48350cb647378f7bb867bda5fad5_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_concerned_and_anxious_20260502T214553Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:22] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:23] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_angry_and_explosive_20260502T210953Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:23] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_sobbing_and_depressed_20260502T210953Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:23] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_concerned_and_anxious_20260502T210953Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 17:46:23] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
- * Detected change in '/home/lucas/Projects/idep/codesign2/data_store.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/processing_server.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/processing_server.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/processing_server.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/pipeline/elevenlabs_voice.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/pipeline/elevenlabs_voice.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/pipeline/elevenlabs_voice.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/pipeline/elevenlabs_voice.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
-127.0.0.1 - - [02/May/2026 17:51:14] "GET /karlotta/analysis HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:14] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:51:14] "GET /reflection/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:14] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /api/audio/latest?session_name=sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection/karlotta/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T13-32-21.832714Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T13-58-20.259424Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T14-59-51.495109Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T15-07-49.832317Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T15-10-13.544415Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T15-12-44.333470Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T15-18-19.981467Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-22T15-14-02.027488Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:15] "GET /reflection_tree/reflection_2026-04-30T17-21-49.704842Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /api/audio/latest?session_name=sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection/karlotta/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T13-32-21.832714Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T13-58-20.259424Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T14-59-51.495109Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T15-07-49.832317Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T15-10-13.544415Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T15-12-44.333470Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T15-18-19.981467Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-30T17-21-49.704842Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:17] "GET /reflection_tree/reflection_2026-04-22T15-14-02.027488Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /api/audio/latest?session_name=sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection/karlotta/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T13-32-21.832714Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T13-58-20.259424Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T14-59-51.495109Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T15-10-13.544415Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T15-07-49.832317Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T15-12-44.333470Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T15-14-02.027488Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-22T15-18-19.981467Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:18] "GET /reflection_tree/reflection_2026-04-30T17-21-49.704842Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:37] "GET /karlotta/analysis HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:38] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:51:38] "GET /reflection/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:38] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:51:39] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
- * Detected change in '/home/lucas/Projects/idep/codesign2/data_store.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/data_store.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/processing_server.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/pipeline/elevenlabs_voice.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:51] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /karlotta/analysis/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /api/audio/latest?session_name=Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection/karlotta/Client_Meeting_Debrief HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-35-59.983369Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-22T15-34-38.225394Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:52] "GET /reflection_tree/reflection_2026-04-30T14-34-04.666455Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:55] "GET /karlotta/analysis HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:55] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:55] "GET /reflection/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:55] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /api/audio/latest?session_name=sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection/karlotta/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T13-32-21.832714Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T13-58-20.259424Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T14-59-51.495109Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T15-07-49.832317Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T15-12-44.333470Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T15-10-13.544415Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T15-14-02.027488Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-22T15-18-19.981467Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:57:57] "GET /reflection_tree/reflection_2026-04-30T17-21-49.704842Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:58:20] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:58:22] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:58:28] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:58:28] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 17:58:28] "GET / HTTP/1.1" 302 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/app.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/sidebar-upload.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/state.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/nodes.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/edges.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/board.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/serialize.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/tabs.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/nodes/agent.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/nodes/goal.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/nodes/blocker.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/nodes/reflection.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/nodes/followup.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/utils.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/node-base.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /static/connection.js HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /api/audio/sessions HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:00:58] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /karlotta/analysis/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /api/audio/latest?session_name=sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection/karlotta/sexism HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T13-32-21.832714Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T13-58-20.259424Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T15-07-49.832317Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T14-59-51.495109Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T15-12-44.333470Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T15-10-13.544415Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T15-14-02.027488Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-22T15-18-19.981467Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /reflection_tree/reflection_2026-04-30T17-21-49.704842Z00-00.json HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:02] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:07] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:07] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:14] "POST /api/audio/reflection/reflection_2026-04-22T15-10-13.544415Z00-00.json/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:14] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_angry_and_explosive_20260502T210953Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_sobbing_and_depressed_20260502T210953Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /training_audio/796f54feb7214ed495ece3760942f301_ee661b7e-0ba4-4c43-983d-896bce24ca97_hap_concerned_and_anxious_20260502T210953Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:17] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /training_audio/1cd9a18ab9344ef7af64a10cd19dbaf2_Client_Meeting_Debrief_hap_angry_and_explosive_20260430T182439Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /training_audio/1cd9a18ab9344ef7af64a10cd19dbaf2_Client_Meeting_Debrief_hap_sobbing_and_depressed_20260430T182439Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /training_audio/1cd9a18ab9344ef7af64a10cd19dbaf2_Client_Meeting_Debrief_hap_concerned_and_anxious_20260430T182439Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:18] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:19] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:19] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:19] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:19] "GET /uploads/ee661b7e-0ba4-4c43-983d-896bce24ca97_sexism.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:29] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:01:29] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:29] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:29] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:01:29] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
- * Detected change in '/home/lucas/Projects/idep/codesign2/data_store.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
- * Detected change in '/home/lucas/Projects/idep/codesign2/server_helpers.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /karlotta/practice HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /static/styles.css HTTP/1.0" 304 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /favicon.ico HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /api/practice/karlotta HTTP/1.0" 200 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /training_audio/1cd9a18ab9344ef7af64a10cd19dbaf2_Client_Meeting_Debrief_hap_angry_and_explosive_20260430T182439Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /training_audio/1cd9a18ab9344ef7af64a10cd19dbaf2_Client_Meeting_Debrief_hap_sobbing_and_depressed_20260430T182439Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /training_audio/1cd9a18ab9344ef7af64a10cd19dbaf2_Client_Meeting_Debrief_hap_concerned_and_anxious_20260430T182439Z_3.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:45] "GET /uploads/ed10801b-92d5-44b8-aecf-0945bfa8cd2e_Client_Meeting_Debrief.wav HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:48] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_angry_and_explosive_20260502T145520Z_1.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:48] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_sobbing_and_depressed_20260502T145520Z_2.mp3 HTTP/1.0" 206 -
-127.0.0.1 - - [02/May/2026 18:04:48] "GET /training_audio/e1cd650b50be4d7b8cd47942d4306562_ed10801b-92d5-44b8-aecf-0945bfa8cd2e_hap_concerned_and_anxious_20260502T145520Z_3.mp3 HTTP/1.0" 206 -
- * Detected change in '/home/lucas/Projects/idep/codesign2/server_helpers.py', reloading
- * Restarting with stat
- * Debugger is active!
- * Debugger PIN: 117-539-364
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/app.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/styles.css HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/sidebar-upload.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/state.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/nodes.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/edges.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/serialize.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/tabs.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/board.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/nodes/agent.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/nodes/goal.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/nodes/blocker.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/nodes/followup.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/nodes/reflection.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/utils.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/node-base.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /static/connection.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:28] "GET /api/audio/sessions HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/sidebar-upload.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/app.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/pipeline.js HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/styles.css HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/state.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/nodes.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/edges.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/serialize.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/board.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/tabs.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/nodes/agent.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/nodes/followup.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/nodes/goal.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/nodes/blocker.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/nodes/reflection.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/utils.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/node-base.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /static/connection.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /api/audio/sessions HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:14:32] "GET /uploads/10c968cc-f846-4916-8ed7-e25d33dbec70_Debrief_Meeting.mp3 HTTP/1.0" 206 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/app.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/sidebar-upload.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/pipeline.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/styles.css HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/state.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/edges.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/nodes.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/serialize.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/tabs.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/board.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/nodes/agent.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/nodes/goal.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/nodes/blocker.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/nodes/followup.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/nodes/reflection.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/utils.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/node-base.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /static/connection.js HTTP/1.0" 304 -
+127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/audio/sessions HTTP/1.0" 200 -
