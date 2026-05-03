@@ -1,0 +1,32 @@
+# Data, models, and logs are mounted as volumes — don't bake them into the image
+data/
+logs/
+
+# Secrets — passed via env_file at runtime
+.env
+
+# Git history
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local dev artifacts
+past sessions/
+trash/
+*.log
+
+# SQLite WAL files (DB itself is in data/ which is excluded above)
+*.db-wal
+*.db-shm
+
+# Docker files themselves don't need to be in the build context
+docker-compose.yml
+docker-compose.override.yml
+
+# VS Code
+.vscode/

@@ -1,0 +1,60 @@
+services:
+
+  processing:
+    build: .
+    command: gunicorn --config gunicorn.conf.py --bind 0.0.0.0:5002 --workers 1 processing_server:app
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      - noonchi
+    # Uncomment to enable GPU access (requires NVIDIA Container Toolkit on host):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  ui:
+    build: .
+    command: gunicorn --config gunicorn.conf.py --bind 0.0.0.0:5001 ui_server:app
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      - noonchi
+
+  bangle:
+    build: .
+    command: gunicorn --config gunicorn.conf.py --bind 0.0.0.0:5007 --workers 1 bangle_server:app
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file: .env
+    restart: unless-stopped
+    # network_mode: host is required for Bluetooth BLE scanning.
+    # Note: BLE won't work on cloud VMs without Bluetooth hardware.
+    network_mode: host
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - processing
+      - ui
+    restart: unless-stopped
+    networks:
+      - noonchi
+
+networks:
+  noonchi:
+    driver: bridge
