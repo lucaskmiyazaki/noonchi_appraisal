@@ -166,6 +166,7 @@ def build_reflection_response_row(row, reflection_file):
         return None
 
     return {
+        "id": row.get("id", ""),
         "reflection_tree_file": reflection_file,
         "user_id": row.get("user_id", ""),
         "username": lookup_username_by_user_id(row.get("user_id", "")),
@@ -334,7 +335,7 @@ def build_journaling_items_for_user(user_name: str):
         session_name = str(row.get("session_name", "") or "").strip()
         record = find_latest_audio_record(session_name) if session_name else None
         display_name = (record.get("displayName") if record else None) or session_name or "Untitled session"
-        entry_map = _parse_journal_entry_map(load_journal_entry_raw(reflection_file))
+        entry_map = _parse_journal_entry_map(load_journal_entry_raw(str(row.get("id", "") or "")))
         fallback_entry = entry_map.get("_single", "")
 
         for index, journaling_path in enumerate(journaling_paths):

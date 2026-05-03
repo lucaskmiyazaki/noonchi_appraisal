@@ -824,7 +824,7 @@ if (saveSessionNameBtn) {
     const activeRes = await fetch("/api/audio/upload/jobs/active");
     if (activeRes.ok) {
       const activeJob = await activeRes.json();
-      if (activeJob.job_id && activeJob.status === "transcribing") {
+      if (activeJob.job_id && activeJob.status === "transcribing" && uploadPanel) {
         setSidebarView("list");
         renderSessionList();
         setTranscriptStatus("Transcribing audio\u2026 (reconnecting)");

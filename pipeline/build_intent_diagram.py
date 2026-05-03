@@ -111,7 +111,7 @@ def build_intent_diagram(json_path, wearer="wearer", participants=None):
     print(f"Wrote intent file: {intent_path}")
 
     upsert_intent_reflection_row(intent.get("sessionName", ""), intent_filename)
-    print(f"Added {intent_filename} to intents.csv")
+    print(f"Saved intent diagram: {intent_filename}")
 
 
 if __name__ == "__main__":

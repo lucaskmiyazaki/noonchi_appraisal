@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import uuid as _uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,7 @@ USERS_CSV_FIELDNAMES = [
 ]
 
 REFLECTION_DB_FIELDNAMES = [
+    "id",
     "user_id",
     "reflection_tree_file",
     "startms",
@@ -77,7 +79,7 @@ INTENTS_CSV_FIELDNAMES = [
 ]
 
 JOURNAL_ENTRIES_CSV_FIELDNAMES = [
-    "reflection_tree_file",
+    "reflection_id",
     "journal_entry",
 ]
 
@@ -93,6 +95,7 @@ MEETINGS_CSV_FIELDNAMES = [
     "uploaded_at",
     "duration",
     "segment_count",
+    "intent_filename",
 ]
 
 AUDIO_RECORD_REQUIRED_KEYS = {
@@ -111,12 +114,94 @@ def ensure_data_layout() -> None:
     JSON_REFLECTIONS_DIR.mkdir(parents=True, exist_ok=True)
     TRAINING_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     migrate_folder_structure()
+    migrate_intents_to_meetings()
     migrate_legacy_reflection_embedded_tables()
+    migrate_reflection_ids()
     migrate_audio_records_to_csv()
     migrate_audio_filename_to_meeting_id()
     migrate_training_to_meeting_id()
     migrate_wearer_agent_to_user_id()
     migrate_meeting_user_id()
+
+
+def migrate_reflection_ids() -> None:
+    """One-time migration: assign a UUID id to every reflection row and update
+    journal_entries.csv to reference reflection_id instead of reflection_tree_file."""
+    csv_path = reflection_csv_path()
+    if not csv_path.exists():
+        return
+
+    raw_rows, raw_fieldnames = read_csv_rows(csv_path)
+
+    # Assign IDs to any rows missing one
+    rtf_to_id: dict[str, str] = {}
+    changed = False
+    for row in raw_rows:
+        row_id = str(row.get("id", "") or "").strip()
+        rtf = str(row.get("reflection_tree_file", "") or "").strip()
+        if not row_id:
+            row_id = _uuid.uuid4().hex
+            row["id"] = row_id
+            changed = True
+        if rtf:
+            rtf_to_id[rtf] = row_id
+
+    if changed:
+        # Write with id as first field
+        fieldnames = reflection_db_fieldnames(list(raw_fieldnames))
+        write_csv_rows(csv_path, raw_rows, fieldnames)
+
+    # Migrate journal_entries.csv if it still uses reflection_tree_file
+    if not JOURNAL_ENTRIES_CSV_PATH.exists():
+        return
+    journal_rows, journal_fieldnames = read_csv_rows(JOURNAL_ENTRIES_CSV_PATH)
+    if "reflection_tree_file" not in journal_fieldnames:
+        return  # already migrated
+
+    new_journal_rows = []
+    for row in journal_rows:
+        rtf = str(row.get("reflection_tree_file", "") or "").strip()
+        rid = rtf_to_id.get(rtf, "")
+        if not rid:
+            continue  # orphaned entry, drop it
+        new_journal_rows.append({
+            "reflection_id": rid,
+            "journal_entry": str(row.get("journal_entry", "") or ""),
+        })
+    write_journal_rows(new_journal_rows, list(JOURNAL_ENTRIES_CSV_FIELDNAMES))
+
+
+def migrate_intents_to_meetings() -> None:
+    """One-time migration: copy intent_filename from intents.csv into meetings.csv,
+    then remove intents.csv. Idempotent: exits early if intents.csv is already gone."""
+    if not INTENTS_CSV_PATH.exists():
+        return
+    raw_intent_rows, _ = read_csv_rows(INTENTS_CSV_PATH)
+    # Build lookup: meeting_id → intent_filename
+    intent_by_meeting: dict[str, str] = {}
+    for row in raw_intent_rows:
+        mid = str(row.get("meeting_id", "") or "").strip()
+        fname = str(row.get("intent_filename", "") or "").strip()
+        if mid and fname:
+            intent_by_meeting[mid] = fname
+
+    if intent_by_meeting:
+        meeting_rows, meeting_fieldnames = load_meeting_rows()
+        changed = False
+        for row in meeting_rows:
+            mid = str(row.get("id", "") or "").strip()
+            if mid in intent_by_meeting and not str(row.get("intent_filename", "")).strip():
+                row["intent_filename"] = intent_by_meeting[mid]
+                changed = True
+        if changed:
+            write_meeting_rows(meeting_rows, meeting_fieldnames)
+
+    # Back up intents.csv and remove it so future runs skip this migration
+    backup = INTENTS_CSV_PATH.with_suffix(".csv.bak")
+    try:
+        INTENTS_CSV_PATH.rename(backup)
+    except OSError:
+        INTENTS_CSV_PATH.unlink(missing_ok=True)
 
 
 def migrate_meeting_user_id() -> None:
@@ -441,9 +526,14 @@ def load_reflection_db_rows():
     raw_rows, raw_fieldnames = read_csv_rows(csv_path)
     fieldnames = reflection_db_fieldnames(raw_fieldnames)
     rows = []
+    needs_save = False
     for row in raw_rows:
         normalized_row = {field: row.get(field, "") for field in fieldnames}
         normalized_row["practice"] = normalize_practice_value(normalized_row.get("practice"))
+        # Auto-assign id if missing
+        if not str(normalized_row.get("id", "")).strip():
+            normalized_row["id"] = _uuid.uuid4().hex
+            needs_save = True
         # Migrate legacy wearer_agent -> user_id (FK to users.csv)
         if not str(normalized_row.get("user_id", "")).strip() and str(row.get("wearer_agent", "")).strip():
             normalized_row["user_id"] = lookup_user_id_by_username(row.get("wearer_agent", ""))
@@ -452,6 +542,8 @@ def load_reflection_db_rows():
         if meeting_id:
             normalized_row["session_name"] = lookup_session_name_by_meeting_id(meeting_id)
         rows.append(normalized_row)
+    if needs_save:
+        write_reflection_db_rows(rows, fieldnames)
     return rows, fieldnames
 
 
@@ -461,48 +553,59 @@ def write_reflection_db_rows(rows, fieldnames=None) -> None:
 
 
 def load_intent_rows():
-    if not INTENTS_CSV_PATH.exists():
-        return [], list(INTENTS_CSV_FIELDNAMES)
-
-    raw_rows, raw_fieldnames = read_csv_rows(INTENTS_CSV_PATH)
-    fieldnames = intents_fieldnames(raw_fieldnames)
-    rows = []
-    for row in raw_rows:
-        normalized = {field: str(row.get(field, "") or "").strip() for field in fieldnames}
-        # Migrate legacy wearer_agent -> user_id (FK to users.csv)
-        if not normalized.get("user_id") and str(row.get("wearer_agent", "")).strip():
-            normalized["user_id"] = lookup_user_id_by_username(row.get("wearer_agent", ""))
-        # Derive session_name from meetings (authoritative)
-        meeting_id = normalized.get("meeting_id", "")
-        if meeting_id:
-            normalized["session_name"] = lookup_session_name_by_meeting_id(meeting_id)
-        rows.append(normalized)
-    return rows, fieldnames
+    """Load intent data from meetings.csv (intent_filename column)."""
+    rows, _ = load_meeting_rows()
+    intent_rows = []
+    for row in rows:
+        fname = str(row.get("intent_filename", "") or "").strip()
+        if fname:
+            intent_rows.append({
+                "intent_filename": fname,
+                "user_id": str(row.get("user_id", "") or "").strip(),
+                "startms": "",
+                "endms": "",
+                "meeting_id": str(row.get("id", "") or "").strip(),
+                "session_name": str(row.get("session_name", "") or "").strip(),
+            })
+    return intent_rows, list(INTENTS_CSV_FIELDNAMES)
 
 
 def write_intent_rows(rows, fieldnames=None) -> None:
-    resolved_fieldnames = intents_fieldnames(fieldnames)
-    normalized = []
+    """Update intent_filename in meetings.csv from the provided intent rows."""
+    intent_by_meeting: dict[str, str] = {}
     for row in rows:
-        normalized.append({field: str(row.get(field, "") or "").strip() for field in resolved_fieldnames})
-    write_csv_rows(INTENTS_CSV_PATH, normalized, resolved_fieldnames)
+        mid = str(row.get("meeting_id", "") or "").strip()
+        fname = str(row.get("intent_filename", "") or "").strip()
+        if mid and fname:
+            intent_by_meeting[mid] = fname
+    if not intent_by_meeting:
+        return
+    meeting_rows, meeting_fieldnames = load_meeting_rows()
+    changed = False
+    for mrow in meeting_rows:
+        mid = str(mrow.get("id", "") or "").strip()
+        if mid in intent_by_meeting:
+            new_val = intent_by_meeting[mid]
+            if str(mrow.get("intent_filename", "") or "").strip() != new_val:
+                mrow["intent_filename"] = new_val
+                changed = True
+    if changed:
+        write_meeting_rows(meeting_rows, meeting_fieldnames)
 
 
 def delete_intent_row(intent_file: str) -> bool:
     safe_intent = str(intent_file or "").strip()
     if not safe_intent:
         return False
-    rows, fieldnames = load_intent_rows()
-    remaining = []
-    removed = False
+    rows, fieldnames = load_meeting_rows()
+    found = False
     for row in rows:
-        if str(row.get("intent_filename", "") or "") == safe_intent:
-            removed = True
-            continue
-        remaining.append(row)
-    if removed:
-        write_intent_rows(remaining, fieldnames)
-    return removed
+        if str(row.get("intent_filename", "") or "").strip() == safe_intent:
+            row["intent_filename"] = ""
+            found = True
+    if found:
+        write_meeting_rows(rows, fieldnames)
+    return found
 
 
 def load_journal_rows():
@@ -865,49 +968,48 @@ def migrate_wearer_agent_to_user_id() -> None:
             write_fn(list(raw_rows))
 
     _replace_in_csv(csv_path, None, lambda rows: write_reflection_db_rows(rows))
-    _replace_in_csv(INTENTS_CSV_PATH, None, lambda rows: write_intent_rows(rows))
     _replace_in_csv(TRAINING_CSV_PATH, None, lambda rows: write_training_rows(rows))
 
 
-def load_journal_entry_raw(reflection_tree_file: str) -> str:
-    target = str(reflection_tree_file or "").strip()
+def load_journal_entry_raw(reflection_id: str) -> str:
+    target = str(reflection_id or "").strip()
     if not target:
         return ""
     rows, _ = load_journal_rows()
     for row in rows:
-        if str(row.get("reflection_tree_file", "") or "").strip() == target:
+        if str(row.get("reflection_id", "") or "").strip() == target:
             return str(row.get("journal_entry", "") or "")
     return ""
 
 
-def upsert_journal_entry_raw(reflection_tree_file: str, journal_entry: str) -> None:
-    target = str(reflection_tree_file or "").strip()
+def upsert_journal_entry_raw(reflection_id: str, journal_entry: str) -> None:
+    target = str(reflection_id or "").strip()
     if not target:
         return
     rows, fieldnames = load_journal_rows()
     replaced = False
     for row in rows:
-        if str(row.get("reflection_tree_file", "") or "").strip() == target:
+        if str(row.get("reflection_id", "") or "").strip() == target:
             row["journal_entry"] = str(journal_entry or "")
             replaced = True
             break
     if not replaced:
         rows.append({
-            "reflection_tree_file": target,
+            "reflection_id": target,
             "journal_entry": str(journal_entry or ""),
         })
     write_journal_rows(rows, fieldnames)
 
 
-def delete_journal_entry_row(reflection_tree_file: str) -> bool:
-    target = str(reflection_tree_file or "").strip()
+def delete_journal_entry_row(reflection_id: str) -> bool:
+    target = str(reflection_id or "").strip()
     if not target:
         return False
     rows, fieldnames = load_journal_rows()
     remaining = []
     removed = False
     for row in rows:
-        if str(row.get("reflection_tree_file", "") or "").strip() == target:
+        if str(row.get("reflection_id", "") or "").strip() == target:
             removed = True
             continue
         remaining.append(row)
@@ -993,20 +1095,9 @@ def _move_stray_audio_files() -> None:
 
 
 def migrate_audio_filename_to_meeting_id() -> None:
-    """One-time migration: replace audio_filename FK with meeting_id in intents and reflections."""
+    """One-time migration: replace audio_filename FK with meeting_id in reflections."""
     meeting_rows, _ = load_meeting_rows()
     by_audio_filename = {r.get("audio_filename", "").strip(): r.get("id", "") for r in meeting_rows}
-
-    # Migrate intents.csv - read raw to access audio_filename before filtering
-    if INTENTS_CSV_PATH.exists():
-        raw_rows, raw_fieldnames = read_csv_rows(INTENTS_CSV_PATH)
-        if any(r.get("audio_filename") and not r.get("meeting_id") for r in raw_rows):
-            for row in raw_rows:
-                if not str(row.get("meeting_id", "")).strip():
-                    af = str(row.get("audio_filename", "") or "").strip()
-                    if af and af in by_audio_filename:
-                        row["meeting_id"] = af and by_audio_filename[af]
-            write_intent_rows(list(raw_rows))
 
     # Migrate reflections.csv - read raw to access audio_filename before filtering
     csv_path = reflection_csv_path()
@@ -1141,22 +1232,22 @@ def migrate_legacy_reflection_embedded_tables() -> None:
 
 
 def upsert_intent_reflection_row(session_name: str, intent_file: str, user_id: str = "", meeting_id: str = "") -> None:
-    intent_rows, fieldnames = load_intent_rows()
     safe_intent = str(intent_file or "").strip()
     if not safe_intent:
         return
-    intent_rows = [
-        row for row in intent_rows
-        if str(row.get("intent_filename", "") or "") != safe_intent
-    ]
-    intent_rows.append({
-        "intent_filename": safe_intent,
-        "user_id": str(user_id or "").strip(),
-        "startms": "",
-        "endms": "",
-        "meeting_id": str(meeting_id or "").strip(),
-    })
-    write_intent_rows(intent_rows, fieldnames)
+    rows, fieldnames = load_meeting_rows()
+    target_id = str(meeting_id or "").strip()
+    target_session = str(session_name or "").strip()
+    found = False
+    for row in rows:
+        mid = str(row.get("id", "") or "").strip()
+        sname = str(row.get("session_name", "") or "").strip()
+        if (target_id and mid == target_id) or (not target_id and sname == target_session):
+            row["intent_filename"] = safe_intent
+            found = True
+            break
+    if found:
+        write_meeting_rows(rows, fieldnames)
 
 
 def load_training_rows():

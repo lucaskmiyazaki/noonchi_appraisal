@@ -365,6 +365,12 @@ def run_pipeline_start(record_id):
             _pipeline_jobs[job_id] = {"status": "done", "progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": "Pipeline complete.", "record_id": safe_id}
         except Exception as exc:
             _pipeline_jobs[job_id] = {"status": "error", "progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": f"Error: {exc}", "error": True, "record_id": safe_id}
+        finally:
+            # Keep job alive for 5 minutes so a page refresh can see final state
+            def _cleanup():
+                import time as _t; _t.sleep(300)
+                _pipeline_jobs.pop(job_id, None)
+            threading.Thread(target=_cleanup, daemon=True).start()
 
     threading.Thread(target=do_run, daemon=True).start()
     return jsonify({"job_id": job_id}), 202
@@ -372,10 +378,10 @@ def run_pipeline_start(record_id):
 
 @app.get("/api/pipeline/jobs/active")
 def pipeline_jobs_active():
-    """Returns the most recent running pipeline job, if any."""
+    """Returns the most recent running OR recently-finished pipeline job, if any."""
     active = None
     for jid, job in reversed(list(_pipeline_jobs.items())):
-        if job.get("status") == "running":
+        if job.get("status") in ("running", "done", "error"):
             active = {"job_id": jid, "status": job.get("status"), "progress": job.get("progress"), "total": job.get("total"), "message": job.get("message"), "record_id": job.get("record_id")}
             break
     if active:
@@ -398,7 +404,7 @@ def pipeline_job_stream(job_id):
                 return
             yield f"data: {_json.dumps(job)}\n\n"
             if job["status"] in ("done", "error"):
-                _pipeline_jobs.pop(safe_job_id, None)
+                # Don't pop here — delayed cleanup in do_run() keeps job for 5 min
                 yield "event: done\ndata: {}\n\n"
                 return
             _time.sleep(1)
@@ -460,7 +466,7 @@ def delete_audio(audio_id):
             reflection_file = str(row.get("reflection_tree_file", "") or "").strip()
             if reflection_file:
                 delete_data_json_file(reflection_file)
-                delete_journal_entry_row(reflection_file)
+                delete_journal_entry_row(str(row.get("id", "") or ""))
                 deleted_reflection_files.append(reflection_file)
             continue
         remaining_rows.append(row)
@@ -690,7 +696,9 @@ def generate_reflections_from_intent(intent_filename):
             if wearer_agent is not None else wearer_id
         )
         resolved_user_id = lookup_user_id_by_username(wearer_agent_name) if wearer_agent_name else ""
+        new_reflection_id = str(uuid.uuid4().hex)
         rows.append({
+            "id": new_reflection_id,
             "user_id": resolved_user_id,
             "reflection_tree_file": reflection_filename,
             "startms": reflection_tree.get("startMs", ""),
@@ -701,6 +709,7 @@ def generate_reflections_from_intent(intent_filename):
             "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })
         results.append({
+            "id": new_reflection_id,
             "reflection_tree": reflection_tree,
             "reflection_tree_file": reflection_filename,
             "user_id": resolved_user_id,
@@ -730,7 +739,7 @@ def delete_reflection(reflection_filename):
 
     write_reflection_db_rows(remaining_rows, fieldnames)
     file_deleted = delete_data_json_file(safe_filename)
-    delete_journal_entry_row(safe_filename)
+    delete_journal_entry_row(str(deleted_row.get("id", "") or "") if deleted_row else "")
 
     if deleted_row is None and not file_deleted:
         return jsonify({"error": "Reflection not found."}), 404
@@ -978,6 +987,7 @@ def play_graph():
         latest_audio_record = find_latest_audio_record(reflection_tree.get("session_name", ""))
         rows, fieldnames = load_reflection_db_rows()
         rows.append({
+            "id": str(uuid.uuid4().hex),
             "user_id": resolved_user_id,
             "reflection_tree_file": str(reflection_path.name),
             "startms": reflection_tree.get("startMs", ""),

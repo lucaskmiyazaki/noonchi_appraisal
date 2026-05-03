@@ -6,26 +6,35 @@ Press CTRL+C to quit
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 117-539-364
-127.0.0.1 - - [03/May/2026 08:14:28] "GET /wizard HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:28] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:32] "GET /wizard/Debrief_Meeting HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:32] "GET /api/pipeline/jobs/active HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:32] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:32] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70 HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:32] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70/reflections HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:32] "GET /api/audio/session/Debrief_Meeting/intents HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:39] "POST /api/pipeline/run/10c968cc-f846-4916-8ed7-e25d33dbec70 HTTP/1.0" 202 -
-127.0.0.1 - - [03/May/2026 08:14:39] "GET /api/pipeline/job/65c09471-86cb-4f5b-ac56-6f03cfe9acbb/stream HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:47] "GET /wizard/Debrief_Meeting HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:47] "GET /api/pipeline/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:47] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:47] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70 HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:47] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70/reflections HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:47] "GET /api/audio/session/Debrief_Meeting/intents HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:50] "GET /wizard HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:50] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:51] "GET /wizard/sexism HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:51] "GET /api/pipeline/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:51] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:51] "GET /api/audio/ee661b7e-0ba4-4c43-983d-896bce24ca97 HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:51] "GET /api/audio/ee661b7e-0ba4-4c43-983d-896bce24ca97/reflections HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:51] "GET /api/audio/session/sexism/intents HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:57:59] "GET /api/audio/ed10801b-92d5-44b8-aecf-0945bfa8cd2e HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:02] "GET /api/audio/ee661b7e-0ba4-4c43-983d-896bce24ca97 HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:46] "GET /wizard HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:46] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:48] "GET /wizard/Debrief_Meeting HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:48] "GET /api/pipeline/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:48] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:48] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70 HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:48] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70/reflections HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:48] "GET /api/audio/session/Debrief_Meeting/intents HTTP/1.0" 200 -
+127.0.0.1 - - [03/May/2026 08:58:54] "POST /api/pipeline/run/10c968cc-f846-4916-8ed7-e25d33dbec70 HTTP/1.0" 202 -
+127.0.0.1 - - [03/May/2026 08:58:54] "GET /api/pipeline/job/9ad401eb-b366-4d23-9db7-e9ca610edc04/stream HTTP/1.0" 200 -
 /home/lucas/.local/lib/python3.10/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: 'Could not load this library: /home/lucas/.local/lib/python3.10/site-packages/torchvision/image.so'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
   warn(
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 Merged transcript saved to /home/lucas/Projects/idep/codesign2/data/meeting_transcript/10c968cc-f846-4916-8ed7-e25d33dbec70.json
-Loading weights:   0%|          | 0/234 [00:00<?, ?it/s]Loading weights: 100%|██████████| 234/234 [00:00<00:00, 4206.53it/s]
-Loading weights:   0%|          | 0/216 [00:00<?, ?it/s]Loading weights: 100%|██████████| 216/216 [00:00<00:00, 16779.70it/s]
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /wizard/Debrief_Meeting HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/pipeline/jobs/active HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/pipeline/job/65c09471-86cb-4f5b-ac56-6f03cfe9acbb/stream HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/audio/upload/jobs/active HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70 HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/audio/10c968cc-f846-4916-8ed7-e25d33dbec70/reflections HTTP/1.0" 200 -
-127.0.0.1 - - [03/May/2026 08:14:50] "GET /api/audio/session/Debrief_Meeting/intents HTTP/1.0" 200 -
+Loading weights:   0%|          | 0/234 [00:00<?, ?it/s]Loading weights: 100%|██████████| 234/234 [00:00<00:00, 4735.83it/s]
+Loading weights:   0%|          | 0/216 [00:00<?, ?it/s]Loading weights: 100%|██████████| 216/216 [00:00<00:00, 13386.47it/s]

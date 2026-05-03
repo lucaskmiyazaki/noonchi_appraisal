@@ -348,16 +348,17 @@ def update_journal_entry(reflection_filename, node_id):
     journal_entry = str(payload.get("journal_entry", "") or "").strip()
 
     rows, _ = load_reflection_db_rows()
-    row_exists = any(
-        str(row.get("reflection_tree_file", "") or "").strip() == safe_filename
-        for row in rows
+    target_row = next(
+        (row for row in rows if str(row.get("reflection_tree_file", "") or "").strip() == safe_filename),
+        None,
     )
-    if not row_exists:
+    if target_row is None:
         return jsonify({"error": "Reflection row not found."}), 404
 
-    entry_map = _parse_journal_entry_map(load_journal_entry_raw(safe_filename))
+    reflection_id = str(target_row.get("id", "") or "").strip()
+    entry_map = _parse_journal_entry_map(load_journal_entry_raw(reflection_id))
     entry_map[safe_node_id] = journal_entry
-    upsert_journal_entry_raw(safe_filename, _serialize_journal_entry_map(entry_map))
+    upsert_journal_entry_raw(reflection_id, _serialize_journal_entry_map(entry_map))
     return jsonify({
         "reflection_tree_file": safe_filename,
         "node_id": safe_node_id,
