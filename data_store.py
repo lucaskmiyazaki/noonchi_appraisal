@@ -27,7 +27,7 @@ JOURNAL_ENTRIES_CSV_PATH = DATA_DIR / "journal_entries.csv"
 MEETINGS_CSV_PATH = DATA_DIR / "meetings.csv"
 TRAINING_CSV_PATH = DATA_DIR / "training.csv"
 USERS_CSV_PATH = DATA_DIR / "users.csv"
-DB_PATH = DATA_DIR / "codesign2.db"
+DB_PATH = DATA_DIR / "data.db"
 
 USERS_CSV_FIELDNAMES = [
     "id", "username", "name",
