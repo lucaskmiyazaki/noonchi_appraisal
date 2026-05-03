@@ -40,4 +40,5 @@ instance/
 Thumbs.db
 
 data/
+logs/
 past sessions/

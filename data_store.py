@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import json
+import sqlite3
+import threading
 import uuid as _uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,7 +16,6 @@ JSON_MEETING_TRANSCRIPT_DIR = DATA_DIR / "meeting_transcript"
 JSON_INTENTS_DIR = DATA_DIR / "intent_json"
 JSON_REFLECTIONS_DIR = DATA_DIR / "reflection_json"
 TRAINING_AUDIO_DIR = DATA_DIR / "training_audio"
-# Audio files go to meeting_audio folder, legacy support as UPLOAD_DIR
 UPLOAD_DIR = MEETING_AUDIO_DIR
 AUDIO_DATA_DIR = DATA_DIR
 JSON_AUDIO_RECORDS_DIR = JSON_MEETING_TRANSCRIPT_DIR
@@ -26,84 +27,329 @@ JOURNAL_ENTRIES_CSV_PATH = DATA_DIR / "journal_entries.csv"
 MEETINGS_CSV_PATH = DATA_DIR / "meetings.csv"
 TRAINING_CSV_PATH = DATA_DIR / "training.csv"
 USERS_CSV_PATH = DATA_DIR / "users.csv"
+DB_PATH = DATA_DIR / "codesign2.db"
 
 USERS_CSV_FIELDNAMES = [
-    "id",
-    "username",
-    "name",
-    "nudge_tone_difference",
-    "nudge_elevation",
-    "nudge_unclear_intent",
-    "nudge_excellent_tone",
-    "nudge_need_for_clarification",
+    "id", "username", "name",
+    "nudge_tone_difference", "nudge_elevation", "nudge_unclear_intent",
+    "nudge_excellent_tone", "nudge_need_for_clarification",
 ]
-
 REFLECTION_DB_FIELDNAMES = [
-    "id",
-    "user_id",
-    "reflection_tree_file",
-    "startms",
-    "endms",
-    "practice",
-    "meeting_id",
-    "tree_type",
-    "has_journaling",
+    "id", "user_id", "reflection_tree_file", "startms", "endms",
+    "practice", "meeting_id", "tree_type", "has_journaling",
 ]
-
 TRAINING_CSV_FIELDNAMES = [
-    "training_id",
-    "created_at",
-    "meeting_id",
-    "user_id",
-    "reflection_id",
-    "type",
-    "valence",
-    "arousal",
-    "dominance",
-    "done",
-    "training_files",
-    "transcription",
-    "summary",
-    "suggestions",
-    "tree_type",
-    "startms",
-    "endms",
+    "training_id", "created_at", "meeting_id", "user_id", "reflection_id",
+    "type", "valence", "arousal", "dominance", "done", "training_files",
+    "transcription", "summary", "suggestions", "tree_type", "startms", "endms",
 ]
-
-INTENTS_CSV_FIELDNAMES = [
-    "intent_filename",
-    "user_id",
-    "startms",
-    "endms",
-    "meeting_id",
-]
-
-JOURNAL_ENTRIES_CSV_FIELDNAMES = [
-    "reflection_id",
-    "journal_entry",
-]
-
+INTENTS_CSV_FIELDNAMES = ["intent_filename", "user_id", "startms", "endms", "meeting_id"]
+JOURNAL_ENTRIES_CSV_FIELDNAMES = ["reflection_id", "journal_entry"]
 MEETINGS_CSV_FIELDNAMES = [
-    "id",
-    "user_id",
-    "session_name",
-    "display_name",
-    "safe_session_name",
-    "original_name",
-    "audio_filename",
-    "transcript_file",
-    "uploaded_at",
-    "duration",
-    "segment_count",
-    "intent_filename",
+    "id", "user_id", "session_name", "display_name", "safe_session_name",
+    "original_name", "audio_filename", "transcript_file", "uploaded_at",
+    "duration", "segment_count", "intent_filename",
 ]
+AUDIO_RECORD_REQUIRED_KEYS = {"id", "audioUrl", "audioFilename", "transcript"}
 
-AUDIO_RECORD_REQUIRED_KEYS = {
-    "id",
-    "audioUrl",
-    "audioFilename",
-    "transcript",
-}
+# ---------------------------------------------------------------------------
+# Database abstraction layer
+#
+# All SQL is isolated in this section. To migrate to PostgreSQL:
+#   1. Replace `import sqlite3` with `import psycopg2 as sqlite3` (or psycopg3)
+#   2. Update _db_connect() to open a PostgreSQL connection
+#   3. Replace placeholder '?' with '%s' in every SQL string
+#   4. Remove check_same_thread=False (not a PG concept)
+#   5. Replace executescript() with execute() calls inside a transaction
+# ---------------------------------------------------------------------------
+
+_local = threading.local()
+
+
+def _db_connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+
+def get_db() -> sqlite3.Connection:
+    """Return a thread-local database connection."""
+    if not getattr(_local, "conn", None):
+        _local.conn = _db_connect()
+    return _local.conn
+
+
+def _db_execute(sql: str, params: tuple = ()) -> sqlite3.Cursor:
+    return get_db().execute(sql, params)
+
+
+def _db_commit() -> None:
+    get_db().commit()
+
+
+def _create_tables() -> None:
+    db = get_db()
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            name TEXT DEFAULT '',
+            nudge_tone_difference TEXT DEFAULT 'false',
+            nudge_elevation TEXT DEFAULT 'false',
+            nudge_unclear_intent TEXT DEFAULT 'false',
+            nudge_excellent_tone TEXT DEFAULT 'false',
+            nudge_need_for_clarification TEXT DEFAULT 'false'
+        );
+        CREATE TABLE IF NOT EXISTS meetings (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id),
+            session_name TEXT DEFAULT '',
+            display_name TEXT DEFAULT '',
+            safe_session_name TEXT DEFAULT '',
+            original_name TEXT DEFAULT '',
+            audio_filename TEXT DEFAULT '',
+            transcript_file TEXT DEFAULT '',
+            uploaded_at TEXT DEFAULT '',
+            duration TEXT DEFAULT '',
+            segment_count TEXT DEFAULT '',
+            intent_filename TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS reflections (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id),
+            reflection_tree_file TEXT DEFAULT '',
+            startms TEXT DEFAULT '',
+            endms TEXT DEFAULT '',
+            practice TEXT DEFAULT 'null',
+            meeting_id TEXT REFERENCES meetings(id),
+            tree_type TEXT DEFAULT '',
+            has_journaling TEXT DEFAULT 'false'
+        );
+        CREATE TABLE IF NOT EXISTS journal_entries (
+            reflection_id TEXT PRIMARY KEY REFERENCES reflections(id),
+            journal_entry TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS training (
+            training_id TEXT PRIMARY KEY,
+            created_at TEXT DEFAULT '',
+            meeting_id TEXT REFERENCES meetings(id),
+            user_id TEXT REFERENCES users(id),
+            reflection_id TEXT REFERENCES reflections(id),
+            type TEXT DEFAULT 'valence',
+            valence TEXT DEFAULT '',
+            arousal TEXT DEFAULT '',
+            dominance TEXT DEFAULT '',
+            done TEXT DEFAULT 'false',
+            training_files TEXT DEFAULT '',
+            transcription TEXT DEFAULT '',
+            summary TEXT DEFAULT '',
+            suggestions TEXT DEFAULT '',
+            tree_type TEXT DEFAULT '',
+            startms TEXT DEFAULT '',
+            endms TEXT DEFAULT ''
+        );
+    """)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# CSV helpers (internal — used only during one-time migration)
+# ---------------------------------------------------------------------------
+
+def _read_csv_rows(csv_path: Path):
+    if not csv_path.exists():
+        return [], []
+    with csv_path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return list(reader), list(reader.fieldnames or [])
+
+
+def _write_csv_rows(csv_path: Path, rows, fieldnames) -> None:
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(fieldnames))
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in fieldnames})
+
+
+def _backup_csv(path: Path) -> None:
+    bak = path.with_suffix(path.suffix + ".bak")
+    try:
+        path.rename(bak)
+    except OSError:
+        pass
+
+
+def _reflection_csv_path() -> Path:
+    if REFLECTIONS_CSV_PATH.exists():
+        return REFLECTIONS_CSV_PATH
+    if LEGACY_DB_CSV_PATH.exists():
+        try:
+            LEGACY_DB_CSV_PATH.rename(REFLECTIONS_CSV_PATH)
+        except OSError:
+            REFLECTIONS_CSV_PATH.write_text(LEGACY_DB_CSV_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+            LEGACY_DB_CSV_PATH.unlink()
+    return REFLECTIONS_CSV_PATH
+
+
+# ---------------------------------------------------------------------------
+# CSV → SQLite migration (runs once at startup, idempotent)
+# ---------------------------------------------------------------------------
+
+def _migrate_csv_to_sqlite() -> None:
+    db = get_db()
+    # Disable FK enforcement during bulk import so we don't fail on orphaned rows
+    db.execute("PRAGMA foreign_keys=OFF")
+
+    # users
+    if USERS_CSV_PATH.exists():
+        rows, _ = _read_csv_rows(USERS_CSV_PATH)
+        for row in rows:
+            uid = str(row.get("id", "") or "").strip()
+            uname = str(row.get("username", "") or "").strip().lower()
+            if not uid or not uname:
+                continue
+            db.execute(
+                "INSERT OR IGNORE INTO users VALUES (?,?,?,?,?,?,?,?)",
+                (uid, uname, str(row.get("name","") or ""),
+                 str(row.get("nudge_tone_difference","false") or "false"),
+                 str(row.get("nudge_elevation","false") or "false"),
+                 str(row.get("nudge_unclear_intent","false") or "false"),
+                 str(row.get("nudge_excellent_tone","false") or "false"),
+                 str(row.get("nudge_need_for_clarification","false") or "false")),
+            )
+        db.commit()
+        _backup_csv(USERS_CSV_PATH)
+
+    # meetings (handle audios.csv → meetings.csv rename)
+    if not MEETINGS_CSV_PATH.exists() and LEGACY_AUDIOS_CSV_PATH.exists():
+        try:
+            LEGACY_AUDIOS_CSV_PATH.rename(MEETINGS_CSV_PATH)
+        except OSError:
+            MEETINGS_CSV_PATH.write_text(LEGACY_AUDIOS_CSV_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+            LEGACY_AUDIOS_CSV_PATH.unlink()
+    if MEETINGS_CSV_PATH.exists():
+        rows, _ = _read_csv_rows(MEETINGS_CSV_PATH)
+        for row in rows:
+            mid = str(row.get("id","") or "").strip()
+            if not mid:
+                continue
+            db.execute(
+                "INSERT OR IGNORE INTO meetings VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (mid, str(row.get("user_id","") or ""), str(row.get("session_name","") or ""),
+                 str(row.get("display_name","") or ""), str(row.get("safe_session_name","") or ""),
+                 str(row.get("original_name","") or ""), str(row.get("audio_filename","") or ""),
+                 str(row.get("transcript_file","") or ""), str(row.get("uploaded_at","") or ""),
+                 str(row.get("duration","") or ""), str(row.get("segment_count","") or ""),
+                 str(row.get("intent_filename","") or "")),
+            )
+        db.commit()
+        _backup_csv(MEETINGS_CSV_PATH)
+
+    # reflections
+    refl_csv = _reflection_csv_path()
+    if refl_csv.exists():
+        rows, _ = _read_csv_rows(refl_csv)
+        for row in rows:
+            rid = str(row.get("id","") or "").strip() or _uuid.uuid4().hex
+            db.execute(
+                "INSERT OR IGNORE INTO reflections VALUES (?,?,?,?,?,?,?,?,?)",
+                (rid, str(row.get("user_id","") or ""), str(row.get("reflection_tree_file","") or ""),
+                 str(row.get("startms","") or ""), str(row.get("endms","") or ""),
+                 normalize_practice_value(row.get("practice","null")),
+                 str(row.get("meeting_id","") or ""), str(row.get("tree_type","") or ""),
+                 str(row.get("has_journaling","false") or "false")),
+            )
+        db.commit()
+        _backup_csv(refl_csv)
+
+    # journal_entries
+    if JOURNAL_ENTRIES_CSV_PATH.exists():
+        rows, _ = _read_csv_rows(JOURNAL_ENTRIES_CSV_PATH)
+        for row in rows:
+            rid = str(row.get("reflection_id","") or "").strip()
+            if not rid:
+                rtf = str(row.get("reflection_tree_file","") or "").strip()
+                if rtf:
+                    r2 = db.execute("SELECT id FROM reflections WHERE reflection_tree_file=?", (rtf,)).fetchone()
+                    if r2:
+                        rid = r2[0]
+            if not rid:
+                continue
+            db.execute(
+                "INSERT OR REPLACE INTO journal_entries VALUES (?,?)",
+                (rid, str(row.get("journal_entry","") or "")),
+            )
+        db.commit()
+        _backup_csv(JOURNAL_ENTRIES_CSV_PATH)
+
+    # training
+    if TRAINING_CSV_PATH.exists():
+        rows, _ = _read_csv_rows(TRAINING_CSV_PATH)
+        for row in rows:
+            tid = str(row.get("training_id","") or "").strip()
+            if not tid:
+                continue
+            db.execute(
+                "INSERT OR IGNORE INTO training VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (tid, str(row.get("created_at","") or ""), str(row.get("meeting_id","") or ""),
+                 str(row.get("user_id","") or ""), str(row.get("reflection_id","") or ""),
+                 normalize_training_type_str(row.get("type","valence")),
+                 str(row.get("valence","") or ""), str(row.get("arousal","") or ""),
+                 str(row.get("dominance","") or ""), normalize_done_str(row.get("done","false")),
+                 str(row.get("training_files","") or ""), str(row.get("transcription","") or ""),
+                 str(row.get("summary","") or ""), str(row.get("suggestions","") or ""),
+                 str(row.get("tree_type","") or ""), str(row.get("startms","") or ""),
+                 str(row.get("endms","") or "")),
+            )
+        db.commit()
+        _backup_csv(TRAINING_CSV_PATH)
+
+    db.execute("PRAGMA foreign_keys=ON")
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# ensure_data_layout
+# ---------------------------------------------------------------------------
+
+def _tree_has_journaling_node(tree) -> bool:
+    """Return True if any node in the reflection tree has type 'journaling'."""
+    nodes = tree.get("nodes") or {}
+    if isinstance(nodes, dict):
+        return any(
+            str(n.get("type", "") or "").strip().lower() == "journaling"
+            for n in nodes.values()
+            if isinstance(n, dict)
+        )
+    return False
+
+
+def _fix_has_journaling_flags() -> None:
+    """Set has_journaling='true' for any reflection whose JSON tree has a journaling node.
+    Runs at startup; idempotent — only touches rows not already marked true."""
+    rows = _db_execute(
+        "SELECT id, reflection_tree_file FROM reflections WHERE has_journaling != 'true'"
+    ).fetchall()
+    changed = False
+    for row in rows:
+        rtf = row["reflection_tree_file"] or ""
+        if not rtf or not rtf.endswith(".json"):
+            continue
+        path = JSON_REFLECTIONS_DIR / rtf
+        if not path.exists():
+            continue
+        try:
+            tree = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if _tree_has_journaling_node(tree):
+            _db_execute("UPDATE reflections SET has_journaling='true' WHERE id=?", (row["id"],))
+            changed = True
+    if changed:
+        _db_commit()
 
 
 def ensure_data_layout() -> None:
@@ -113,142 +359,161 @@ def ensure_data_layout() -> None:
     JSON_INTENTS_DIR.mkdir(parents=True, exist_ok=True)
     JSON_REFLECTIONS_DIR.mkdir(parents=True, exist_ok=True)
     TRAINING_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-    migrate_folder_structure()
-    migrate_intents_to_meetings()
-    migrate_legacy_reflection_embedded_tables()
-    migrate_reflection_ids()
-    migrate_audio_records_to_csv()
-    migrate_audio_filename_to_meeting_id()
-    migrate_training_to_meeting_id()
-    migrate_wearer_agent_to_user_id()
-    migrate_meeting_user_id()
+    _create_tables()
+    _pre_migrate_folder_structure()
+    _pre_migrate_move_stray_audio_files()
+    _pre_migrate_intents_to_meetings_csv()
+    _pre_migrate_audio_records_to_csv()
+    _migrate_csv_to_sqlite()
+    _fix_meeting_user_ids()
+    _fix_has_journaling_flags()
 
 
-def migrate_reflection_ids() -> None:
-    """One-time migration: assign a UUID id to every reflection row and update
-    journal_entries.csv to reference reflection_id instead of reflection_tree_file."""
-    csv_path = reflection_csv_path()
-    if not csv_path.exists():
+# ---------------------------------------------------------------------------
+# Pre-migration CSV helpers (only run before first SQLite import)
+# ---------------------------------------------------------------------------
+
+def _pre_migrate_folder_structure() -> None:
+    legacy = DATA_DIR / "audio_records"
+    if not (legacy.exists() and legacy.is_dir()):
         return
-
-    raw_rows, raw_fieldnames = read_csv_rows(csv_path)
-
-    # Assign IDs to any rows missing one
-    rtf_to_id: dict[str, str] = {}
-    changed = False
-    for row in raw_rows:
-        row_id = str(row.get("id", "") or "").strip()
-        rtf = str(row.get("reflection_tree_file", "") or "").strip()
-        if not row_id:
-            row_id = _uuid.uuid4().hex
-            row["id"] = row_id
-            changed = True
-        if rtf:
-            rtf_to_id[rtf] = row_id
-
-    if changed:
-        # Write with id as first field
-        fieldnames = reflection_db_fieldnames(list(raw_fieldnames))
-        write_csv_rows(csv_path, raw_rows, fieldnames)
-
-    # Migrate journal_entries.csv if it still uses reflection_tree_file
-    if not JOURNAL_ENTRIES_CSV_PATH.exists():
-        return
-    journal_rows, journal_fieldnames = read_csv_rows(JOURNAL_ENTRIES_CSV_PATH)
-    if "reflection_tree_file" not in journal_fieldnames:
-        return  # already migrated
-
-    new_journal_rows = []
-    for row in journal_rows:
-        rtf = str(row.get("reflection_tree_file", "") or "").strip()
-        rid = rtf_to_id.get(rtf, "")
-        if not rid:
-            continue  # orphaned entry, drop it
-        new_journal_rows.append({
-            "reflection_id": rid,
-            "journal_entry": str(row.get("journal_entry", "") or ""),
-        })
-    write_journal_rows(new_journal_rows, list(JOURNAL_ENTRIES_CSV_FIELDNAMES))
+    JSON_MEETING_TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
+    for file in list(legacy.iterdir()):
+        if file.is_file():
+            dst = JSON_MEETING_TRANSCRIPT_DIR / file.name
+            if not dst.exists():
+                try:
+                    file.rename(dst)
+                except OSError:
+                    dst.write_bytes(file.read_bytes())
+                    file.unlink()
+    try:
+        legacy.rmdir()
+    except OSError:
+        pass
 
 
-def migrate_intents_to_meetings() -> None:
-    """One-time migration: copy intent_filename from intents.csv into meetings.csv,
-    then remove intents.csv. Idempotent: exits early if intents.csv is already gone."""
+def _pre_migrate_move_stray_audio_files() -> None:
+    audio_extensions = {".mp3", ".wav", ".m4a", ".ogg", ".webm", ".mp4", ".mpeg", ".mpga"}
+    for file in DATA_DIR.iterdir():
+        if file.is_file() and file.suffix.lower() in audio_extensions:
+            dst = MEETING_AUDIO_DIR / file.name
+            if not dst.exists():
+                try:
+                    file.rename(dst)
+                except OSError:
+                    dst.write_bytes(file.read_bytes())
+                    file.unlink()
+
+
+def _pre_migrate_intents_to_meetings_csv() -> None:
     if not INTENTS_CSV_PATH.exists():
         return
-    raw_intent_rows, _ = read_csv_rows(INTENTS_CSV_PATH)
-    # Build lookup: meeting_id → intent_filename
+    raw_intent_rows, _ = _read_csv_rows(INTENTS_CSV_PATH)
     intent_by_meeting: dict[str, str] = {}
     for row in raw_intent_rows:
-        mid = str(row.get("meeting_id", "") or "").strip()
-        fname = str(row.get("intent_filename", "") or "").strip()
+        mid = str(row.get("meeting_id","") or "").strip()
+        fname = str(row.get("intent_filename","") or "").strip()
         if mid and fname:
             intent_by_meeting[mid] = fname
-
-    if intent_by_meeting:
-        meeting_rows, meeting_fieldnames = load_meeting_rows()
+    if intent_by_meeting and MEETINGS_CSV_PATH.exists():
+        meeting_rows, meeting_fieldnames = _read_csv_rows(MEETINGS_CSV_PATH)
         changed = False
         for row in meeting_rows:
-            mid = str(row.get("id", "") or "").strip()
-            if mid in intent_by_meeting and not str(row.get("intent_filename", "")).strip():
+            mid = str(row.get("id","") or "").strip()
+            if mid in intent_by_meeting and not str(row.get("intent_filename","")).strip():
                 row["intent_filename"] = intent_by_meeting[mid]
                 changed = True
         if changed:
-            write_meeting_rows(meeting_rows, meeting_fieldnames)
-
-    # Back up intents.csv and remove it so future runs skip this migration
-    backup = INTENTS_CSV_PATH.with_suffix(".csv.bak")
-    try:
-        INTENTS_CSV_PATH.rename(backup)
-    except OSError:
-        INTENTS_CSV_PATH.unlink(missing_ok=True)
+            _write_csv_rows(MEETINGS_CSV_PATH, meeting_rows, meeting_fieldnames)
+    _backup_csv(INTENTS_CSV_PATH)
 
 
-def migrate_meeting_user_id() -> None:
-    """One-time migration: populate user_id in meetings.csv by parsing the
-    '- Username' suffix from display_name (e.g. 'Sexism - Karlotta' → 'karlotta')."""
-    if not MEETINGS_CSV_PATH.exists():
+def _pre_migrate_audio_records_to_csv() -> None:
+    # Skip if CSV or its backup exists, or if meetings table already has rows
+    if MEETINGS_CSV_PATH.exists() or LEGACY_AUDIOS_CSV_PATH.exists():
         return
-    rows, fieldnames = load_meeting_rows()
+    if get_db().execute("SELECT COUNT(*) FROM meetings").fetchone()[0] > 0:
+        return
+    rows = []
+    for json_file in JSON_MEETING_TRANSCRIPT_DIR.glob("*.json"):
+        try:
+            record = read_json(json_file)
+            if is_audio_record(record):
+                transcript = record.get("transcript", [])
+                last_segment = transcript[-1] if transcript else {}
+                rows.append({
+                    "id": record.get("id",""),
+                    "user_id": "",
+                    "session_name": record.get("sessionName",""),
+                    "display_name": record.get("displayName",""),
+                    "safe_session_name": record.get("safeSessionName",""),
+                    "original_name": record.get("originalName",""),
+                    "audio_filename": record.get("audioFilename",""),
+                    "transcript_file": json_file.name,
+                    "uploaded_at": record.get("uploadedAt",""),
+                    "duration": str(float(last_segment.get("end", 0.0) or 0.0)),
+                    "segment_count": str(len(transcript)),
+                    "intent_filename": "",
+                })
+        except (OSError, json.JSONDecodeError):
+            continue
+    if rows:
+        _write_csv_rows(MEETINGS_CSV_PATH, rows, MEETINGS_CSV_FIELDNAMES)
+
+
+def _fix_meeting_user_ids() -> None:
+    rows = _db_execute(
+        "SELECT id, display_name FROM meetings WHERE user_id IS NULL OR user_id=''"
+    ).fetchall()
     changed = False
     for row in rows:
-        if str(row.get("user_id", "")).strip():
+        display_name = str(row["display_name"] or "")
+        if " - " not in display_name:
             continue
-        display_name = str(row.get("display_name", "") or "").strip()
-        # Convention: "<session_name> - <username>"
-        if " - " in display_name:
-            suffix = display_name.rsplit(" - ", 1)[-1].strip()
-            if suffix:
-                user_id = lookup_user_id_by_username(suffix)
-                if not user_id:
-                    # Try lowercase
-                    user_id = lookup_user_id_by_username(suffix.lower())
-                if user_id:
-                    row["user_id"] = user_id
-                    changed = True
+        suffix = display_name.rsplit(" - ", 1)[-1].strip()
+        if not suffix:
+            continue
+        user = _db_execute(
+            "SELECT id FROM users WHERE LOWER(username)=? OR LOWER(username)=?",
+            (suffix.lower(), suffix.lower()),
+        ).fetchone()
+        if user:
+            _db_execute("UPDATE meetings SET user_id=? WHERE id=?", (user["id"], row["id"]))
+            changed = True
     if changed:
-        write_meeting_rows(rows, fieldnames)
+        _db_commit()
 
+
+# ---------------------------------------------------------------------------
+# Normalisation helpers
+# ---------------------------------------------------------------------------
+
+def normalize_practice_value(value) -> str:
+    normalized = str(value or "").strip().lower()
+    return normalized if normalized in {"done", "todo", "null"} else "null"
+
+
+def normalize_done_str(value) -> str:
+    return "true" if str(value or "").strip().lower() in {"true", "1", "yes", "done"} else "false"
+
+
+def normalize_training_type_str(value) -> str:
+    return "arousal" if str(value or "").strip().lower() == "arousal" else "valence"
+
+
+# ---------------------------------------------------------------------------
+# JSON file helpers (files stay on disk, not in DB)
+# ---------------------------------------------------------------------------
 
 def reflection_csv_path() -> Path:
-    # Migrate legacy data/db.csv to data/reflections.csv once.
-    if REFLECTIONS_CSV_PATH.exists():
-        return REFLECTIONS_CSV_PATH
-    if LEGACY_DB_CSV_PATH.exists() and LEGACY_DB_CSV_PATH.is_file():
-        try:
-            LEGACY_DB_CSV_PATH.rename(REFLECTIONS_CSV_PATH)
-        except OSError:
-            # Fallback for cross-device or permission edge cases.
-            REFLECTIONS_CSV_PATH.write_text(LEGACY_DB_CSV_PATH.read_text(encoding="utf-8"), encoding="utf-8")
-            LEGACY_DB_CSV_PATH.unlink()
-    return REFLECTIONS_CSV_PATH
+    return _reflection_csv_path()
 
 
 def meeting_record_path(record_id: str) -> Path:
     return JSON_MEETING_TRANSCRIPT_DIR / f"{record_id}.json"
 
 
-# Keep old name as alias
 def audio_record_path(record_id: str) -> Path:
     return meeting_record_path(record_id)
 
@@ -271,7 +536,6 @@ def is_reflection_json_filename(filename: str) -> bool:
 
 
 def json_storage_dir_for_filename(filename: str) -> Path:
-    # Keep routing logic in one place so callers remain filename-only.
     if is_intent_json_filename(filename):
         return JSON_INTENTS_DIR
     if is_reflection_json_filename(filename):
@@ -288,10 +552,7 @@ def read_json(path: Path) -> Any:
 
 
 def write_json(path: Path, payload: Any, *, indent: int = 2, ensure_ascii: bool = True) -> None:
-    path.write_text(
-        json.dumps(payload, indent=indent, ensure_ascii=ensure_ascii),
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(payload, indent=indent, ensure_ascii=ensure_ascii), encoding="utf-8")
 
 
 def iter_data_json_files():
@@ -339,41 +600,66 @@ def is_audio_record(record) -> bool:
     return isinstance(record, dict) and AUDIO_RECORD_REQUIRED_KEYS.issubset(record.keys())
 
 
-def save_meeting(record) -> None:
-    record_id = str(record.get("id", ""))
-    write_json(meeting_record_path(record_id), record)
+# ---------------------------------------------------------------------------
+# Meetings
+# ---------------------------------------------------------------------------
 
-    # Also write to meetings.csv
+def _row_to_meeting_dict(row) -> dict:
+    return {k: (row[k] or "") for k in MEETINGS_CSV_FIELDNAMES}
+
+
+def load_meeting_rows():
+    rows = _db_execute("SELECT * FROM meetings").fetchall()
+    return [_row_to_meeting_dict(r) for r in rows], list(MEETINGS_CSV_FIELDNAMES)
+
+
+def write_meeting_rows(rows, fieldnames=None) -> None:
+    db = get_db()
+    db.execute("PRAGMA foreign_keys=OFF")
+    db.execute("DELETE FROM meetings")
+    for row in rows:
+        mid = str(row.get("id","") or "").strip()
+        if not mid:
+            continue
+        db.execute(
+            "INSERT INTO meetings VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (mid, str(row.get("user_id","") or ""), str(row.get("session_name","") or ""),
+             str(row.get("display_name","") or ""), str(row.get("safe_session_name","") or ""),
+             str(row.get("original_name","") or ""), str(row.get("audio_filename","") or ""),
+             str(row.get("transcript_file","") or ""), str(row.get("uploaded_at","") or ""),
+             str(row.get("duration","") or ""), str(row.get("segment_count","") or ""),
+             str(row.get("intent_filename","") or "")),
+        )
+    db.commit()
+    db.execute("PRAGMA foreign_keys=ON")
+
+
+def save_meeting(record) -> None:
+    record_id = str(record.get("id",""))
+    write_json(meeting_record_path(record_id), record)
     transcript = record.get("transcript", [])
     last_segment = transcript[-1] if transcript else {}
-    meeting_row = {
-        "id": record_id,
-        "user_id": record.get("userId", record.get("user_id", "")),
-        "session_name": record.get("sessionName", ""),
-        "display_name": record.get("displayName", ""),
-        "safe_session_name": record.get("safeSessionName", ""),
-        "original_name": record.get("originalName", ""),
-        "audio_filename": record.get("audioFilename", ""),
-        "transcript_file": f"{record_id}.json",
-        "uploaded_at": record.get("uploadedAt", ""),
-        "duration": str(float(last_segment.get("end", 0.0) or 0.0)),
-        "segment_count": str(len(transcript)),
-    }
-
-    # Update or insert row in CSV
-    rows, fieldnames = load_meeting_rows()
-    found = False
-    for i, row in enumerate(rows):
-        if row.get("id", "") == record_id:
-            rows[i] = meeting_row
-            found = True
-            break
-    if not found:
-        rows.append(meeting_row)
-    write_meeting_rows(rows, fieldnames)
+    _raw_uid = str(record.get("userId", record.get("user_id","")) or "").strip()
+    user_id = _raw_uid if _raw_uid else None  # NULL passes FK; empty string does not
+    existing = _db_execute("SELECT intent_filename FROM meetings WHERE id=?", (record_id,)).fetchone()
+    intent_filename = existing["intent_filename"] if existing else ""
+    db = get_db()
+    db.execute(
+        "INSERT INTO meetings VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET "
+        "user_id=excluded.user_id, session_name=excluded.session_name, display_name=excluded.display_name, "
+        "safe_session_name=excluded.safe_session_name, original_name=excluded.original_name, "
+        "audio_filename=excluded.audio_filename, transcript_file=excluded.transcript_file, "
+        "uploaded_at=excluded.uploaded_at, duration=excluded.duration, segment_count=excluded.segment_count",
+        (record_id, user_id, str(record.get("sessionName","")), str(record.get("displayName","")),
+         str(record.get("safeSessionName","")), str(record.get("originalName","")),
+         str(record.get("audioFilename","")), f"{record_id}.json",
+         str(record.get("uploadedAt","")),
+         str(float(last_segment.get("end", 0.0) or 0.0)),
+         str(len(transcript)), intent_filename),
+    )
+    db.commit()
 
 
-# Keep old name as alias
 def save_audio_record(record) -> None:
     save_meeting(record)
 
@@ -385,7 +671,6 @@ def load_meeting(record_id):
     return read_json(record_path)
 
 
-# Keep old name as alias
 def load_audio_record(record_id):
     return load_meeting(record_id)
 
@@ -396,372 +681,182 @@ def delete_meeting(record_id) -> bool:
     if record_path.exists():
         record_path.unlink()
         deleted_json = True
-
-    # Also remove from meetings.csv
-    rows, fieldnames = load_meeting_rows()
-    original_count = len(rows)
-    rows = [row for row in rows if row.get("id", "") != str(record_id)]
-    if len(rows) < original_count:
-        write_meeting_rows(rows, fieldnames)
-        return True
-
-    return deleted_json
+    cur = _db_execute("DELETE FROM meetings WHERE id=?", (str(record_id),))
+    _db_commit()
+    return cur.rowcount > 0 or deleted_json
 
 
-# Keep old name as alias
 def delete_audio_record(record_id) -> bool:
     return delete_meeting(record_id)
 
 
 def iter_meetings():
-    """Load all meeting records from CSV + transcript JSON files."""
+    rows = _db_execute("SELECT * FROM meetings").fetchall()
     records = []
-    rows, _ = load_meeting_rows()
-
     for row in rows:
-        record_id = row.get("id", "").strip()
+        record_id = row["id"]
         if not record_id:
             continue
-
-        # Load full transcript from JSON
         transcript = []
-        transcript_file = row.get("transcript_file", "").strip()
+        transcript_file = row["transcript_file"] or ""
         if transcript_file:
-            transcript_json = read_data_json_file(transcript_file)
-            if isinstance(transcript_json, list):
-                transcript = transcript_json
-            elif isinstance(transcript_json, dict):
-                transcript = transcript_json.get("transcript", [])
-
-        # Build record from CSV + loaded transcript
-        record = {
+            t = read_data_json_file(transcript_file)
+            if isinstance(t, list):
+                transcript = t
+            elif isinstance(t, dict):
+                transcript = t.get("transcript", [])
+        records.append({
             "id": record_id,
-            "userId": row.get("user_id", ""),
-            "sessionName": row.get("session_name", ""),
-            "displayName": row.get("display_name", ""),
-            "safeSessionName": row.get("safe_session_name", ""),
-            "originalName": row.get("original_name", ""),
-            "audioFilename": row.get("audio_filename", ""),
-            "audioUrl": f"/uploads/{row.get('audio_filename', '')}",
-            "uploadedAt": row.get("uploaded_at", ""),
+            "userId": row["user_id"] or "",
+            "sessionName": row["session_name"] or "",
+            "displayName": row["display_name"] or "",
+            "safeSessionName": row["safe_session_name"] or "",
+            "originalName": row["original_name"] or "",
+            "audioFilename": row["audio_filename"] or "",
+            "audioUrl": f"/uploads/{row['audio_filename'] or ''}",
+            "uploadedAt": row["uploaded_at"] or "",
             "transcript": transcript,
-        }
-        records.append(record)
-
+        })
     return records
 
 
-# Keep old name as alias
 def iter_audio_records():
     return iter_meetings()
-
-
-def read_csv_rows(csv_path: Path):
-    if not csv_path.exists():
-        return [], []
-
-    with csv_path.open(newline="", encoding="utf-8") as csvfile:
-        reader = csv.DictReader(csvfile)
-        return list(reader), list(reader.fieldnames or [])
-
-
-def write_csv_rows(csv_path: Path, rows, fieldnames) -> None:
-    with csv_path.open("w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=list(fieldnames))
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({field: row.get(field, "") for field in fieldnames})
-
-
-def normalize_practice_value(value) -> str:
-    normalized = str(value or "").strip().lower()
-    if normalized in {"done", "todo", "null"}:
-        return normalized
-    return "null"
-
-
-def normalize_done_str(value) -> str:
-    normalized = str(value or "").strip().lower()
-    return "true" if normalized in {"true", "1", "yes", "done"} else "false"
-
-
-def normalize_training_type_str(value) -> str:
-    normalized = str(value or "").strip().lower()
-    return "arousal" if normalized == "arousal" else "valence"
-
-
-def reflection_db_fieldnames(fieldnames=None):
-    ordered = []
-    for name in list(fieldnames or []) + REFLECTION_DB_FIELDNAMES:
-        if name in {"intent_filename", "journal_entry", "audio_filename", "session_name", "wearer_agent"}:
-            continue
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
-
-
-def intents_fieldnames(fieldnames=None):
-    ordered = []
-    for name in list(fieldnames or []) + INTENTS_CSV_FIELDNAMES:
-        if name in {"audio_filename", "session_name", "wearer_agent"}:
-            continue
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
-
-
-def journal_entries_fieldnames(fieldnames=None):
-    ordered = []
-    for name in list(fieldnames or []) + JOURNAL_ENTRIES_CSV_FIELDNAMES:
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
-
-
-def load_reflection_db_rows():
-    csv_path = reflection_csv_path()
-    if not csv_path.exists():
-        return [], list(REFLECTION_DB_FIELDNAMES)
-
-    raw_rows, raw_fieldnames = read_csv_rows(csv_path)
-    fieldnames = reflection_db_fieldnames(raw_fieldnames)
-    rows = []
-    needs_save = False
-    for row in raw_rows:
-        normalized_row = {field: row.get(field, "") for field in fieldnames}
-        normalized_row["practice"] = normalize_practice_value(normalized_row.get("practice"))
-        # Auto-assign id if missing
-        if not str(normalized_row.get("id", "")).strip():
-            normalized_row["id"] = _uuid.uuid4().hex
-            needs_save = True
-        # Migrate legacy wearer_agent -> user_id (FK to users.csv)
-        if not str(normalized_row.get("user_id", "")).strip() and str(row.get("wearer_agent", "")).strip():
-            normalized_row["user_id"] = lookup_user_id_by_username(row.get("wearer_agent", ""))
-        # Derive session_name from meetings (authoritative)
-        meeting_id = str(normalized_row.get("meeting_id", "") or "").strip()
-        if meeting_id:
-            normalized_row["session_name"] = lookup_session_name_by_meeting_id(meeting_id)
-        rows.append(normalized_row)
-    if needs_save:
-        write_reflection_db_rows(rows, fieldnames)
-    return rows, fieldnames
-
-
-def write_reflection_db_rows(rows, fieldnames=None) -> None:
-    resolved_fieldnames = reflection_db_fieldnames(fieldnames)
-    write_csv_rows(reflection_csv_path(), rows, resolved_fieldnames)
-
-
-def load_intent_rows():
-    """Load intent data from meetings.csv (intent_filename column)."""
-    rows, _ = load_meeting_rows()
-    intent_rows = []
-    for row in rows:
-        fname = str(row.get("intent_filename", "") or "").strip()
-        if fname:
-            intent_rows.append({
-                "intent_filename": fname,
-                "user_id": str(row.get("user_id", "") or "").strip(),
-                "startms": "",
-                "endms": "",
-                "meeting_id": str(row.get("id", "") or "").strip(),
-                "session_name": str(row.get("session_name", "") or "").strip(),
-            })
-    return intent_rows, list(INTENTS_CSV_FIELDNAMES)
-
-
-def write_intent_rows(rows, fieldnames=None) -> None:
-    """Update intent_filename in meetings.csv from the provided intent rows."""
-    intent_by_meeting: dict[str, str] = {}
-    for row in rows:
-        mid = str(row.get("meeting_id", "") or "").strip()
-        fname = str(row.get("intent_filename", "") or "").strip()
-        if mid and fname:
-            intent_by_meeting[mid] = fname
-    if not intent_by_meeting:
-        return
-    meeting_rows, meeting_fieldnames = load_meeting_rows()
-    changed = False
-    for mrow in meeting_rows:
-        mid = str(mrow.get("id", "") or "").strip()
-        if mid in intent_by_meeting:
-            new_val = intent_by_meeting[mid]
-            if str(mrow.get("intent_filename", "") or "").strip() != new_val:
-                mrow["intent_filename"] = new_val
-                changed = True
-    if changed:
-        write_meeting_rows(meeting_rows, meeting_fieldnames)
-
-
-def delete_intent_row(intent_file: str) -> bool:
-    safe_intent = str(intent_file or "").strip()
-    if not safe_intent:
-        return False
-    rows, fieldnames = load_meeting_rows()
-    found = False
-    for row in rows:
-        if str(row.get("intent_filename", "") or "").strip() == safe_intent:
-            row["intent_filename"] = ""
-            found = True
-    if found:
-        write_meeting_rows(rows, fieldnames)
-    return found
-
-
-def load_journal_rows():
-    if not JOURNAL_ENTRIES_CSV_PATH.exists():
-        return [], list(JOURNAL_ENTRIES_CSV_FIELDNAMES)
-
-    raw_rows, raw_fieldnames = read_csv_rows(JOURNAL_ENTRIES_CSV_PATH)
-    fieldnames = journal_entries_fieldnames(raw_fieldnames)
-    rows = []
-    for row in raw_rows:
-        rows.append({field: str(row.get(field, "") or "") for field in fieldnames})
-    return rows, fieldnames
-
-
-def write_journal_rows(rows, fieldnames=None) -> None:
-    resolved_fieldnames = journal_entries_fieldnames(fieldnames)
-    normalized = []
-    for row in rows:
-        normalized.append({field: str(row.get(field, "") or "") for field in resolved_fieldnames})
-    write_csv_rows(JOURNAL_ENTRIES_CSV_PATH, normalized, resolved_fieldnames)
-
-
-def load_meeting_rows():
-    csv_path = MEETINGS_CSV_PATH
-    # Migrate audios.csv → meetings.csv on first access
-    if not csv_path.exists() and LEGACY_AUDIOS_CSV_PATH.exists():
-        try:
-            LEGACY_AUDIOS_CSV_PATH.rename(csv_path)
-        except OSError:
-            csv_path.write_text(LEGACY_AUDIOS_CSV_PATH.read_text(encoding="utf-8"), encoding="utf-8")
-            LEGACY_AUDIOS_CSV_PATH.unlink()
-    if not csv_path.exists():
-        return [], list(MEETINGS_CSV_FIELDNAMES)
-
-    raw_rows, raw_fieldnames = read_csv_rows(csv_path)
-    fieldnames = meeting_entries_fieldnames(raw_fieldnames)
-    rows = []
-    for row in raw_rows:
-        rows.append({field: str(row.get(field, "") or "") for field in fieldnames})
-    return rows, fieldnames
-
-
-def write_meeting_rows(rows, fieldnames=None) -> None:
-    resolved_fieldnames = meeting_entries_fieldnames(fieldnames)
-    normalized = []
-    for row in rows:
-        normalized.append({field: str(row.get(field, "") or "") for field in resolved_fieldnames})
-    write_csv_rows(MEETINGS_CSV_PATH, normalized, resolved_fieldnames)
-
-
-def meeting_entries_fieldnames(fieldnames=None):
-    ordered = []
-    for name in list(fieldnames or []) + MEETINGS_CSV_FIELDNAMES:
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
 
 
 def lookup_meeting_id_by_audio_filename(audio_filename: str) -> str:
     target = str(audio_filename or "").strip()
     if not target:
         return ""
-    rows, _ = load_meeting_rows()
-    for row in rows:
-        if row.get("audio_filename", "").strip() == target:
-            return row.get("id", "")
-    return ""
+    row = _db_execute("SELECT id FROM meetings WHERE audio_filename=?", (target,)).fetchone()
+    return row["id"] if row else ""
 
 
 def lookup_meeting_id_by_session_name(session_name: str) -> str:
     target = str(session_name or "").strip().lower()
     if not target:
         return ""
-    rows, _ = load_meeting_rows()
-    for row in rows:
-        if row.get("session_name", "").strip().lower() == target:
-            return row.get("id", "")
-    return ""
+    row = _db_execute("SELECT id FROM meetings WHERE LOWER(session_name)=?", (target,)).fetchone()
+    return row["id"] if row else ""
 
 
 def lookup_session_name_by_meeting_id(meeting_id: str) -> str:
     target = str(meeting_id or "").strip()
     if not target:
         return ""
-    rows, _ = load_meeting_rows()
-    for row in rows:
-        if row.get("id", "").strip() == target:
-            return row.get("session_name", "")
-    return ""
+    row = _db_execute("SELECT session_name FROM meetings WHERE id=?", (target,)).fetchone()
+    return row["session_name"] if row else ""
+
+
+def list_meeting_sessions_for_user(username: str) -> list[dict]:
+    user_record = lookup_user_by_username(username)
+    user_id = user_record.get("id","") if user_record else ""
+    if user_id:
+        rows = _db_execute(
+            "SELECT session_name, display_name FROM meetings WHERE user_id=? ORDER BY session_name",
+            (user_id,),
+        ).fetchall()
+    else:
+        rows = _db_execute(
+            "SELECT session_name, display_name FROM meetings ORDER BY session_name"
+        ).fetchall()
+    return [
+        {"sessionName": r["session_name"] or "", "displayName": r["display_name"] or r["session_name"] or ""}
+        for r in rows if r["session_name"]
+    ]
+
+
+def iter_meetings_for_username(username: str = "") -> list[dict]:
+    user_id_filter = ""
+    clean_username = str(username or "").strip()
+    if clean_username:
+        user = lookup_user_by_username(clean_username)
+        user_id_filter = user.get("id","") if user else ""
+    return [
+        record for record in iter_meetings()
+        if not user_id_filter or record.get("userId","") == user_id_filter
+    ]
+
+
+def enrich_meeting_user_fields(record: dict, meeting_id: str = "") -> dict:
+    if not isinstance(record, dict):
+        return record
+    resolved_id = str(meeting_id or record.get("id","") or "").strip()
+    user_id = str(record.get("userId","") or record.get("user_id","") or "").strip()
+    if not user_id and resolved_id:
+        row = _db_execute("SELECT user_id FROM meetings WHERE id=?", (resolved_id,)).fetchone()
+        if row:
+            user_id = row["user_id"] or ""
+    if user_id:
+        record["userId"] = user_id
+        record["user_id"] = user_id
+    record["username"] = lookup_username_by_user_id(user_id)
+    return record
 
 
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------
 
+def _row_to_user_dict(row) -> dict:
+    return {k: (row[k] or "") for k in USERS_CSV_FIELDNAMES}
+
+
 def load_user_rows():
-    if not USERS_CSV_PATH.exists():
-        return [], list(USERS_CSV_FIELDNAMES)
-    raw_rows, raw_fieldnames = read_csv_rows(USERS_CSV_PATH)
-    fieldnames = _users_fieldnames(raw_fieldnames)
-    rows = []
-    for row in raw_rows:
-        rows.append({field: str(row.get(field, "") or "").strip() for field in fieldnames})
-    return rows, fieldnames
-
-
-def _users_fieldnames(fieldnames=None):
-    ordered = []
-    for name in list(fieldnames or []) + USERS_CSV_FIELDNAMES:
-        if name and name not in ordered:
-            ordered.append(name)
-    return ordered
+    rows = _db_execute("SELECT * FROM users").fetchall()
+    return [_row_to_user_dict(r) for r in rows], list(USERS_CSV_FIELDNAMES)
 
 
 def write_user_rows(rows, fieldnames=None) -> None:
-    resolved = _users_fieldnames(fieldnames)
-    normalized = []
+    db = get_db()
+    db.execute("PRAGMA foreign_keys=OFF")
+    db.execute("DELETE FROM users")
     for row in rows:
-        normalized.append({field: str(row.get(field, "") or "").strip() for field in resolved})
-    write_csv_rows(USERS_CSV_PATH, normalized, resolved)
+        uid = str(row.get("id","") or "").strip()
+        uname = str(row.get("username","") or "").strip().lower()
+        if not uid or not uname:
+            continue
+        db.execute(
+            "INSERT INTO users VALUES (?,?,?,?,?,?,?,?)",
+            (uid, uname, str(row.get("name","") or ""),
+             str(row.get("nudge_tone_difference","false") or "false"),
+             str(row.get("nudge_elevation","false") or "false"),
+             str(row.get("nudge_unclear_intent","false") or "false"),
+             str(row.get("nudge_excellent_tone","false") or "false"),
+             str(row.get("nudge_need_for_clarification","false") or "false")),
+        )
+    db.commit()
+    db.execute("PRAGMA foreign_keys=ON")
 
 
 def lookup_user_by_id(user_id: str) -> dict | None:
     target = str(user_id or "").strip()
     if not target:
         return None
-    rows, _ = load_user_rows()
-    for row in rows:
-        if row.get("id", "").strip() == target:
-            return row
-    return None
+    row = _db_execute("SELECT * FROM users WHERE id=?", (target,)).fetchone()
+    return _row_to_user_dict(row) if row else None
 
 
 def lookup_user_by_username(username: str) -> dict | None:
     target = str(username or "").strip().lower()
     if not target:
         return None
-    rows, _ = load_user_rows()
-    for row in rows:
-        if row.get("username", "").strip().lower() == target:
-            return row
-    return None
+    row = _db_execute("SELECT * FROM users WHERE LOWER(username)=?", (target,)).fetchone()
+    return _row_to_user_dict(row) if row else None
 
 
 def lookup_user_id_by_username(username: str) -> str:
     row = lookup_user_by_username(username)
-    return row.get("id", "") if row else ""
+    return row.get("id","") if row else ""
 
 
 def lookup_username_by_user_id(user_id: str) -> str:
     row = lookup_user_by_id(user_id)
-    return row.get("username", "") if row else ""
+    return row.get("username","") if row else ""
 
 
 def nudge_fieldnames() -> list[str]:
-    return [field for field in USERS_CSV_FIELDNAMES if field.startswith("nudge_")]
+    return [f for f in USERS_CSV_FIELDNAMES if f.startswith("nudge_")]
 
 
 def normalize_user_updates(updates: dict | None) -> dict:
@@ -773,7 +868,7 @@ def normalize_user_updates(updates: dict | None) -> dict:
             continue
         value = payload[field]
         if field.startswith("nudge_"):
-            normalized[field] = "true" if str(value).strip().lower() in {"true", "1", "yes", "on"} else "false"
+            normalized[field] = "true" if str(value).strip().lower() in {"true","1","yes","on"} else "false"
         else:
             normalized[field] = str(value).strip() if not isinstance(value, bool) else str(value).lower()
     return normalized
@@ -784,10 +879,7 @@ def create_user(username: str, name: str = "", updates: dict | None = None) -> d
     clean_name = str(name or "").strip() or clean_username
     if not clean_username:
         raise ValueError("username is required")
-    payload = {
-        "username": clean_username,
-        "name": clean_name,
-    }
+    payload = {"username": clean_username, "name": clean_name}
     payload.update(normalize_user_updates(updates))
     return save_user(payload)
 
@@ -800,578 +892,340 @@ def update_user(username: str, updates: dict | None = None) -> dict | None:
     return save_user(existing)
 
 
-def enrich_meeting_user_fields(record: dict, meeting_id: str = "") -> dict:
-    if not isinstance(record, dict):
-        return record
+def save_user(user: dict) -> dict:
+    db = get_db()
+    user_id = str(user.get("id","") or "").strip()
+    if not user_id:
+        user_id = _uuid.uuid4().hex
+        user = dict(user, id=user_id)
+    username = str(user.get("username","") or "").strip().lower()
+    if not username:
+        raise ValueError("username is required")
+    conflict = db.execute(
+        "SELECT id FROM users WHERE LOWER(username)=? AND id!=?", (username, user_id)
+    ).fetchone()
+    if conflict:
+        raise ValueError(f"username '{username}' is already taken")
+    for field in nudge_fieldnames():
+        if str(user.get(field,"") or "").strip() == "":
+            user[field] = "false"
+    db.execute(
+        "INSERT INTO users VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET "
+        "username=excluded.username, name=excluded.name, "
+        "nudge_tone_difference=excluded.nudge_tone_difference, nudge_elevation=excluded.nudge_elevation, "
+        "nudge_unclear_intent=excluded.nudge_unclear_intent, nudge_excellent_tone=excluded.nudge_excellent_tone, "
+        "nudge_need_for_clarification=excluded.nudge_need_for_clarification",
+        (user_id, username, str(user.get("name","") or ""),
+         str(user.get("nudge_tone_difference","false") or "false"),
+         str(user.get("nudge_elevation","false") or "false"),
+         str(user.get("nudge_unclear_intent","false") or "false"),
+         str(user.get("nudge_excellent_tone","false") or "false"),
+         str(user.get("nudge_need_for_clarification","false") or "false")),
+    )
+    db.commit()
+    return lookup_user_by_id(user_id) or user
 
-    resolved_meeting_id = str(meeting_id or record.get("id", "") or "").strip()
-    user_id = str(record.get("userId", "") or record.get("user_id", "") or "").strip()
 
-    if not user_id and resolved_meeting_id:
-        rows, _ = load_meeting_rows()
-        for row in rows:
-            if str(row.get("id", "") or "").strip() == resolved_meeting_id:
-                user_id = str(row.get("user_id", "") or "").strip()
-                break
+# ---------------------------------------------------------------------------
+# Reflections
+# ---------------------------------------------------------------------------
 
-    if user_id:
-        record["userId"] = user_id
-        record["user_id"] = user_id
-
-    record["username"] = lookup_username_by_user_id(user_id)
-    return record
-
-
-def iter_meetings_for_username(username: str = "") -> list[dict]:
-    user_id_filter = ""
-    clean_username = str(username or "").strip()
-    if clean_username:
-        user = lookup_user_by_username(clean_username)
-        user_id_filter = user.get("id", "") if user else ""
-    return [
-        record for record in iter_meetings()
-        if not user_id_filter or record.get("userId", "") == user_id_filter
-    ]
+def _row_to_reflection_dict(row) -> dict:
+    meeting_id = row["meeting_id"] or ""
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"] or "",
+        "reflection_tree_file": row["reflection_tree_file"] or "",
+        "startms": row["startms"] or "",
+        "endms": row["endms"] or "",
+        "practice": normalize_practice_value(row["practice"]),
+        "meeting_id": meeting_id,
+        "tree_type": row["tree_type"] or "",
+        "has_journaling": row["has_journaling"] or "",
+        "session_name": lookup_session_name_by_meeting_id(meeting_id) if meeting_id else "",
+    }
 
 
-def list_meeting_sessions_for_user(username: str) -> list[dict]:
-    user_record = lookup_user_by_username(username)
-    user_id = user_record.get("id", "") if user_record else ""
-    rows, _ = load_meeting_rows()
-    sessions = []
+def load_reflection_db_rows():
+    rows = _db_execute("SELECT * FROM reflections").fetchall()
+    return [_row_to_reflection_dict(r) for r in rows], list(REFLECTION_DB_FIELDNAMES)
+
+
+def write_reflection_db_rows(rows, fieldnames=None) -> None:
+    db = get_db()
+    db.execute("PRAGMA foreign_keys=OFF")
+    db.execute("DELETE FROM reflections")
     for row in rows:
-        if user_id and row.get("user_id", "") != user_id:
-            continue
-        session_name = row.get("session_name", "").strip()
-        display_name = row.get("display_name", "").strip() or session_name
-        if session_name:
-            sessions.append({"sessionName": session_name, "displayName": display_name})
-    sessions.sort(key=lambda item: item["sessionName"])
-    return sessions
+        rid = str(row.get("id","") or "").strip() or _uuid.uuid4().hex
+        db.execute(
+            "INSERT INTO reflections VALUES (?,?,?,?,?,?,?,?,?)",
+            (rid,
+             str(row.get("user_id","") or "") or None,
+             str(row.get("reflection_tree_file","") or ""),
+             str(row.get("startms","") or ""), str(row.get("endms","") or ""),
+             normalize_practice_value(row.get("practice","null")),
+             str(row.get("meeting_id","") or "") or None,
+             str(row.get("tree_type","") or ""),
+             str(row.get("has_journaling","") or "")),
+        )
+    db.commit()
+    db.execute("PRAGMA foreign_keys=ON")
 
 
 def list_reflection_rows_for_session(session_name: str) -> list[dict]:
-    rows, _ = load_reflection_db_rows()
-    return [row for row in rows if row.get("session_name", "") == session_name]
+    meeting_id = lookup_meeting_id_by_session_name(session_name)
+    if not meeting_id:
+        return []
+    rows = _db_execute("SELECT * FROM reflections WHERE meeting_id=?", (meeting_id,)).fetchall()
+    return [_row_to_reflection_dict(r) for r in rows]
 
 
 def list_reflection_rows_for_audio(meeting_id: str) -> list[dict]:
-    rows, _ = load_reflection_db_rows()
-    return [row for row in rows if row.get("meeting_id", "") == meeting_id]
+    rows = _db_execute("SELECT * FROM reflections WHERE meeting_id=?", (meeting_id,)).fetchall()
+    return [_row_to_reflection_dict(r) for r in rows]
 
 
 def list_reflection_rows_for_user_session(username: str, session_name: str) -> list[dict]:
     user_record = lookup_user_by_username(username)
-    user_id = user_record.get("id", "") if user_record else ""
-    rows, _ = load_reflection_db_rows()
-    return [
-        row for row in rows
-        if (not user_id or row.get("user_id", "") == user_id) and row.get("session_name", "") == session_name
-    ]
+    user_id = user_record.get("id","") if user_record else ""
+    meeting_id = lookup_meeting_id_by_session_name(session_name)
+    if user_id and meeting_id:
+        rows = _db_execute(
+            "SELECT * FROM reflections WHERE user_id=? AND meeting_id=?", (user_id, meeting_id)
+        ).fetchall()
+    elif user_id:
+        rows = _db_execute("SELECT * FROM reflections WHERE user_id=?", (user_id,)).fetchall()
+    elif meeting_id:
+        rows = _db_execute("SELECT * FROM reflections WHERE meeting_id=?", (meeting_id,)).fetchall()
+    else:
+        rows = _db_execute("SELECT * FROM reflections").fetchall()
+    return [_row_to_reflection_dict(r) for r in rows]
 
 
-def save_user(user: dict) -> dict:
-    """Create or update a user row. Generates an id if missing."""
-    import uuid as _uuid
-    rows, fieldnames = load_user_rows()
-    user_id = str(user.get("id", "") or "").strip()
-    if not user_id:
-        user_id = _uuid.uuid4().hex
-        user = dict(user, id=user_id)
-    # Validate username uniqueness
-    username = str(user.get("username", "") or "").strip().lower()
-    if not username:
-        raise ValueError("username is required")
+# ---------------------------------------------------------------------------
+# Journal entries
+# ---------------------------------------------------------------------------
 
-    # Default all nudge flags to false for newly created users.
-    for field in fieldnames:
-        if field.startswith("nudge_") and str(user.get(field, "") or "").strip() == "":
-            user[field] = "false"
+def load_journal_rows():
+    rows = _db_execute("SELECT * FROM journal_entries").fetchall()
+    return [{"reflection_id": r["reflection_id"], "journal_entry": r["journal_entry"] or ""} for r in rows], list(JOURNAL_ENTRIES_CSV_FIELDNAMES)
 
+
+def write_journal_rows(rows, fieldnames=None) -> None:
+    db = get_db()
+    db.execute("DELETE FROM journal_entries")
     for row in rows:
-        if row.get("id") != user_id and row.get("username", "").strip().lower() == username:
-            raise ValueError(f"username '{username}' is already taken")
-    rows = [r for r in rows if r.get("id") != user_id]
-    rows.append({field: str(user.get(field, "") or "").strip() for field in fieldnames})
-    write_user_rows(rows, fieldnames)
-    return lookup_user_by_id(user_id) or user
-
-
-def migrate_wearer_agent_to_user_id() -> None:
-    """One-time migration: create a user row for each unique wearer_agent value and
-    replace wearer_agent with user_id in reflections, intents, and training rows."""
-    import uuid as _uuid
-
-    # Collect all unique wearer_agent names from existing CSVs
-    wearer_names: set[str] = set()
-
-    csv_path = reflection_csv_path()
-    if csv_path.exists():
-        raw_rows, _ = read_csv_rows(csv_path)
-        for row in raw_rows:
-            wa = str(row.get("wearer_agent", "") or "").strip()
-            if wa:
-                wearer_names.add(wa)
-
-    if INTENTS_CSV_PATH.exists():
-        raw_rows, _ = read_csv_rows(INTENTS_CSV_PATH)
-        for row in raw_rows:
-            wa = str(row.get("wearer_agent", "") or "").strip()
-            if wa:
-                wearer_names.add(wa)
-
-    if TRAINING_CSV_PATH.exists():
-        raw_rows, _ = read_csv_rows(TRAINING_CSV_PATH)
-        for row in raw_rows:
-            wa = str(row.get("wearer_agent", "") or "").strip()
-            if wa:
-                wearer_names.add(wa)
-
-    if not wearer_names:
-        return
-
-    # Create user rows for any wearer_agent not yet in users.csv
-    user_rows, user_fieldnames = load_user_rows()
-    existing_usernames = {r.get("username", "").strip().lower() for r in user_rows}
-    for name in sorted(wearer_names):
-        slug = name.strip().lower()
-        if slug not in existing_usernames:
-            user_rows.append({
-                "id": _uuid.uuid4().hex,
-                "username": slug,
-                "name": name,
-                "nudge_tone_difference": "false",
-                "nudge_elevation": "false",
-                "nudge_unclear_intent": "false",
-                "nudge_excellent_tone": "false",
-                "nudge_need_for_clarification": "false",
-            })
-            existing_usernames.add(slug)
-    write_user_rows(user_rows, user_fieldnames)
-
-    # Reload to get ids
-    user_rows, _ = load_user_rows()
-    by_name = {r.get("username", "").strip().lower(): r.get("id", "") for r in user_rows}
-
-    def _replace_in_csv(path, read_fn, write_fn):
-        if not path.exists():
-            return
-        raw_rows, _ = read_csv_rows(path)
-        changed = False
-        for row in raw_rows:
-            if not str(row.get("user_id", "")).strip():
-                wa = str(row.get("wearer_agent", "") or "").strip().lower()
-                if wa and wa in by_name:
-                    row["user_id"] = by_name[wa]
-                    changed = True
-        if changed:
-            write_fn(list(raw_rows))
-
-    _replace_in_csv(csv_path, None, lambda rows: write_reflection_db_rows(rows))
-    _replace_in_csv(TRAINING_CSV_PATH, None, lambda rows: write_training_rows(rows))
+        rid = str(row.get("reflection_id","") or "").strip()
+        if not rid:
+            continue
+        db.execute(
+            "INSERT INTO journal_entries VALUES (?,?)",
+            (rid, str(row.get("journal_entry","") or "")),
+        )
+    db.commit()
 
 
 def load_journal_entry_raw(reflection_id: str) -> str:
     target = str(reflection_id or "").strip()
     if not target:
         return ""
-    rows, _ = load_journal_rows()
-    for row in rows:
-        if str(row.get("reflection_id", "") or "").strip() == target:
-            return str(row.get("journal_entry", "") or "")
-    return ""
+    row = _db_execute(
+        "SELECT journal_entry FROM journal_entries WHERE reflection_id=?", (target,)
+    ).fetchone()
+    return row["journal_entry"] if row else ""
 
 
 def upsert_journal_entry_raw(reflection_id: str, journal_entry: str) -> None:
     target = str(reflection_id or "").strip()
     if not target:
         return
-    rows, fieldnames = load_journal_rows()
-    replaced = False
-    for row in rows:
-        if str(row.get("reflection_id", "") or "").strip() == target:
-            row["journal_entry"] = str(journal_entry or "")
-            replaced = True
-            break
-    if not replaced:
-        rows.append({
-            "reflection_id": target,
-            "journal_entry": str(journal_entry or ""),
-        })
-    write_journal_rows(rows, fieldnames)
+    _db_execute(
+        "INSERT INTO journal_entries VALUES (?,?) ON CONFLICT(reflection_id) DO UPDATE SET journal_entry=excluded.journal_entry",
+        (target, str(journal_entry or "")),
+    )
+    _db_commit()
 
 
 def delete_journal_entry_row(reflection_id: str) -> bool:
     target = str(reflection_id or "").strip()
     if not target:
         return False
-    rows, fieldnames = load_journal_rows()
-    remaining = []
-    removed = False
+    cur = _db_execute("DELETE FROM journal_entries WHERE reflection_id=?", (target,))
+    _db_commit()
+    return cur.rowcount > 0
+
+
+# ---------------------------------------------------------------------------
+# Intents (stored as intent_filename on meetings table)
+# ---------------------------------------------------------------------------
+
+def load_intent_rows():
+    rows = _db_execute(
+        "SELECT id, user_id, session_name, intent_filename FROM meetings WHERE intent_filename IS NOT NULL AND intent_filename!=''"
+    ).fetchall()
+    return [
+        {"intent_filename": r["intent_filename"], "user_id": r["user_id"] or "",
+         "startms": "", "endms": "", "meeting_id": r["id"], "session_name": r["session_name"] or ""}
+        for r in rows
+    ], list(INTENTS_CSV_FIELDNAMES)
+
+
+def write_intent_rows(rows, fieldnames=None) -> None:
     for row in rows:
-        if str(row.get("reflection_id", "") or "").strip() == target:
-            removed = True
-            continue
-        remaining.append(row)
-    if removed:
-        write_journal_rows(remaining, fieldnames)
-    return removed
+        mid = str(row.get("meeting_id","") or "").strip()
+        fname = str(row.get("intent_filename","") or "").strip()
+        if mid and fname:
+            _db_execute("UPDATE meetings SET intent_filename=? WHERE id=?", (fname, mid))
+    _db_commit()
 
 
-def migrate_folder_structure() -> None:
-    """Migrate from audio_records/ to meeting_transcript/ (one-time)."""
-    legacy_audio_records = DATA_DIR / "audio_records"
-    # Check if migration is needed: audio_records exists AND meeting_transcript is empty
-    if legacy_audio_records.exists() and legacy_audio_records.is_dir():
-        # Count files in legacy folder
-        legacy_files = list(legacy_audio_records.iterdir())
-        if legacy_files:
-            # Files exist in legacy folder, need to migrate
-            JSON_MEETING_TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
-            for file in legacy_files:
-                if file.is_file():
-                    dst = JSON_MEETING_TRANSCRIPT_DIR / file.name
-                    if not dst.exists():
-                        try:
-                            file.rename(dst)
-                        except OSError:
-                            # Cross-device or permission issue: copy files
-                            dst.write_bytes(file.read_bytes())
-                            file.unlink()
-            # Remove legacy folder if empty
-            try:
-                legacy_audio_records.rmdir()
-            except OSError:
-                pass
-
-
-def migrate_audio_records_to_csv() -> None:
-    """Migrate audio record JSONs to meetings.csv and move audio files to meeting_audio/ (one-time)."""
-    # Move any stray audio files to meeting_audio regardless
-    _move_stray_audio_files()
-
-    if MEETINGS_CSV_PATH.exists() or LEGACY_AUDIOS_CSV_PATH.exists():
-        return  # Already migrated (rename happens lazily in load_meeting_rows)
-
-    rows = []
-    for json_file in JSON_MEETING_TRANSCRIPT_DIR.glob("*.json"):
-        try:
-            record = read_json(json_file)
-            if is_audio_record(record):
-                transcript = record.get("transcript", [])
-                last_segment = transcript[-1] if transcript else {}
-                row = {
-                    "id": record.get("id", ""),
-                    "session_name": record.get("sessionName", ""),
-                    "display_name": record.get("displayName", ""),
-                    "safe_session_name": record.get("safeSessionName", ""),
-                    "original_name": record.get("originalName", ""),
-                    "audio_filename": record.get("audioFilename", ""),
-                    "transcript_file": json_file.name,
-                    "uploaded_at": record.get("uploadedAt", ""),
-                    "duration": str(float(last_segment.get("end", 0.0) or 0.0)),
-                    "segment_count": str(len(transcript)),
-                }
-                rows.append(row)
-        except (OSError, json.JSONDecodeError):
-            continue
-
-    if rows:
-        write_meeting_rows(rows)
-
-
-def _move_stray_audio_files() -> None:
-    """Move audio files in DATA_DIR root into MEETING_AUDIO_DIR."""
-    audio_extensions = {".mp3", ".wav", ".m4a", ".ogg", ".webm", ".mp4", ".mpeg", ".mpga"}
-    for file in DATA_DIR.iterdir():
-        if file.is_file() and file.suffix.lower() in audio_extensions:
-            dst = MEETING_AUDIO_DIR / file.name
-            if not dst.exists():
-                try:
-                    file.rename(dst)
-                except OSError:
-                    dst.write_bytes(file.read_bytes())
-                    file.unlink()
-
-
-def migrate_audio_filename_to_meeting_id() -> None:
-    """One-time migration: replace audio_filename FK with meeting_id in reflections."""
-    meeting_rows, _ = load_meeting_rows()
-    by_audio_filename = {r.get("audio_filename", "").strip(): r.get("id", "") for r in meeting_rows}
-
-    # Migrate reflections.csv - read raw to access audio_filename before filtering
-    csv_path = reflection_csv_path()
-    if csv_path.exists():
-        raw_rows, raw_fieldnames = read_csv_rows(csv_path)
-        needs = any(r.get("audio_filename") and not r.get("meeting_id") for r in raw_rows)
-        if needs:
-            for row in raw_rows:
-                if not str(row.get("meeting_id", "")).strip():
-                    af = str(row.get("audio_filename", "") or "").strip()
-                    if af and af in by_audio_filename:
-                        row["meeting_id"] = by_audio_filename[af]
-                    elif not af:
-                        # Fallback: look up by session_name
-                        sn = str(row.get("session_name", "") or "").strip().lower()
-                        for mr in meeting_rows:
-                            if mr.get("session_name", "").strip().lower() == sn:
-                                row["meeting_id"] = mr.get("id", "")
-                                break
-            # Write with filtered fieldnames (no audio_filename)
-            new_fieldnames = [
-                f for f in raw_fieldnames
-                if f not in {"audio_filename", "intent_filename", "journal_entry"}
-            ]
-            if "meeting_id" not in new_fieldnames:
-                new_fieldnames.append("meeting_id")
-            write_csv_rows(csv_path, list(raw_rows), new_fieldnames)
-
-
-def migrate_training_to_meeting_id() -> None:
-    """One-time migration: replace session/session_name columns with meeting_id in training.csv."""
-    if not TRAINING_CSV_PATH.exists():
-        return
-    raw_rows, raw_fieldnames = read_csv_rows(TRAINING_CSV_PATH)
-    if not raw_rows:
-        return
-    # Check if any row is missing meeting_id (has legacy session/session_name instead)
-    needs = any(
-        (str(row.get("session", "") or row.get("session_name", "")).strip())
-        and not str(row.get("meeting_id", "")).strip()
-        for row in raw_rows
-    )
-    if not needs:
-        return
-    for row in raw_rows:
-        if not str(row.get("meeting_id", "")).strip():
-            legacy_session = str(row.get("session", "") or row.get("session_name", "") or "").strip()
-            if legacy_session:
-                row["meeting_id"] = lookup_meeting_id_by_session_name(legacy_session)
-    write_training_rows(list(raw_rows))
-
-
-def _load_reflection_db_rows_direct():
-    """Load reflection rows without server.py's session-name backfill wrapper."""
-    csv_path = reflection_csv_path()
-    if not csv_path.exists():
-        return [], list(REFLECTION_DB_FIELDNAMES)
-    raw_rows, raw_fieldnames = read_csv_rows(csv_path)
-    fieldnames = reflection_db_fieldnames(raw_fieldnames)
-    rows = []
-    for row in raw_rows:
-        normalized_row = {field: row.get(field, "") for field in fieldnames}
-        normalized_row["practice"] = normalize_practice_value(normalized_row.get("practice"))
-        rows.append(normalized_row)
-    return rows, fieldnames
-
-
-def migrate_legacy_reflection_embedded_tables() -> None:
-    csv_path = reflection_csv_path()
-    raw_rows, raw_fieldnames = read_csv_rows(csv_path)
-    rows = [dict(row) for row in raw_rows]
-    fieldnames = reflection_db_fieldnames(raw_fieldnames)
-    intent_rows, intent_fieldnames = load_intent_rows()
-    journal_rows, journal_fieldnames = load_journal_rows()
-
-    intents_by_filename = {
-        str(row.get("intent_filename", "") or "").strip()
-        for row in intent_rows
-        if str(row.get("intent_filename", "") or "").strip()
-    }
-    journals_by_reflection = {
-        str(row.get("reflection_tree_file", "") or "").strip()
-        for row in journal_rows
-        if str(row.get("reflection_tree_file", "") or "").strip()
-    }
-
-    migrated_rows = []
-    changed = False
-    for row in rows:
-        intent_filename = str(row.get("intent_filename", "") or "").strip()
-        journal_entry = str(row.get("journal_entry", "") or "")
-        reflection_tree_file = str(row.get("reflection_tree_file", "") or "").strip()
-
-        if intent_filename and intent_filename not in intents_by_filename:
-            intent_rows.append({
-                "intent_filename": intent_filename,
-                "user_id": str(row.get("user_id", "") or row.get("wearer_agent", "") or "").strip(),
-                "startms": str(row.get("startms", "") or "").strip(),
-                "endms": str(row.get("endms", "") or "").strip(),
-                "meeting_id": str(row.get("meeting_id", "") or row.get("audio_filename", "") or "").strip(),
-            })
-            intents_by_filename.add(intent_filename)
-            changed = True
-
-        if reflection_tree_file and journal_entry and reflection_tree_file not in journals_by_reflection:
-            journal_rows.append({
-                "reflection_tree_file": reflection_tree_file,
-                "journal_entry": journal_entry,
-            })
-            journals_by_reflection.add(reflection_tree_file)
-            changed = True
-
-        if intent_filename and not reflection_tree_file:
-            # Legacy intent-only rows move fully to intents.csv and are removed from reflections.csv
-            changed = True
-            continue
-
-        if intent_filename or journal_entry:
-            row = dict(row)
-            row["intent_filename"] = ""
-            row["journal_entry"] = ""
-            changed = True
-
-        migrated_rows.append(row)
-
-    if not changed:
-        return
-
-    write_intent_rows(intent_rows, intent_fieldnames)
-    write_journal_rows(journal_rows, journal_fieldnames)
-    write_reflection_db_rows(migrated_rows, fieldnames)
+def delete_intent_row(intent_file: str) -> bool:
+    safe = str(intent_file or "").strip()
+    if not safe:
+        return False
+    cur = _db_execute("UPDATE meetings SET intent_filename='' WHERE intent_filename=?", (safe,))
+    _db_commit()
+    return cur.rowcount > 0
 
 
 def upsert_intent_reflection_row(session_name: str, intent_file: str, user_id: str = "", meeting_id: str = "") -> None:
     safe_intent = str(intent_file or "").strip()
     if not safe_intent:
         return
-    rows, fieldnames = load_meeting_rows()
     target_id = str(meeting_id or "").strip()
     target_session = str(session_name or "").strip()
-    found = False
-    for row in rows:
-        mid = str(row.get("id", "") or "").strip()
-        sname = str(row.get("session_name", "") or "").strip()
-        if (target_id and mid == target_id) or (not target_id and sname == target_session):
-            row["intent_filename"] = safe_intent
-            found = True
-            break
-    if found:
-        write_meeting_rows(rows, fieldnames)
+    if target_id:
+        _db_execute("UPDATE meetings SET intent_filename=? WHERE id=?", (safe_intent, target_id))
+    elif target_session:
+        _db_execute("UPDATE meetings SET intent_filename=? WHERE session_name=?", (safe_intent, target_session))
+    _db_commit()
+
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+
+def _row_to_training_dict(row) -> dict:
+    meeting_id = row["meeting_id"] or ""
+    return {
+        "training_id": row["training_id"],
+        "created_at": row["created_at"] or "",
+        "meeting_id": meeting_id,
+        "user_id": row["user_id"] or "",
+        "session_name": lookup_session_name_by_meeting_id(meeting_id) if meeting_id else "",
+        "reflection_id": row["reflection_id"] or "",
+        "type": normalize_training_type_str(row["type"]),
+        "valence": row["valence"] or "",
+        "arousal": row["arousal"] or "",
+        "dominance": row["dominance"] or "",
+        "done": normalize_done_str(row["done"]),
+        "training_files": row["training_files"] or "",
+        "transcription": row["transcription"] or "",
+        "summary": row["summary"] or "",
+        "suggestions": row["suggestions"] or "",
+        "tree_type": row["tree_type"] or "",
+        "startms": row["startms"] or "",
+        "endms": row["endms"] or "",
+    }
 
 
 def load_training_rows():
-    if not TRAINING_CSV_PATH.exists():
-        return []
-
-    raw_rows, _ = read_csv_rows(TRAINING_CSV_PATH)
-    normalized_rows = []
-    for row in raw_rows:
-        # Handle legacy rows that have session/session_name but no meeting_id
-        meeting_id = str(row.get("meeting_id", "") or "").strip()
-        if not meeting_id:
-            legacy_session = str(row.get("session", "") or row.get("session_name", "") or "").strip()
-            if legacy_session:
-                meeting_id = lookup_meeting_id_by_session_name(legacy_session)
-        # Derive session_name from meetings (authoritative)
-        session_name = lookup_session_name_by_meeting_id(meeting_id) if meeting_id else ""
-        # Migrate legacy wearer_agent -> user_id
-        user_id = str(row.get("user_id", "") or "").strip()
-        if not user_id and str(row.get("wearer_agent", "")).strip():
-            user_id = lookup_user_id_by_username(row.get("wearer_agent", ""))
-        normalized_rows.append({
-            "training_id": str(row.get("training_id", "") or "").strip(),
-            "created_at": str(row.get("created_at", "") or "").strip(),
-            "meeting_id": meeting_id,
-            "user_id": user_id,
-            "session_name": session_name,
-            "reflection_id": str(row.get("reflection_id", "") or "").strip(),
-            "type": normalize_training_type_str(row.get("type", "valence")),
-            "valence": str(row.get("valence", "") or "").strip(),
-            "arousal": str(row.get("arousal", "") or "").strip(),
-            "dominance": str(row.get("dominance", "") or "").strip(),
-            "done": normalize_done_str(row.get("done", "false")),
-            "training_files": str(row.get("training_files", "") or "").strip(),
-            "transcription": str(row.get("transcription", "") or "").strip(),
-            "summary": str(row.get("summary", "") or "").strip(),
-            "suggestions": str(row.get("suggestions", "") or "").strip(),
-            "tree_type": str(row.get("tree_type", "") or "").strip(),
-            "startms": str(row.get("startms", "") or "").strip(),
-            "endms": str(row.get("endms", "") or "").strip(),
-        })
-    return normalized_rows
+    rows = _db_execute("SELECT * FROM training").fetchall()
+    return [_row_to_training_dict(r) for r in rows]
 
 
 def write_training_rows(rows) -> None:
-    normalized_rows = []
+    db = get_db()
+    db.execute("DELETE FROM training")
     for row in rows:
-        normalized_rows.append({
-            "training_id": str(row.get("training_id", "") or "").strip(),
-            "created_at": str(row.get("created_at", "") or "").strip(),
-            "meeting_id": str(row.get("meeting_id", "") or "").strip(),
-            "user_id": str(row.get("user_id", "") or "").strip(),
-            "reflection_id": str(row.get("reflection_id", "") or "").strip(),
-            "type": normalize_training_type_str(row.get("type", "valence")),
-            "valence": str(row.get("valence", "") or "").strip(),
-            "arousal": str(row.get("arousal", "") or "").strip(),
-            "dominance": str(row.get("dominance", "") or "").strip(),
-            "done": normalize_done_str(row.get("done", "false")),
-            "training_files": str(row.get("training_files", "") or "").strip(),
-            "transcription": str(row.get("transcription", "") or "").strip(),
-            "summary": str(row.get("summary", "") or "").strip(),
-            "suggestions": str(row.get("suggestions", "") or "").strip(),
-            "tree_type": str(row.get("tree_type", "") or "").strip(),
-            "startms": str(row.get("startms", "") or "").strip(),
-            "endms": str(row.get("endms", "") or "").strip(),
-        })
-    write_csv_rows(TRAINING_CSV_PATH, normalized_rows, TRAINING_CSV_FIELDNAMES)
+        tid = str(row.get("training_id","") or "").strip()
+        if not tid:
+            continue
+        db.execute(
+            "INSERT INTO training VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (tid, str(row.get("created_at","") or ""), str(row.get("meeting_id","") or ""),
+             str(row.get("user_id","") or ""), str(row.get("reflection_id","") or ""),
+             normalize_training_type_str(row.get("type","valence")),
+             str(row.get("valence","") or ""), str(row.get("arousal","") or ""),
+             str(row.get("dominance","") or ""), normalize_done_str(row.get("done","false")),
+             str(row.get("training_files","") or ""), str(row.get("transcription","") or ""),
+             str(row.get("summary","") or ""), str(row.get("suggestions","") or ""),
+             str(row.get("tree_type","") or ""), str(row.get("startms","") or ""),
+             str(row.get("endms","") or "")),
+        )
+    db.commit()
 
 
-def append_training_row(training_id: str, meeting_id: str, reflection_id: str = "", user_id: str = "", training_type: str = "valence", valence: float | None = None, arousal: float | None = None, dominance: float | None = None, training_files: list[str] | None = None, transcription: str = "", summary: str = "", suggestions: list[str] | None = None, tree_type: str = "", startms: str = "", endms: str = "", done: str = "false") -> None:
+def append_training_row(
+    training_id: str, meeting_id: str, reflection_id: str = "", user_id: str = "",
+    training_type: str = "valence", valence: float | None = None, arousal: float | None = None,
+    dominance: float | None = None, training_files: list[str] | None = None,
+    transcription: str = "", summary: str = "", suggestions: list[str] | None = None,
+    tree_type: str = "", startms: str = "", endms: str = "", done: str = "false",
+) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    existing_rows = load_training_rows()
-    existing_rows.append({
-        "training_id": str(training_id or "").strip(),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "meeting_id": str(meeting_id or "").strip(),
-        "user_id": str(user_id or "").strip(),
-        "reflection_id": str(reflection_id or "").strip(),
-        "type": normalize_training_type_str(training_type),
-        "valence": "" if valence is None else str(valence),
-        "arousal": "" if arousal is None else str(arousal),
-        "dominance": "" if dominance is None else str(dominance),
-        "done": normalize_done_str(done),
-        "training_files": ";".join(training_files or []),
-        "transcription": str(transcription or "").strip(),
-        "summary": str(summary or "").strip(),
-        "suggestions": "|".join(suggestions or []),
-        "tree_type": str(tree_type or "").strip(),
-        "startms": str(startms or "").strip(),
-        "endms": str(endms or "").strip(),
-    })
-    write_training_rows(existing_rows)
+    _t_uid = str(user_id or "").strip()
+    _t_mid = str(meeting_id or "").strip()
+    _t_rid = str(reflection_id or "").strip()
+    _db_execute(
+        "INSERT OR IGNORE INTO training VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (str(training_id or "").strip(), datetime.now(timezone.utc).isoformat(),
+         _t_mid or None, _t_uid or None,
+         _t_rid or None, normalize_training_type_str(training_type),
+         "" if valence is None else str(valence),
+         "" if arousal is None else str(arousal),
+         "" if dominance is None else str(dominance),
+         normalize_done_str(done), ";".join(training_files or []),
+         str(transcription or "").strip(), str(summary or "").strip(),
+         "|".join(suggestions or []), str(tree_type or "").strip(),
+         str(startms or "").strip(), str(endms or "").strip()),
+    )
+    _db_commit()
 
 
 def update_training_row_files(training_id: str, training_files: list[str], suggestions: list[str]) -> None:
-    """Update the training_files and suggestions of an existing training row in-place."""
-    rows = load_training_rows()
-    for row in rows:
-        if str(row.get("training_id", "") or "").strip() == str(training_id or "").strip():
-            row["training_files"] = ";".join(training_files or [])
-            row["suggestions"] = "|".join(suggestions or [])
-            break
-    write_training_rows(rows)
+    _db_execute(
+        "UPDATE training SET training_files=?, suggestions=? WHERE training_id=?",
+        (";".join(training_files or []), "|".join(suggestions or []), str(training_id or "").strip()),
+    )
+    _db_commit()
 
+
+# ---------------------------------------------------------------------------
+# Audio / training file helpers
+# ---------------------------------------------------------------------------
 
 def _sanitize_storage_name(value: str, fallback: str) -> str:
-    normalized = "".join(char if char.isalnum() or char in "-_" else "_" for char in str(value or ""))
-    normalized = "_".join(part for part in normalized.split("_") if part)
+    normalized = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(value or ""))
+    normalized = "_".join(p for p in normalized.split("_") if p)
     return normalized or fallback
 
 
-def save_training_audio_variants(training_id: str, meeting_id: str, emotion: str, tagged_audio: list[tuple[str, bytes]], output_dir: str | Path | None = None) -> list[str]:
+def save_training_audio_variants(
+    training_id: str, meeting_id: str, emotion: str,
+    tagged_audio: list[tuple[str, bytes]], output_dir: str | Path | None = None,
+) -> list[str]:
     output_root = Path(output_dir) if output_dir else TRAINING_AUDIO_DIR
     output_root.mkdir(parents=True, exist_ok=True)
-
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     safe_session = _sanitize_storage_name(meeting_id, "session")
     safe_emotion = _sanitize_storage_name(emotion, "emotion")
-
     output_files: list[str] = []
     for index, (tag, audio_bytes) in enumerate(tagged_audio, start=1):
         safe_tag = _sanitize_storage_name(tag, f"tag{index}")
         filename = f"{training_id}_{safe_session}_{safe_emotion}_{safe_tag}_{timestamp}_{index}.mp3"
         (output_root / filename).write_bytes(audio_bytes)
         output_files.append(filename)
-
     return output_files
+
+
+# ---------------------------------------------------------------------------
+# Backwards-compatible CSV aliases (for any code that imports read/write_csv_rows)
+# ---------------------------------------------------------------------------
+
+def read_csv_rows(csv_path: Path):
+    return _read_csv_rows(csv_path)
+
+
+def write_csv_rows(csv_path: Path, rows, fieldnames) -> None:
+    _write_csv_rows(csv_path, rows, fieldnames)
