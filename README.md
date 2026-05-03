@@ -1,4 +1,4 @@
-# Codesign2
+# Noonchi
 
 A meeting analysis platform that records audio, transcribes speech, runs emotion/intent analysis, and surfaces reflections and coaching nudges through a web UI. A wearable Bangle.js smartwatch receives real-time tip notifications over BLE.
 
