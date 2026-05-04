@@ -8,6 +8,7 @@ sed -i 's/^DEBUG=.*/DEBUG=true/' .env
 
 echo "[dev] Starting Docker containers (detached)..."
 sudo docker compose up -d --build
+sudo docker compose restart nginx
 
 echo "[dev] Containers up. Starting ngrok on port 5000..."
 echo "  (Ctrl+C to stop ngrok — containers keep running)"
