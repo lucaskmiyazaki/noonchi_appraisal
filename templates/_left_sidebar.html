@@ -73,20 +73,7 @@
 
 <nav class="app-nav">
   <a class="app-logo" href="{{ dashboard_nav_href or ('/' ~ (current_user|urlencode)) }}" aria-label="Open dashboard">
-    <svg class="app-logo-icon" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="navLgBlue" x1="0" y1="44" x2="22" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#1a0f52"/>
-          <stop offset="100%" stop-color="#5a3dbf"/>
-        </linearGradient>
-        <linearGradient id="navLgGold" x1="36" y1="0" x2="10" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#f7d535"/>
-          <stop offset="100%" stop-color="#e08a0a"/>
-        </linearGradient>
-      </defs>
-      <path d="M10 40 C3 34 2 22 4 14 C6 7 12 2 18 2 C14 8 12 18 14 28 C15 34 18 40 16 42 C13 42 10 40 10 40Z" fill="url(#navLgBlue)"/>
-      <path d="M18 2 C24 0 34 6 36 16 C38 27 30 42 20 44 C16 44 14 42 14 38 C14 28 18 16 18 8 C18 4 16 2 18 2Z" fill="url(#navLgGold)"/>
-    </svg>
+    <img class="app-logo-icon" src="/static/images/logo.svg" alt="Noonchi logo" />
     <span class="app-logo-name">Noonchi</span>
   </a>
 
