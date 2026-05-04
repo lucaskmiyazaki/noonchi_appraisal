@@ -13,6 +13,11 @@ sed -i 's/^DEBUG=.*/DEBUG=false/' .env
 # ── Step 1: GCP firewall — open ports 80 and 443 ─────────────────────────────
 echo "[prod] Checking GCP firewall rules..."
 if command -v gcloud &>/dev/null; then
+  # Ensure gcloud has valid credentials (non-interactive refresh)
+  if ! gcloud auth print-access-token &>/dev/null 2>&1; then
+    echo "[prod] gcloud not authenticated — running gcloud auth login..."
+    gcloud auth login --no-launch-browser
+  fi
   # Check if the rule already exists
   if ! gcloud compute firewall-rules describe allow-noonchi-web &>/dev/null 2>&1; then
     echo "[prod] Creating firewall rule to allow ports 80 and 443..."
@@ -20,18 +25,11 @@ if command -v gcloud &>/dev/null; then
       --allow tcp:80,tcp:443 \
       --direction=INGRESS \
       --priority=1000 \
-      --description="Allow HTTP and HTTPS for noonchi.live" 2>/dev/null; then
+      --description="Allow HTTP and HTTPS for noonchi.live"; then
       echo "[prod] Firewall rule created."
     else
       echo ""
-      echo "[prod] ⚠ Could not create firewall rule via gcloud (insufficient auth scopes)."
-      echo "       Fix with one of these options:"
-      echo ""
-      echo "       Option A — re-authenticate gcloud and retry:"
-      echo "         gcloud auth login"
-      echo "         gcloud compute firewall-rules create allow-noonchi-web --allow tcp:80,tcp:443"
-      echo ""
-      echo "       Option B — create via GCP Console (no auth needed):"
+      echo "[prod] ⚠ Could not create firewall rule — create it manually via GCP Console:"
       echo "         https://console.cloud.google.com/networking/firewalls/add"
       echo "         Name: allow-noonchi-web"
       echo "         Direction: Ingress | Action: Allow | Targets: All instances"
@@ -44,8 +42,8 @@ if command -v gcloud &>/dev/null; then
   fi
 else
   echo "[prod] gcloud not found — skipping firewall setup."
-  echo "       If ports 80/443 are not open, run manually:"
-  echo "       gcloud compute firewall-rules create allow-noonchi-web --allow tcp:80,tcp:443"
+  echo "       If ports 80/443 are not open, create the rule in GCP Console:"
+  echo "         https://console.cloud.google.com/networking/firewalls/add"
 fi
 
 # ── Step 2: Detect this VM's external IP ─────────────────────────────────────
@@ -58,7 +56,15 @@ echo "[prod] VM external IP: ${VM_IP}"
 
 # ── Step 3: Verify DNS resolves to this VM ───────────────────────────────────
 echo "[prod] Checking DNS for ${DOMAIN}..."
-DNS_IP=$(dig +short "${DOMAIN}" A | tail -1)
+if command -v dig &>/dev/null; then
+  DNS_IP=$(dig +short "${DOMAIN}" A | tail -1)
+elif command -v nslookup &>/dev/null; then
+  DNS_IP=$(nslookup "${DOMAIN}" 2>/dev/null | awk '/^Address: / { print $2 }' | tail -1)
+elif command -v host &>/dev/null; then
+  DNS_IP=$(host "${DOMAIN}" 2>/dev/null | awk '/has address/ { print $4 }' | tail -1)
+else
+  DNS_IP=$(curl -sf --max-time 5 "https://dns.google/resolve?name=${DOMAIN}&type=A" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['Answer'][-1]['data'])" 2>/dev/null || echo "")
+fi
 if [ -z "$DNS_IP" ]; then
   echo ""
   echo "[prod] ⚠ DNS not yet configured for ${DOMAIN}."
