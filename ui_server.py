@@ -133,6 +133,7 @@ def user_analysis_session(user_name, session_name):
     record = find_latest_audio_record(session_name)
     display_name = (record.get("displayName") if record else None) or session_name
     meeting_id = (record.get("id") if record else None) or ""
+    uploaded_at = (record.get("uploadedAt") if record else None) or ""
     current_user_record = lookup_user_by_username(user_name) or {}
     return render_template(
         "session.html",
@@ -141,6 +142,7 @@ def user_analysis_session(user_name, session_name):
         current_session=session_name,
         display_name=display_name,
         meeting_id=meeting_id,
+        uploaded_at=uploaded_at,
     )
 
 
