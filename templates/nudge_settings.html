@@ -238,7 +238,8 @@
 {% set nudges_nav_href = '/' ~ (resolved_user|urlencode) ~ '/nudges' %}
 <body data-current-user="{{ resolved_user }}"
       data-nudge-trigger="{{ current_user_record.get('nudge_trigger', '') }}"
-      data-nudge-type="{{ current_user_record.get('nudge_type', 'vibration') }}">
+      data-nudge-type="{{ current_user_record.get('nudge_type', 'vibration') }}"
+      data-nudge-device="{{ current_user_record.get('nudge_device', 'smartwatch') }}">
   <div class="nudge-layout">
     {% include '_left_sidebar.html' %}
 
@@ -340,6 +341,35 @@
           </div>
         </section>
 
+        <!-- Where will this nudge be delivered -->
+        <section class="nudge-section">
+          <div class="nudge-section-label">Where will this nudge be delivered</div>
+          <p class="nudge-section-desc">Choose whether the nudge goes to your smartwatch or your desktop.</p>
+          <div class="nudge-type-options">
+
+            <div class="nudge-type-card" data-nudge-device="smartwatch">
+              <div class="nudge-type-card-header">
+                <div class="nudge-type-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/><line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/></svg>
+                </div>
+                <span class="nudge-type-name">Smartwatch</span>
+              </div>
+              <p class="nudge-type-desc">Delivered directly to your wrist during the meeting.</p>
+            </div>
+
+            <div class="nudge-type-card" data-nudge-device="desktop">
+              <div class="nudge-type-card-header">
+                <div class="nudge-type-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <span class="nudge-type-name">Desktop</span>
+              </div>
+              <p class="nudge-type-desc">Shown as a notification on your computer screen.</p>
+            </div>
+
+          </div>
+        </section>
+
 
 
       </div>
@@ -350,6 +380,7 @@
     const currentUser = document.body.dataset.currentUser || '';
     let activeTrigger = document.body.dataset.nudgeTrigger || '';
     let activeType = document.body.dataset.nudgeType || 'vibration';
+    let activeDevice = document.body.dataset.nudgeDevice || 'smartwatch';
 
     function refreshTriggerUI() {
       document.querySelectorAll('.trigger-card').forEach((card) => {
@@ -358,13 +389,20 @@
     }
 
     function refreshTypeUI() {
-      document.querySelectorAll('.nudge-type-card').forEach((card) => {
+      document.querySelectorAll('[data-nudge-type]').forEach((card) => {
         card.classList.toggle('is-selected', card.dataset.nudgeType === activeType);
+      });
+    }
+
+    function refreshDeviceUI() {
+      document.querySelectorAll('[data-nudge-device]').forEach((card) => {
+        card.classList.toggle('is-selected', card.dataset.nudgeDevice === activeDevice);
       });
     }
 
     refreshTriggerUI();
     refreshTypeUI();
+    refreshDeviceUI();
 
     async function saveField(field, value) {
       if (!currentUser) return;
@@ -389,11 +427,19 @@
       });
     });
 
-    document.querySelectorAll('.nudge-type-card').forEach((card) => {
+    document.querySelectorAll('[data-nudge-type]').forEach((card) => {
       card.addEventListener('click', () => {
         activeType = card.dataset.nudgeType;
         refreshTypeUI();
         saveField('nudge_type', activeType);
+      });
+    });
+
+    document.querySelectorAll('[data-nudge-device]').forEach((card) => {
+      card.addEventListener('click', () => {
+        activeDevice = card.dataset.nudgeDevice;
+        refreshDeviceUI();
+        saveField('nudge_device', activeDevice);
       });
     });
 
