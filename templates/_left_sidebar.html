@@ -1,25 +1,130 @@
+<style>
+  .app-nav {
+    background: var(--sidebar-bg, #e5ebf4);
+    border-radius: 0 24px 24px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px 12px;
+    z-index: 3;
+    gap: 0;
+  }
+  .app-logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 4px 8px 14px;
+    text-decoration: none;
+    margin-bottom: 6px;
+  }
+  .app-logo-icon { width: 28px; height: 34px; flex-shrink: 0; }
+  .app-logo-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.01em;
+  }
+  .app-nav-icons { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .app-nav-icon {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    color: #6b7280;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .app-nav-icon svg { width: 18px; height: 18px; stroke: currentColor; flex-shrink: 0; }
+  .app-nav-icon:hover { background: rgba(0,0,0,0.05); color: #111827; }
+  .app-nav-icon.is-active { background: rgba(0,0,0,0.08); color: #111827; font-weight: 600; }
+  .app-nav-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.07);
+    margin-top: 6px;
+  }
+  .app-nav-bottom-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    color: #6b7280;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .app-nav-bottom-item svg { width: 18px; height: 18px; stroke: currentColor; flex-shrink: 0; }
+  .app-nav-bottom-item:hover { background: rgba(0,0,0,0.05); color: #111827; }
+</style>
+
 <nav class="app-nav">
-  <a class="app-logo" href="{{ dashboard_nav_href or ('/' ~ (current_user|urlencode)) }}" aria-label="Open dashboard">▲</a>
+  <a class="app-logo" href="{{ dashboard_nav_href or ('/' ~ (current_user|urlencode)) }}" aria-label="Open dashboard">
+    <svg class="app-logo-icon" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="navLgBlue" x1="0" y1="44" x2="22" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1a0f52"/>
+          <stop offset="100%" stop-color="#5a3dbf"/>
+        </linearGradient>
+        <linearGradient id="navLgGold" x1="36" y1="0" x2="10" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#f7d535"/>
+          <stop offset="100%" stop-color="#e08a0a"/>
+        </linearGradient>
+      </defs>
+      <path d="M10 40 C3 34 2 22 4 14 C6 7 12 2 18 2 C14 8 12 18 14 28 C15 34 18 40 16 42 C13 42 10 40 10 40Z" fill="url(#navLgBlue)"/>
+      <path d="M18 2 C24 0 34 6 36 16 C38 27 30 42 20 44 C16 44 14 42 14 38 C14 28 18 16 18 8 C18 4 16 2 18 2Z" fill="url(#navLgGold)"/>
+    </svg>
+    <span class="app-logo-name">Noonchi</span>
+  </a>
+
   <div class="app-nav-icons">
-    <a class="app-nav-icon{% if active_nav_icon == 'grid' %} is-active{% endif %}" href="{{ dashboard_nav_href or ('/' ~ (current_user|urlencode)) }}" aria-label="Open dashboard">
-      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+    <a class="app-nav-icon{% if active_nav_icon == 'grid' %} is-active{% endif %}" href="{{ dashboard_nav_href or ('/' ~ (current_user|urlencode)) }}" aria-label="Home">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+      <span>Home</span>
     </a>
-    <a class="app-nav-icon{% if active_nav_icon == 'chart' %} is-active{% endif %}" href="{{ analysis_nav_href or ('/' ~ (current_user|urlencode)) }}" aria-label="Open analysis">
-      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+    <a class="app-nav-icon{% if active_nav_icon == 'chart' %} is-active{% endif %}" href="{{ analysis_nav_href or ('/' ~ (current_user|urlencode) ~ '/analysis') }}" aria-label="Reflections">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span>Reflections</span>
     </a>
-    <a class="app-nav-icon{% if active_nav_icon == 'calendar' %} is-active{% endif %}" href="/{{ current_user|urlencode }}/practice" aria-label="Open practice">
-      <svg viewBox="14 14 20 20" fill="none" aria-hidden="true">
-        <g transform="translate(24 24) scale(0.92) translate(-24 -24)">
-          <path d="M32.0262 21.3749L30.982 20.3306L31.5972 19.6904C31.6614 19.6262 31.6935 19.554 31.6935 19.4739C31.6935 19.3937 31.6614 19.3216 31.5972 19.2576L28.7435 16.4039C28.6795 16.3397 28.6074 16.3076 28.5272 16.3076C28.4471 16.3076 28.3749 16.3397 28.3107 16.4039L27.6705 17.0191L26.6012 15.9499L27.255 15.2711C27.5935 14.9326 28.0108 14.7675 28.507 14.7759C29.0031 14.7842 29.4205 14.9576 29.759 15.2961L32.705 18.2421C33.0435 18.5806 33.2127 18.9938 33.2127 19.4816C33.2127 19.9694 33.0435 20.3826 32.705 20.7211L32.0262 21.3749ZM20.7475 32.6786C20.409 33.0171 19.9958 33.1864 19.508 33.1864C19.0201 33.1864 18.607 33.0171 18.2685 32.6786L15.361 29.7709C15.016 29.426 14.8435 29.0001 14.8435 28.4931C14.8435 27.9861 15.016 27.5601 15.361 27.2151L15.9762 26.5999L17.0455 27.6691L16.4147 28.2844C16.3506 28.3485 16.3185 28.4207 16.3185 28.5009C16.3185 28.581 16.3506 28.6531 16.4147 28.7171L19.284 31.5864C19.348 31.6505 19.4201 31.6826 19.5002 31.6826C19.5804 31.6826 19.6526 31.6505 19.7167 31.5864L20.332 30.9556L21.4012 32.0249L20.7475 32.6786ZM30.5762 25.0769L31.857 23.7961C31.9211 23.7319 31.9532 23.6582 31.9532 23.5749C31.9532 23.4915 31.9211 23.4178 31.857 23.3536L24.6475 16.1441C24.5833 16.0799 24.5096 16.0479 24.4262 16.0479C24.3429 16.0479 24.2691 16.0799 24.205 16.1441L22.9242 17.4249C22.8602 17.489 22.8282 17.5611 22.8282 17.6411C22.8282 17.7213 22.8602 17.7934 22.9242 17.8576L30.1435 25.0769C30.2076 25.1409 30.2798 25.1729 30.36 25.1729C30.44 25.1729 30.5121 25.1409 30.5762 25.0769ZM23.7975 31.8556L25.0782 30.5594C25.1422 30.4954 25.1742 30.4233 25.1742 30.3431C25.1742 30.2629 25.1422 30.1909 25.0782 30.1269L17.8742 22.9229C17.8102 22.8589 17.7381 22.8269 17.658 22.8269C17.5778 22.8269 17.5057 22.8589 17.4417 22.9229L16.1455 24.2036C16.0813 24.2678 16.0492 24.3415 16.0492 24.4249C16.0492 24.5082 16.0813 24.5819 16.1455 24.6461L23.355 31.8556C23.4191 31.9198 23.4929 31.9519 23.5762 31.9519C23.6596 31.9519 23.7333 31.9198 23.7975 31.8556ZM23.3685 26.2941L26.311 23.3671L24.634 21.6901L21.707 24.6326L23.3685 26.2941ZM24.857 32.9094C24.5121 33.2544 24.0852 33.4269 23.5762 33.4269C23.0672 33.4269 22.6403 33.2544 22.2955 32.9094L15.0917 25.7056C14.7467 25.3608 14.5742 24.9339 14.5742 24.4249C14.5742 23.9159 14.7467 23.4889 15.0917 23.1441L16.3725 21.8536C16.7173 21.5088 17.1432 21.3364 17.6502 21.3364C18.1574 21.3364 18.5834 21.5088 18.9282 21.8536L20.6377 23.5634L23.5802 20.6211L21.8705 18.9269C21.5256 18.582 21.3532 18.1534 21.3532 17.6411C21.3532 17.1289 21.5256 16.7004 21.8705 16.3556L23.161 15.0654C23.5058 14.7204 23.9317 14.5479 24.4387 14.5479C24.9457 14.5479 25.3716 14.7204 25.7165 15.0654L32.9357 22.2846C33.2807 22.6294 33.4532 23.0554 33.4532 23.5624C33.4532 24.0694 33.2807 24.4953 32.9357 24.8401L31.6455 26.1306C31.3006 26.4754 30.8721 26.6479 30.36 26.6479C29.8476 26.6479 29.4191 26.4754 29.0742 26.1306L27.38 24.4209L24.4377 27.3634L26.1475 29.0729C26.4923 29.4177 26.6647 29.8437 26.6647 30.3509C26.6647 30.8579 26.4923 31.2838 26.1475 31.6286L24.857 32.9094Z" fill="currentColor"></path>
-        </g>
-      </svg>
+    <a class="app-nav-icon{% if active_nav_icon == 'regulation' %} is-active{% endif %}" href="{{ nudges_nav_href or ('/' ~ (current_user|urlencode) ~ '/nudges') }}" aria-label="Nudges">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+      <span>Nudges</span>
     </a>
-    <a class="app-nav-icon{% if active_nav_icon == 'journal' %} is-active{% endif %}" href="/{{ current_user|urlencode }}/journaling" aria-label="Open journaling">
+    <a class="app-nav-icon{% if active_nav_icon == 'calendar' %} is-active{% endif %}" href="/{{ current_user|urlencode }}/practice" aria-label="Practice">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+      <span>Practice</span>
+    </a>
+    <a class="app-nav-icon{% if active_nav_icon == 'journal' %} is-active{% endif %}" href="/{{ current_user|urlencode }}/journaling" aria-label="Journal">
       <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6.768-6.768a2.5 2.5 0 113.536 3.536L12.536 14.536a4 4 0 01-1.657 1.01L7 17l1.454-3.879A4 4 0 019.464 11zM6 20h12"/></svg>
-    </a>
-    <a class="app-nav-icon{% if active_nav_icon == 'regulation' %} is-active{% endif %}" href="{{ nudges_nav_href or ('/' ~ (current_user|urlencode) ~ '/nudges') }}" aria-label="Open nudge settings">
-      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+      <span>Journal</span>
     </a>
   </div>
-  <div class="app-nav-avatar"></div>
+
+  <div class="app-nav-bottom">
+    <a class="app-nav-bottom-item" href="#" aria-label="Docs">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4M12 8h.01"/></svg>
+      <span>Docs</span>
+    </a>
+    <button class="app-nav-bottom-item" type="button" id="navLightModeToggle" aria-label="Toggle light/dark mode">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <span>Light Mode</span>
+    </button>
+    <a class="app-nav-bottom-item" href="#" aria-label="Account">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+      <span>Account</span>
+    </a>
+  </div>
 </nav>

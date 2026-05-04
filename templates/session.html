@@ -28,14 +28,8 @@
 
     html, body { height: 100%; overflow: hidden; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
-    .session-layout { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
-    .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
-    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
-    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
-    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
-    .app-nav-icon.is-active { color: #111827; }
-    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+    .session-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+
     .session-main { position: relative; z-index: 1; background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
     .session-main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; border-bottom: 1px solid #f0f0f0; }
     .session-main-title-group { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
@@ -144,7 +138,7 @@
 {% set dashboard_nav_href = '/' ~ (resolved_user|urlencode) %}
 {% set analysis_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis/' ~ (resolved_session|urlencode) %}
 {% set meetings_nav_href = '/' ~ (resolved_user|urlencode) ~ '/analysis' %}
-<body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}">
+<body data-current-user="{{ resolved_user }}" data-current-session="{{ resolved_session }}" data-meeting-id="{{ meeting_id or '' }}">
   <div class="session-layout">
     <svg id="reflectionLinks" class="reflection-links" aria-hidden="true"></svg>
     {% include '_left_sidebar.html' %}
@@ -1470,6 +1464,12 @@
     }
 
     loadSession();
+
+    // Auto-mark session as opened
+    const _meetingId = document.body.dataset.meetingId;
+    if (_meetingId) {
+      fetch(`/api/meetings/${encodeURIComponent(_meetingId)}/open`, { method: 'POST' }).catch(() => {});
+    }
   </script>
 </body>
 </html>

@@ -37,6 +37,7 @@ from data_store import (
     lookup_user_by_username,
     lookup_user_id_by_username,
     lookup_username_by_user_id,
+    mark_meeting_opened,
     normalize_done_str,
     normalize_practice_value,
     load_training_rows,
@@ -131,6 +132,7 @@ def user_analysis(user_name):
 def user_analysis_session(user_name, session_name):
     record = find_latest_audio_record(session_name)
     display_name = (record.get("displayName") if record else None) or session_name
+    meeting_id = (record.get("id") if record else None) or ""
     current_user_record = lookup_user_by_username(user_name) or {}
     return render_template(
         "session.html",
@@ -138,6 +140,7 @@ def user_analysis_session(user_name, session_name):
         current_user_record=current_user_record,
         current_session=session_name,
         display_name=display_name,
+        meeting_id=meeting_id,
     )
 
 
@@ -305,6 +308,16 @@ def update_reflection_practice(reflection_filename):
 def list_reflections_for_user(user):
     sessions = list_meeting_sessions_for_user(user)
     return jsonify({"user": user, "session_names": [s["sessionName"] for s in sessions], "sessions": sessions})
+
+
+@app.post("/api/meetings/<meeting_id>/open")
+def mark_session_opened(meeting_id):
+    """Mark a meeting as opened (sets opened_at once, never overwrites)."""
+    safe_id = str(meeting_id or "").strip()
+    if not safe_id:
+        return jsonify({"error": "Invalid meeting id"}), 400
+    mark_meeting_opened(safe_id)
+    return jsonify({"ok": True, "meetingId": safe_id})
 
 
 @app.get("/reflection/<user>/<session>")

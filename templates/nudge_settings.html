@@ -34,55 +34,11 @@
 
     .nudge-layout {
       display: grid;
-      grid-template-columns: 80px minmax(0, 1fr);
-      gap: 16px;
+      grid-template-columns: 160px minmax(0, 1fr);
       height: 100vh;
       width: 100vw;
       padding: 16px;
     }
-
-    .app-nav {
-      background: var(--sidebar-bg);
-      border-radius: 0 24px 24px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px 0;
-      z-index: 3;
-    }
-
-    .app-logo {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: #fff;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      font-weight: 700;
-      margin-bottom: auto;
-      text-decoration: none;
-    }
-
-    .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .app-nav-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      background: transparent;
-      font-size: 18px;
-      text-decoration: none;
-    }
-
-    .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
-    .app-nav-icon.is-active { color: #111827; }
-    .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
 
     .nudge-main {
       min-width: 0;

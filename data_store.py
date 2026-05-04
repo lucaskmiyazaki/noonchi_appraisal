@@ -114,7 +114,8 @@ def _create_tables() -> None:
             uploaded_at TEXT DEFAULT '',
             duration TEXT DEFAULT '',
             segment_count TEXT DEFAULT '',
-            intent_filename TEXT DEFAULT ''
+            intent_filename TEXT DEFAULT '',
+            opened_at TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS reflections (
             id TEXT PRIMARY KEY,
@@ -152,6 +153,12 @@ def _create_tables() -> None:
         );
     """)
     db.commit()
+    # Migrate: add opened_at to meetings if it doesn't exist yet
+    try:
+        db.execute("ALTER TABLE meetings ADD COLUMN opened_at TEXT DEFAULT ''")
+        db.commit()
+    except Exception:
+        pass  # column already exists
 
 
 # ---------------------------------------------------------------------------
@@ -753,17 +760,37 @@ def list_meeting_sessions_for_user(username: str) -> list[dict]:
     user_id = user_record.get("id","") if user_record else ""
     if user_id:
         rows = _db_execute(
-            "SELECT session_name, display_name FROM meetings WHERE user_id=? ORDER BY session_name",
+            "SELECT id, session_name, display_name, uploaded_at, opened_at FROM meetings WHERE user_id=? ORDER BY uploaded_at DESC",
             (user_id,),
         ).fetchall()
     else:
         rows = _db_execute(
-            "SELECT session_name, display_name FROM meetings ORDER BY session_name"
+            "SELECT id, session_name, display_name, uploaded_at, opened_at FROM meetings ORDER BY uploaded_at DESC"
         ).fetchall()
     return [
-        {"sessionName": r["session_name"] or "", "displayName": r["display_name"] or r["session_name"] or ""}
+        {
+            "id": r["id"] or "",
+            "sessionName": r["session_name"] or "",
+            "displayName": r["display_name"] or r["session_name"] or "",
+            "uploadedAt": r["uploaded_at"] or "",
+            "openedAt": r["opened_at"] or "",
+        }
         for r in rows if r["session_name"]
     ]
+
+
+def mark_meeting_opened(meeting_id: str) -> bool:
+    """Set opened_at to now for a meeting. Returns True if the row was found."""
+    target = str(meeting_id or "").strip()
+    if not target:
+        return False
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = _db_execute(
+        "UPDATE meetings SET opened_at=? WHERE id=? AND (opened_at IS NULL OR opened_at='')",
+        (now, target),
+    )
+    _db_commit()
+    return cursor.rowcount > 0
 
 
 def iter_meetings_for_username(username: str = "") -> list[dict]:
