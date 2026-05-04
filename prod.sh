@@ -16,12 +16,29 @@ if command -v gcloud &>/dev/null; then
   # Check if the rule already exists
   if ! gcloud compute firewall-rules describe allow-noonchi-web &>/dev/null 2>&1; then
     echo "[prod] Creating firewall rule to allow ports 80 and 443..."
-    gcloud compute firewall-rules create allow-noonchi-web \
+    if gcloud compute firewall-rules create allow-noonchi-web \
       --allow tcp:80,tcp:443 \
       --direction=INGRESS \
       --priority=1000 \
-      --description="Allow HTTP and HTTPS for noonchi.live"
-    echo "[prod] Firewall rule created."
+      --description="Allow HTTP and HTTPS for noonchi.live" 2>/dev/null; then
+      echo "[prod] Firewall rule created."
+    else
+      echo ""
+      echo "[prod] ⚠ Could not create firewall rule via gcloud (insufficient auth scopes)."
+      echo "       Fix with one of these options:"
+      echo ""
+      echo "       Option A — re-authenticate gcloud and retry:"
+      echo "         gcloud auth login"
+      echo "         gcloud compute firewall-rules create allow-noonchi-web --allow tcp:80,tcp:443"
+      echo ""
+      echo "       Option B — create via GCP Console (no auth needed):"
+      echo "         https://console.cloud.google.com/networking/firewalls/add"
+      echo "         Name: allow-noonchi-web"
+      echo "         Direction: Ingress | Action: Allow | Targets: All instances"
+      echo "         Protocols/ports: tcp:80, tcp:443"
+      echo ""
+      echo "       Continuing — ports may already be open..."
+    fi
   else
     echo "[prod] Firewall rule already exists — skipping."
   fi
