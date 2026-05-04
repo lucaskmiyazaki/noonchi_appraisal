@@ -31,8 +31,7 @@ DB_PATH = DATA_DIR / "data.db"
 
 USERS_CSV_FIELDNAMES = [
     "id", "username", "name",
-    "nudge_tone_difference", "nudge_elevation", "nudge_unclear_intent",
-    "nudge_excellent_tone", "nudge_need_for_clarification",
+    "nudge_trigger", "nudge_type",
 ]
 REFLECTION_DB_FIELDNAMES = [
     "id", "user_id", "reflection_tree_file", "startms", "endms",
@@ -96,11 +95,8 @@ def _create_tables() -> None:
             id TEXT PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             name TEXT DEFAULT '',
-            nudge_tone_difference TEXT DEFAULT 'false',
-            nudge_elevation TEXT DEFAULT 'false',
-            nudge_unclear_intent TEXT DEFAULT 'false',
-            nudge_excellent_tone TEXT DEFAULT 'false',
-            nudge_need_for_clarification TEXT DEFAULT 'false'
+            nudge_trigger TEXT DEFAULT '',
+            nudge_type TEXT DEFAULT 'vibration'
         );
         CREATE TABLE IF NOT EXISTS meetings (
             id TEXT PRIMARY KEY,
@@ -159,6 +155,13 @@ def _create_tables() -> None:
         db.commit()
     except Exception:
         pass  # column already exists
+    # Migrate: replace old nudge columns with nudge_trigger + nudge_type
+    for _col, _default in [("nudge_trigger", ""), ("nudge_type", "vibration")]:
+        try:
+            db.execute(f"ALTER TABLE users ADD COLUMN {_col} TEXT DEFAULT '{_default}'")
+            db.commit()
+        except Exception:
+            pass  # column already exists
 
 
 # ---------------------------------------------------------------------------
@@ -219,13 +222,10 @@ def _migrate_csv_to_sqlite() -> None:
             if not uid or not uname:
                 continue
             db.execute(
-                "INSERT OR IGNORE INTO users VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO users (id, username, name, nudge_trigger, nudge_type) VALUES (?,?,?,?,?)",
                 (uid, uname, str(row.get("name","") or ""),
-                 str(row.get("nudge_tone_difference","false") or "false"),
-                 str(row.get("nudge_elevation","false") or "false"),
-                 str(row.get("nudge_unclear_intent","false") or "false"),
-                 str(row.get("nudge_excellent_tone","false") or "false"),
-                 str(row.get("nudge_need_for_clarification","false") or "false")),
+                 str(row.get("nudge_trigger","") or ""),
+                 str(row.get("nudge_type","vibration") or "vibration")),
             )
         db.commit()
         _backup_csv(USERS_CSV_PATH)
@@ -844,13 +844,10 @@ def write_user_rows(rows, fieldnames=None) -> None:
         if not uid or not uname:
             continue
         db.execute(
-            "INSERT INTO users VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT INTO users (id, username, name, nudge_trigger, nudge_type) VALUES (?,?,?,?,?)",
             (uid, uname, str(row.get("name","") or ""),
-             str(row.get("nudge_tone_difference","false") or "false"),
-             str(row.get("nudge_elevation","false") or "false"),
-             str(row.get("nudge_unclear_intent","false") or "false"),
-             str(row.get("nudge_excellent_tone","false") or "false"),
-             str(row.get("nudge_need_for_clarification","false") or "false")),
+             str(row.get("nudge_trigger","") or ""),
+             str(row.get("nudge_type","vibration") or "vibration")),
         )
     db.commit()
     db.execute("PRAGMA foreign_keys=ON")
@@ -886,6 +883,12 @@ def nudge_fieldnames() -> list[str]:
     return [f for f in USERS_CSV_FIELDNAMES if f.startswith("nudge_")]
 
 
+VALID_NUDGE_TRIGGERS = {
+    "tone_difference", "elevation", "unclear_intent", "excellent_tone", "need_for_clarification", ""
+}
+VALID_NUDGE_TYPES = {"vibration", "sound"}
+
+
 def normalize_user_updates(updates: dict | None) -> dict:
     payload = updates or {}
     allowed = set(USERS_CSV_FIELDNAMES) - {"id"}
@@ -894,8 +897,12 @@ def normalize_user_updates(updates: dict | None) -> dict:
         if field not in payload:
             continue
         value = payload[field]
-        if field.startswith("nudge_"):
-            normalized[field] = "true" if str(value).strip().lower() in {"true","1","yes","on"} else "false"
+        if field == "nudge_trigger":
+            v = str(value).strip().lower()
+            normalized[field] = v if v in VALID_NUDGE_TRIGGERS else ""
+        elif field == "nudge_type":
+            v = str(value).strip().lower()
+            normalized[field] = "sound" if v == "sound" else "vibration"
         else:
             normalized[field] = str(value).strip() if not isinstance(value, bool) else str(value).lower()
     return normalized
@@ -935,19 +942,14 @@ def save_user(user: dict) -> dict:
         raise ValueError(f"username '{username}' is already taken")
     for field in nudge_fieldnames():
         if str(user.get(field,"") or "").strip() == "":
-            user[field] = "false"
+            user[field] = "vibration" if field == "nudge_type" else ""
     db.execute(
-        "INSERT INTO users VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET "
+        "INSERT INTO users (id, username, name, nudge_trigger, nudge_type) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET "
         "username=excluded.username, name=excluded.name, "
-        "nudge_tone_difference=excluded.nudge_tone_difference, nudge_elevation=excluded.nudge_elevation, "
-        "nudge_unclear_intent=excluded.nudge_unclear_intent, nudge_excellent_tone=excluded.nudge_excellent_tone, "
-        "nudge_need_for_clarification=excluded.nudge_need_for_clarification",
+        "nudge_trigger=excluded.nudge_trigger, nudge_type=excluded.nudge_type",
         (user_id, username, str(user.get("name","") or ""),
-         str(user.get("nudge_tone_difference","false") or "false"),
-         str(user.get("nudge_elevation","false") or "false"),
-         str(user.get("nudge_unclear_intent","false") or "false"),
-         str(user.get("nudge_excellent_tone","false") or "false"),
-         str(user.get("nudge_need_for_clarification","false") or "false")),
+         str(user.get("nudge_trigger","") or ""),
+         str(user.get("nudge_type","vibration") or "vibration")),
     )
     db.commit()
     return lookup_user_by_id(user_id) or user
