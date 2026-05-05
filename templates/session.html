@@ -7,12 +7,8 @@
   <link rel="stylesheet" href="/static/styles.css">
   <style>
     :root {
-      --bg-main: #f3f6fa;
-      --sidebar-bg: #e5ebf4;
-      --panel-bg: #ffffff;
+      /* page-specific tokens — shared tokens inherited from styles.css */
       --right-panel-bg: #fafbfc;
-      --text-dark: #1e1e1e;
-      --text-muted: #5a5a5a;
       --pink-hl: #fde0eb;
       --pink-stroke: #b52a65;
       --yellow-hl: #fef2b6;
@@ -23,11 +19,10 @@
       --blue-stroke: #1d4ed8;
       --orange-hl: #ffd9b3;
       --orange-stroke: #c86a1d;
-      --card-radius: 16px;
     }
 
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
 
     /* Top-level grid: nav col + content col */
     .session-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }

@@ -9,18 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <style>
-    :root {
-      --bg-main: #f8fafc;
-      --panel-bg: #ffffff;
-      --sidebar-bg: #f8fafc;
-      --text-dark: #1c1b1f;
-      --text-muted: #6b7280;
-      --border-soft: rgba(226, 232, 240, 0.9);
-      --card-radius: 8px;
-    }
+    /* tokens inherited from styles.css */
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .dashboard-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; box-sizing: border-box; }
     .dashboard-main { min-width: 0; border-radius: var(--card-radius); background: linear-gradient(135deg, rgba(189, 219, 246, 0.85) 0%, rgba(229, 239, 248, 0.82) 50%, rgba(246, 247, 248, 0.96) 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
     .dashboard-inner { max-width: 1080px; width: 100%; margin: 0 auto; padding: 44px 36px; box-sizing: border-box; }

@@ -1,13 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
 
+/* ── Design tokens — single source of truth ─────────────────────────────── *
+ * Edit here to update fonts, radii and base colours across the whole app.   */
+:root {
+  /* Fonts */
+  --font-heading: 'Poppins', sans-serif;
+  --font-mono:    'Source Code Pro', monospace;
+  /* Colours */
+  --bg-main:      #f8fafc;
+  --panel-bg:     #ffffff;
+  --sidebar-bg:   #f8fafc;
+  --text-dark:    #1c1b1f;
+  --text-muted:   #6b7280;
+  --border-soft:  rgba(226, 232, 240, 0.9);
+  /* Radii */
+  --card-radius:  8px;
+  --radius-sm:    4px;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background: #f8fafc;
+  font-family: var(--font-heading);
+  background: var(--bg-main);
   overflow: hidden;
 }
 

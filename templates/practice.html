@@ -7,21 +7,15 @@
   <link rel="stylesheet" href="/static/styles.css">
   <style>
     :root {
-      --bg-main: #f3f6fa;
-      --panel-bg: #ffffff;
+      /* page-specific tokens — shared tokens inherited from styles.css */
       --right-panel-bg: #fafbfc;
-      --sidebar-bg: #e5ebf4;
-      --text-dark: #111827;
-      --text-muted: #6b7280;
       --pink-hl: #fde0eb;
       --yellow-hl: #fef2b6;
       --green-hl: #bdf1aa;
-      --border-soft: rgba(226, 232, 240, 0.9);
-      --card-radius: 16px;
     }
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .practice-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
 
     .practice-main { background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 32px; min-width: 0; overflow-y: auto; }
