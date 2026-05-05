@@ -4,24 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nudge Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <style>
-    :root {
-      /* page-specific tokens — shared tokens inherited from styles.css */
-      --panel-bg: rgba(255, 255, 255, 0.84); /* local: semi-transparent */
-      --pink-hl: #fde0eb;
-      --yellow-hl: #fef2b6;
-      --green-hl: #bdf1aa;
-      --blue-hl: #dbeafe;
-      --orange-hl: #ffd9b3;
-    }
+    :root { --panel-bg: rgba(255, 255, 255, 0.84); }
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body {
-      font-family: var(--font-heading);
-      background: var(--bg-main);
-      color: var(--text-dark);
-    }
+    body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
 
     .nudge-layout {
       display: grid;
@@ -35,36 +26,79 @@
 
     .nudge-main {
       min-width: 0;
-      border-radius: 8px;
-      background: linear-gradient(135deg, rgba(189, 219, 246, 0.9) 0%, rgba(228, 238, 248, 0.88) 52%, rgba(247, 247, 247, 0.96) 100%);
+      border-radius: var(--card-radius);
+      background: #ffffff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    .nudge-inner {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 28px 32px 48px;
+    /* ── Topbar (title row) — mirrors .ref-topbar in analysis ── */
+    .nudge-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 28px 0;
+      flex-shrink: 0;
     }
 
-    .nudge-page-title {
-      margin: 0 0 6px;
+    .nudge-title {
+      margin: 0;
       font-size: var(--fs-h1);
-      font-weight: var(--fw-regular);
+      font-weight: var(--fw-medium);
       line-height: 1.05;
       letter-spacing: -0.02em;
       font-family: var(--font-heading);
     }
 
-    .nudge-page-subtitle {
-      margin: 0 0 36px;
-      font-size: var(--fs-body);
-      color: var(--text-muted);
+    /* ── Filter bar: type tabs left + device tabs right ── */
+    .nudge-filterbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 28px 0;
+      flex-shrink: 0;
     }
 
-    /* ── Section ── */
-    .nudge-section {
-      margin-bottom: 36px;
+    .nudge-tabs { display: flex; align-items: center; gap: 4px; }
+
+    .nudge-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font: inherit;
+      font-size: var(--fs-h3);
+      font-weight: var(--fw-medium);
+      font-family: var(--font-mono);
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-dark);
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .nudge-tab svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .nudge-tab.is-selected { background: #1c1b1f; color: #fff; }
+    .nudge-tab:not(.is-selected):hover { background: rgba(0,0,0,0.05); }
+
+    /* ── Scrollable content ── */
+    .nudge-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 28px 32px;
     }
 
     .nudge-section-label {
@@ -78,18 +112,18 @@
     }
 
     .nudge-section-desc {
-      font-size: 13px;
+      font-size: var(--fs-body);
       color: var(--text-muted);
       margin-bottom: 16px;
       line-height: 1.5;
       font-family: var(--font-mono);
     }
 
-    /* ── Trigger cards ── */
+    /* ── Trigger cards — sized like Figma Make (p-6, 32px icon, 24px title) ── */
     .trigger-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
     }
 
     .trigger-card {
@@ -97,28 +131,24 @@
       background: var(--card-bg, var(--panel-bg));
       border: 2px solid transparent;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      padding: 18px 18px 14px;
+      padding: 28px 24px;
       cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.13s;
     }
 
-    .trigger-card.is-selected {
-      border-color: var(--card-icon, #1c1b1f);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.10);
-    }
+    .trigger-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.12); }
+    .trigger-card.is-selected { border-color: var(--card-icon, #1c1b1f); box-shadow: 0 6px 20px rgba(0,0,0,0.10); }
 
     .trigger-card-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 12px;
+      margin-bottom: 12px;
     }
 
     .trigger-card-icon {
-      width: 22px;
-      height: 22px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background: var(--card-icon, #1c1b1f);
       flex-shrink: 0;
@@ -126,29 +156,25 @@
 
     .trigger-card-title {
       margin: 0;
-      font-size: var(--fs-body);
+      font-size: var(--fs-h2);
       font-weight: var(--fw-medium);
       letter-spacing: -0.01em;
       font-family: var(--font-heading);
     }
 
     .trigger-card-desc {
-      margin: 0 0 14px;
+      margin: 0 0 16px;
       font-size: var(--fs-label);
       color: var(--text-muted);
       line-height: 1.45;
       font-family: var(--font-mono);
     }
 
-    .trigger-card-audio {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .trigger-card-audio { display: flex; align-items: center; gap: 8px; }
 
     .trigger-audio-btn {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       border: 0;
       background: var(--card-icon, #1c1b1f);
@@ -158,7 +184,6 @@
       justify-content: center;
       cursor: pointer;
       flex-shrink: 0;
-      opacity: 0.55;
     }
 
     .trigger-audio-btn svg { width: 9px; height: 9px; fill: currentColor; }
@@ -168,75 +193,16 @@
       color: var(--text-muted);
       font-weight: var(--fw-medium);
       font-family: var(--font-mono);
-      opacity: 0.6;
-    }
-
-    /* ── Type options ── */
-    .nudge-type-options {
-      display: flex;
-      gap: 12px;
-    }
-
-    .nudge-type-card {
-      flex: 1;
-      border-radius: var(--card-radius);
-      background: var(--panel-bg);
-      border: 2px solid transparent;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      padding: 18px 20px;
-      cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-
-    .nudge-type-card.is-selected {
-      border-color: #1c1b1f;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.10);
-    }
-
-    .nudge-type-card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .nudge-type-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-sm);
-      background: #f1f5f9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.15s;
-    }
-
-    .nudge-type-icon svg { width: 15px; height: 15px; stroke: #334155; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.15s; }
-
-    .nudge-type-card.is-selected .nudge-type-icon { background: #1c1b1f; }
-    .nudge-type-card.is-selected .nudge-type-icon svg { stroke: #fff; }
-
-    .nudge-type-name {
-      font-size: 15px;
-      font-weight: 500;
-      letter-spacing: -0.01em;
-      font-family: var(--font-heading);
-    }
-
-    .nudge-type-desc {
-      font-size: var(--fs-label);
-      color: var(--text-muted);
-      line-height: 1.45;
-      font-family: var(--font-mono);
     }
 
     @media (max-width: 820px) {
       body { overflow: auto; }
       .nudge-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
       .app-nav { display: none; }
-      .nudge-inner { padding: 24px 18px 40px; }
-      .nudge-type-options { flex-direction: column; }
+      .nudge-main { overflow: visible; }
+      .nudge-scroll { overflow: visible; padding: 16px 18px 40px; }
+      .nudge-filterbar { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .trigger-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -253,150 +219,135 @@
     {% include '_left_sidebar.html' %}
 
     <main class="nudge-main">
-      <div class="nudge-inner">
-        <h1 class="nudge-page-title">Nudge Settings</h1>
-        <p class="nudge-page-subtitle">Choose what triggers a nudge on your smartwatch and how you want to be notified.</p>
+
+      <!-- Title bar — same positioning as /analysis topbar -->
+      <div class="nudge-topbar">
+        <h1 class="nudge-title">Nudges</h1>
+      </div>
+
+      <!-- Controls: Nudge Type tabs (left) + Delivery device tabs (right) -->
+      <div class="nudge-filterbar">
 
         <!-- Nudge Type -->
-        <section class="nudge-section">
-          <div class="nudge-section-label">Nudge Type</div>
-          <p class="nudge-section-desc">How should your smartwatch notify you when the trigger is detected?</p>
-          <div class="nudge-type-options">
+        <div class="nudge-tabs" id="nudgeTypeTabs">
+          <button class="nudge-tab" data-nudge-type="vibration" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="7" y="2" width="10" height="20" rx="2" ry="2"/>
+              <line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/>
+              <line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/>
+            </svg>
+            <span>Vibration</span>
+          </button>
+          <button class="nudge-tab" data-nudge-type="sound" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <span>Sound</span>
+          </button>
+        </div>
 
-            <div class="nudge-type-card" data-nudge-type="vibration">
-              <div class="nudge-type-card-header">
-                <div class="nudge-type-icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/><line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/></svg>
-                </div>
-                <span class="nudge-type-name">Vibration</span>
-              </div>
-              <p class="nudge-type-desc">A silent buzz on your wrist. Discreet — others won't notice.</p>
-            </div>
-
-            <div class="nudge-type-card" data-nudge-type="sound">
-              <div class="nudge-type-card-header">
-                <div class="nudge-type-icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                </div>
-                <span class="nudge-type-name">Sound</span>
-              </div>
-              <p class="nudge-type-desc">A short audio tone from your watch. Audible in quiet settings.</p>
-            </div>
-
-          </div>
-        </section>
-
-        <!-- When will this nudge be triggered -->
-        <section class="nudge-section">
-          <div class="nudge-section-label">When will this nudge be triggered</div>
-          <p class="nudge-section-desc">Select one trigger. Your watch will nudge you in real time when this pattern is detected during a meeting.</p>
-          <div class="trigger-grid">
-
-            <div class="trigger-card" data-trigger="tone_difference" style="--card-bg: #dbeafe; --card-icon: #2D6BB8;">
-              <div class="trigger-card-header">
-                <div class="trigger-card-icon"></div>
-                <h2 class="trigger-card-title">Tone Difference</h2>
-              </div>
-              <p class="trigger-card-desc">Your tone lands sharper or harsher than the context suggests.</p>
-              <div class="trigger-card-audio">
-                <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="tone_difference">
-                  <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-                </button>
-                <span class="trigger-audio-label">Example audio</span>
-              </div>
-            </div>
-
-            <div class="trigger-card" data-trigger="elevation" style="--card-bg: #ffe53a; --card-icon: #F45520;">
-              <div class="trigger-card-header">
-                <div class="trigger-card-icon"></div>
-                <h2 class="trigger-card-title">Elevation</h2>
-              </div>
-              <p class="trigger-card-desc">Your emotional intensity rises enough to affect how your message lands.</p>
-              <div class="trigger-card-audio">
-                <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="elevation">
-                  <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-                </button>
-                <span class="trigger-audio-label">Example audio</span>
-              </div>
-            </div>
-
-            <div class="trigger-card" data-trigger="unclear_intent" style="--card-bg: #fef9c3; --card-icon: #9d7b27;">
-              <div class="trigger-card-header">
-                <div class="trigger-card-icon"></div>
-                <h2 class="trigger-card-title">Unclear Intent</h2>
-              </div>
-              <p class="trigger-card-desc">Your reaction shows friction but your goal or next step is missing.</p>
-              <div class="trigger-card-audio">
-                <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="unclear_intent">
-                  <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-                </button>
-                <span class="trigger-audio-label">Example audio</span>
-              </div>
-            </div>
-
-            <div class="trigger-card" data-trigger="excellent_tone" style="--card-bg: #dcfce7; --card-icon: #16a34a;">
-              <div class="trigger-card-header">
-                <div class="trigger-card-icon"></div>
-                <h2 class="trigger-card-title">Excellent Tone</h2>
-              </div>
-              <p class="trigger-card-desc">Your tone lands especially well — recognize and repeat it.</p>
-              <div class="trigger-card-audio">
-                <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="excellent_tone">
-                  <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-                </button>
-                <span class="trigger-audio-label">Example audio</span>
-              </div>
-            </div>
-
-            <div class="trigger-card" data-trigger="need_for_clarification" style="--card-bg: #ffd9b3; --card-icon: #c86a1d;">
-              <div class="trigger-card-header">
-                <div class="trigger-card-icon"></div>
-                <h2 class="trigger-card-title">Need for Clarification</h2>
-              </div>
-              <p class="trigger-card-desc">A participant sounds concerned and it's unclear what needs clarifying.</p>
-              <div class="trigger-card-audio">
-                <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="need_for_clarification">
-                  <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-                </button>
-                <span class="trigger-audio-label">Example audio</span>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        <!-- Where will this nudge be delivered -->
-        <section class="nudge-section">
-          <div class="nudge-section-label">Where will this nudge be delivered</div>
-          <p class="nudge-section-desc">Choose whether the nudge goes to your smartwatch or your desktop.</p>
-          <div class="nudge-type-options">
-
-            <div class="nudge-type-card" data-nudge-device="smartwatch">
-              <div class="nudge-type-card-header">
-                <div class="nudge-type-icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/><line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/></svg>
-                </div>
-                <span class="nudge-type-name">Smartwatch</span>
-              </div>
-              <p class="nudge-type-desc">Delivered directly to your wrist during the meeting.</p>
-            </div>
-
-            <div class="nudge-type-card" data-nudge-device="desktop">
-              <div class="nudge-type-card-header">
-                <div class="nudge-type-icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
-                <span class="nudge-type-name">Desktop</span>
-              </div>
-              <p class="nudge-type-desc">Shown as a notification on your computer screen.</p>
-            </div>
-
-          </div>
-        </section>
-
-
+        <!-- Delivery device -->
+        <div class="nudge-tabs" id="nudgeDeviceTabs">
+          <button class="nudge-tab" data-nudge-device="desktop" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span>Desktop</span>
+          </button>
+          <button class="nudge-tab" data-nudge-device="smartwatch" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="7"/>
+              <polyline points="12 9 12 12 13.5 13.5"/>
+              <path d="M16.51 17.35l-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83"/>
+            </svg>
+            <span>Watch</span>
+          </button>
+        </div>
 
       </div>
+
+      <!-- Scrollable: trigger cards -->
+      <div class="nudge-scroll">
+        <div class="nudge-section-label">When will this nudge be triggered</div>
+
+        <div class="trigger-grid">
+
+          <div class="trigger-card" data-trigger="tone_difference" style="--card-bg: #dbeafe; --card-icon: #2D6BB8;">
+            <div class="trigger-card-header">
+              <div class="trigger-card-icon"></div>
+              <h2 class="trigger-card-title">Tone Difference</h2>
+            </div>
+            <p class="trigger-card-desc">Your tone lands sharper or harsher than the context suggests.</p>
+            <div class="trigger-card-audio">
+              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="tone_difference">
+                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="trigger-audio-label">Example audio</span>
+            </div>
+          </div>
+
+          <div class="trigger-card" data-trigger="elevation" style="--card-bg: #ffe53a; --card-icon: #F45520;">
+            <div class="trigger-card-header">
+              <div class="trigger-card-icon"></div>
+              <h2 class="trigger-card-title">Elevation</h2>
+            </div>
+            <p class="trigger-card-desc">Your emotional intensity rises enough to affect how your message lands.</p>
+            <div class="trigger-card-audio">
+              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="elevation">
+                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="trigger-audio-label">Example audio</span>
+            </div>
+          </div>
+
+          <div class="trigger-card" data-trigger="unclear_intent" style="--card-bg: #fef9c3; --card-icon: #9d7b27;">
+            <div class="trigger-card-header">
+              <div class="trigger-card-icon"></div>
+              <h2 class="trigger-card-title">Unclear Intent</h2>
+            </div>
+            <p class="trigger-card-desc">Your reaction shows friction but your goal or next step is missing.</p>
+            <div class="trigger-card-audio">
+              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="unclear_intent">
+                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="trigger-audio-label">Example audio</span>
+            </div>
+          </div>
+
+          <div class="trigger-card" data-trigger="excellent_tone" style="--card-bg: #dcfce7; --card-icon: #16a34a;">
+            <div class="trigger-card-header">
+              <div class="trigger-card-icon"></div>
+              <h2 class="trigger-card-title">Excellent Tone</h2>
+            </div>
+            <p class="trigger-card-desc">Your tone lands especially well — recognize and repeat it.</p>
+            <div class="trigger-card-audio">
+              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="excellent_tone">
+                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="trigger-audio-label">Example audio</span>
+            </div>
+          </div>
+
+          <div class="trigger-card" data-trigger="need_for_clarification" style="--card-bg: #ffd9b3; --card-icon: #c86a1d;">
+            <div class="trigger-card-header">
+              <div class="trigger-card-icon"></div>
+              <h2 class="trigger-card-title">Need for Clarification</h2>
+            </div>
+            <p class="trigger-card-desc">A participant sounds concerned and it's unclear what needs clarifying.</p>
+            <div class="trigger-card-audio">
+              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="need_for_clarification">
+                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="trigger-audio-label">Example audio</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -413,14 +364,14 @@
     }
 
     function refreshTypeUI() {
-      document.querySelectorAll('[data-nudge-type]').forEach((card) => {
-        card.classList.toggle('is-selected', card.dataset.nudgeType === activeType);
+      document.querySelectorAll('.nudge-tab[data-nudge-type]').forEach((btn) => {
+        btn.classList.toggle('is-selected', btn.dataset.nudgeType === activeType);
       });
     }
 
     function refreshDeviceUI() {
-      document.querySelectorAll('[data-nudge-device]').forEach((card) => {
-        card.classList.toggle('is-selected', card.dataset.nudgeDevice === activeDevice);
+      document.querySelectorAll('.nudge-tab[data-nudge-device]').forEach((btn) => {
+        btn.classList.toggle('is-selected', btn.dataset.nudgeDevice === activeDevice);
       });
     }
 
@@ -451,17 +402,17 @@
       });
     });
 
-    document.querySelectorAll('[data-nudge-type]').forEach((card) => {
-      card.addEventListener('click', () => {
-        activeType = card.dataset.nudgeType;
+    document.querySelectorAll('.nudge-tab[data-nudge-type]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeType = btn.dataset.nudgeType;
         refreshTypeUI();
         saveField('nudge_type', activeType);
       });
     });
 
-    document.querySelectorAll('[data-nudge-device]').forEach((card) => {
-      card.addEventListener('click', () => {
-        activeDevice = card.dataset.nudgeDevice;
+    document.querySelectorAll('.nudge-tab[data-nudge-device]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeDevice = btn.dataset.nudgeDevice;
         refreshDeviceUI();
         saveField('nudge_device', activeDevice);
       });
