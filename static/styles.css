@@ -3,9 +3,23 @@
 /* ── Design tokens — single source of truth ─────────────────────────────── *
  * Edit here to update fonts, radii and base colours across the whole app.   */
 :root {
-  /* Fonts */
+  /* Fonts — family */
   --font-heading: 'Poppins', sans-serif;
   --font-mono:    'Source Code Pro', monospace;
+  /* Fonts — size */
+  --fs-display: 72px;   /* hero title */
+  --fs-h1:      32px;   /* page titles, big metrics */
+  --fs-h2:      24px;   /* card headers */
+  --fs-h3:      18px;   /* sub-headers, secondary metrics */
+  --fs-body:    14px;   /* body text */
+  --fs-label:   12px;   /* labels, nav items */
+  --fs-xs:      11px;   /* badges, tiny labels */
+  /* Fonts — weight */
+  --fw-light:    300;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
   /* Colours */
   --bg-main:      #f8fafc;
   --panel-bg:     #ffffff;
@@ -16,6 +30,7 @@
   /* Radii */
   --card-radius:  8px;
   --radius-sm:    4px;
+  --radius-full:  999px; /* pill / avatar */
 }
 
 * {
