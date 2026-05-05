@@ -104,22 +104,7 @@
           <h1 class="dashboard-title">Welcome, {{ resolved_user }}!</h1>
           <div class="dashboard-hero-sub">
             <p id="dashboardDate" class="dashboard-date"></p>
-            <div class="dash-device-group">
-              <a class="dash-app-btn" href="/{{ resolved_user }}/analysis">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Transcript
-              </a>
-              <div class="dash-seg-toggle">
-                <button class="dash-seg-btn" id="deviceDesktop" type="button" data-device="desktop">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                  Desktop
-                </button>
-                <button class="dash-seg-btn" id="deviceWatch" type="button" data-device="smartwatch">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/><line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/></svg>
-                  Watch
-                </button>
-              </div>
-            </div>
+            <div id="meetingWidget"></div>
           </div>
         </div>
 
@@ -182,6 +167,7 @@
       </div>
     </main>
   </div>
+  <script src="/static/meeting-widget.js"></script>
   <script>
     const currentUser = document.body.dataset.currentUser || '';
     const dashboardDate = document.getElementById('dashboardDate');
@@ -198,13 +184,6 @@
     const nudgeDeviceEl = document.getElementById('nudgeDevice');
     const nudgeTypeEl = document.getElementById('nudgeType');
     const nudgeTriggerEl = document.getElementById('nudgeTrigger');
-    const deviceDesktopBtn = document.getElementById('deviceDesktop');
-    const deviceWatchBtn = document.getElementById('deviceWatch');
-
-    function setDeviceToggle(device) {
-      deviceDesktopBtn.classList.toggle('is-active', device === 'desktop');
-      deviceWatchBtn.classList.toggle('is-active', device === 'smartwatch');
-    }
 
     async function saveDevice(value) {
       if (!currentUser) return;
@@ -216,13 +195,6 @@
         });
       } catch (err) { console.error(err); }
     }
-
-    [deviceDesktopBtn, deviceWatchBtn].forEach((btn) => {
-      btn.addEventListener('click', () => {
-        setDeviceToggle(btn.dataset.device);
-        saveDevice(btn.dataset.device);
-      });
-    });
 
     const TRIGGER_LABELS = {
       tone_difference: 'Tone Difference',
@@ -247,7 +219,7 @@
       applyValue(nudgeDeviceEl, DEVICE_LABELS[device] || '');
       applyValue(nudgeTypeEl, TYPE_LABELS[type] || '');
       applyValue(nudgeTriggerEl, TRIGGER_LABELS[trigger] || '');
-      setDeviceToggle(device || 'smartwatch');
+      if (meetingWidget) meetingWidget.setDevice(device || 'smartwatch');
     }
 
     function formatDashboardDate() {
@@ -302,6 +274,16 @@
       } catch (err) {
         console.error(err);
       }
+    }
+
+    /* ── Meeting widget ─────────────────────────────────────────── */
+    let meetingWidget;
+    const _mwMount = document.getElementById('meetingWidget');
+    if (_mwMount) {
+      meetingWidget = initMeetingWidget(_mwMount, {
+        user: currentUser,
+        onDeviceChange: saveDevice,
+      });
     }
 
     loadDashboard().catch((err) => console.error('Failed to load dashboard', err));
