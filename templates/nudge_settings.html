@@ -57,7 +57,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 28px 0;
+      padding: 16px 28px 0;
       flex-shrink: 0;
     }
 
@@ -98,16 +98,14 @@
     .nudge-scroll {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 28px 32px;
+      padding: 16px 28px 32px;
     }
 
     .nudge-section-label {
-      font-size: var(--fs-xs);
-      font-weight: var(--fw-medium);
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: #94a3b8;
-      margin-bottom: 8px;
+      font-size: var(--fs-body);
+      font-weight: var(--fw-bold);
+      color: var(--text-muted);
+      margin: 0 0 14px;
       font-family: var(--font-mono);
     }
 
@@ -123,7 +121,8 @@
     .trigger-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
+      gap: 14px;
+      margin-bottom: 28px;
     }
 
     .trigger-card {
