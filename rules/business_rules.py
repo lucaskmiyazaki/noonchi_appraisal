@@ -382,6 +382,33 @@ def detect_good_excitement(wearer_agent):
     }
 
 
+def detect_extreme_arousal(wearer_agent):
+    """Detects extreme arousal (high or low) regardless of goal presence — fires the elevation reflection as a fallback."""
+    emotion = getattr(wearer_agent, "emotion", None)
+    if emotion is None:
+        return None
+
+    arousal = getattr(emotion, "arousal", PAD_DEFAULT)
+
+    if arousal > PAD_HIGH_AROUSAL_THRESHOLD:
+        kind = "high_context"
+    elif arousal < PAD_LOW_AROUSAL_THRESHOLD:
+        kind = "low_context"
+    else:
+        return None
+
+    return {
+        "kind": kind,
+        "goal": None,
+        "blocker": None,
+        "arousal": arousal,
+        "lower_threshold": PAD_LOW_AROUSAL_THRESHOLD,
+        "goal_upper_threshold": PAD_HIGH_AROUSAL_THRESHOLD,
+        "effective_upper_threshold": PAD_HIGH_AROUSAL_THRESHOLD,
+        "blocker_threshold": None,
+    }
+
+
 def summarize_rule_issue(issue):
     if issue is None:
         return None

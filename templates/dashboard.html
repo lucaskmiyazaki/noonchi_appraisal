@@ -88,6 +88,37 @@
       .dashboard-title { font-size: 42px; text-align: left; }
       .dashboard-grid { grid-template-columns: 1fr; }
     }
+
+    /* Processing card */
+    .mw-proc-card {
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 18px 40px rgba(148, 163, 184, 0.14);
+      padding: 22px 20px;
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      grid-column: 1 / -1;
+    }
+    .mw-proc-header { display: flex; align-items: center; gap: 10px; }
+    .mw-proc-title { margin: 0; font-size: 15px; font-weight: 700; }
+    .mw-proc-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; background: #fef2b6; color: #9d7b27;
+      border-radius: 999px; padding: 2px 8px;
+    }
+    .mw-proc-bar-wrap {
+      height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;
+    }
+    .mw-proc-bar {
+      height: 100%; background: #111827; border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+    .mw-proc-log {
+      font-size: 12px; color: #6b7280;
+      min-height: 18px;
+    }
   </style>
 </head>
 {% set resolved_user = current_user or '' %}
@@ -109,6 +140,17 @@
         </div>
 
         <div class="dashboard-grid">
+          <!-- Processing card (hidden until meeting upload starts) -->
+          <div id="meetingProcCard" class="mw-proc-card" style="display:none">
+            <div class="mw-proc-header">
+              <p class="mw-proc-title" id="procCardTitle">Processing meeting…</p>
+              <span class="mw-proc-badge" id="procCardBadge">Uploading</span>
+            </div>
+            <div class="mw-proc-bar-wrap">
+              <div class="mw-proc-bar" id="procCardBar" style="width:0%"></div>
+            </div>
+            <div class="mw-proc-log" id="procCardLog"></div>
+          </div>
           <!-- Meeting Reflections -->
           <section id="meetingAnalysisCard" class="dashboard-card is-link">
             <div class="card-header">
@@ -275,6 +317,54 @@
         console.error(err);
       }
     }
+
+    /* ── Meeting processing card ────────────────────────────────── */
+    const procCard  = document.getElementById('meetingProcCard');
+    const procTitle = document.getElementById('procCardTitle');
+    const procBadge = document.getElementById('procCardBadge');
+    const procBar   = document.getElementById('procCardBar');
+    const procLog   = document.getElementById('procCardLog');
+
+    function phaseLblDash(phase) {
+      return phase === 'upload' ? 'Uploading' : phase === 'pipeline' ? 'Analysing' : phase === 'done' ? 'Done' : 'Error';
+    }
+
+    function showProcCard(meetingName, phase, pct, msg) {
+      procCard.style.display = '';
+      procTitle.textContent  = 'Processing \u201c' + meetingName + '\u201d\u2026';
+      procBadge.textContent  = phaseLblDash(phase);
+      procBar.style.width    = pct + '%';
+      procBar.style.background = phase === 'error' ? '#ef4444' : '';
+      procLog.textContent    = msg;
+    }
+
+    /* Restore processing card on load by querying active server jobs */
+    fetch('/api/processing/active').then(r => r.json()).then(state => {
+      if (state && state.phase && state.phase !== 'done') {
+        const pct = state.phase === 'upload'
+          ? Math.round((state.progress || 0) * 0.5)
+          : 50 + Math.round(((state.progress || 0) / (state.total || 5)) * 50);
+        showProcCard(state.meeting_name || 'Meeting', state.phase, pct, state.message || '');
+      }
+    }).catch(() => {});
+
+    window.addEventListener('mw:processing', (e) => {
+      const { meetingName, phase, progress, total, message } = e.detail;
+      const pct = phase === 'upload'
+        ? Math.round((progress || 0) * 0.5)
+        : 50 + Math.round(((progress || 0) / (total || 5)) * 50);
+      showProcCard(meetingName, phase, pct, message);
+    });
+
+    window.addEventListener('mw:processingDone', (e) => {
+      showProcCard(e.detail.meetingName, 'done', 100, 'Reflections ready');
+      setTimeout(() => { procCard.style.display = 'none'; loadDashboard(); }, 2500);
+    });
+
+    window.addEventListener('mw:processingError', (e) => {
+      showProcCard(e.detail.meetingName, 'error', 100, e.detail.error || 'Something went wrong');
+      setTimeout(() => { procCard.style.display = 'none'; }, 6000);
+    });
 
     /* ── Meeting widget ─────────────────────────────────────────── */
     let meetingWidget;

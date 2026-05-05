@@ -117,7 +117,7 @@ def transcribe_audio_file(file_path: Path):
         raise ValueError("Audio file appears to be empty or silent.")
     # Whisper's internal STFT uses chunks of 3000 mel frames (30 s).
     # Any non-zero length audio is safe to transcribe.
-    result = get_whisper_model().transcribe(str(file_path), fp16=False)
+    result = get_whisper_model().transcribe(str(file_path), fp16=False, language="en")
     transcript = []
     for index, segment in enumerate(result.get("segments", []), start=1):
         text = str(segment.get("text", "")).strip()
@@ -205,7 +205,8 @@ def upload_audio():
 
     job_id = str(uuid.uuid4())
     original_name = audio.filename
-    _upload_jobs[job_id] = {"status": "transcribing", "progress": 0, "message": "Transcribing audio…"}
+    _captured_username = str(request.form.get("username") or "").strip()
+    _upload_jobs[job_id] = {"status": "transcribing", "progress": 0, "message": "Transcribing audio…", "session_name": session_name}
 
     def _run():
         import time as _time
@@ -227,6 +228,8 @@ def upload_audio():
 
             transcript = transcribe_audio_file(output_path)
             _stop.set()
+            username = _captured_username
+            user_id = lookup_user_id_by_username(username) if username else ""
             record = {
                 "id": audio_id,
                 "audioUrl": f"/uploads/{stored_filename}",
@@ -236,6 +239,9 @@ def upload_audio():
                 "safeSessionName": secure_filename(session_name),
                 "uploadedAt": datetime.now(timezone.utc).isoformat(),
                 "transcript": transcript,
+                "username": username,
+                "userId": user_id,
+                "user_id": user_id,
             }
             save_meeting(record)
             _upload_jobs[job_id] = {"status": "done", "progress": 100, "message": "Transcription complete.", "record": record}
@@ -372,7 +378,51 @@ def run_pipeline_start(record_id):
                 })
 
         try:
-            pl.run_pipeline(str(json_path), log=log)
+            # Load record to get wearer username
+            meeting_record = load_meeting(safe_id) or {}
+            wearer_username = str(meeting_record.get("username") or "").strip() or "wearer"
+
+            pl.run_pipeline(str(json_path), log=log, wearer=wearer_username)
+
+            # ── Step 6: Generate reflections from intent diagram ──
+            _pipeline_jobs[job_id].update({"progress": 5, "message": "Generating reflections\u2026"})
+            intent_filename = f"{safe_id}.intent.json"
+            intent_data = read_data_json_file(intent_filename)
+            if intent_data is not None:
+                diagrams = intent_data.get("diagrams", [])
+                session_name = intent_data.get("sessionName", "")
+                meeting_id = safe_id
+                rows, fieldnames = load_reflection_db_rows()
+                for diagram in diagrams:
+                    reflection_tree, wearer_id, wearer_agent = evaluate_diagram_for_reflection(diagram, session_name)
+                    if reflection_tree is None:
+                        continue
+                    timestamp = datetime.now(timezone.utc).isoformat()
+                    safe_ts = timestamp.replace(":", "-").replace("+", "Z")
+                    reflection_tree["timestamp"] = timestamp
+                    reflection_tree["startMs"] = diagram.get("startms")
+                    reflection_tree["endMs"] = diagram.get("endms")
+                    reflection_tree["session_name"] = session_name
+                    reflection_filename = f"reflection_{safe_ts}.json"
+                    write_data_json_file(reflection_filename, reflection_tree)
+                    wearer_agent_name = (
+                        getattr(wearer_agent, 'name', None) or getattr(wearer_agent, 'role', None) or wearer_id
+                        if wearer_agent is not None else wearer_id
+                    )
+                    resolved_user_id = lookup_user_id_by_username(wearer_agent_name) if wearer_agent_name else ""
+                    rows.append({
+                        "id": str(uuid.uuid4().hex),
+                        "user_id": resolved_user_id,
+                        "reflection_tree_file": reflection_filename,
+                        "startms": reflection_tree.get("startMs", ""),
+                        "endms": reflection_tree.get("endMs", ""),
+                        "practice": "null",
+                        "meeting_id": meeting_id,
+                        "tree_type": str(reflection_tree.get("type", "") or ""),
+                        "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
+                    })
+                write_reflection_db_rows(rows, fieldnames)
+
             _pipeline_jobs[job_id] = {"status": "done", "progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": "Pipeline complete.", "record_id": safe_id}
         except Exception as exc:
             _pipeline_jobs[job_id] = {"status": "error", "progress": STEPS_TOTAL, "total": STEPS_TOTAL, "message": f"Error: {exc}", "error": True, "record_id": safe_id}
@@ -398,6 +448,42 @@ def pipeline_jobs_active():
     if active:
         return jsonify(active)
     return jsonify({"job_id": None})
+
+
+@app.get("/api/processing/active")
+def processing_active():
+    """Single endpoint for UI to check if any upload or pipeline is running.
+    Returns phase, job_id, meeting_name, progress, message.
+    """
+    # Check pipeline first (upload is complete once pipeline starts)
+    for jid, job in reversed(list(_pipeline_jobs.items())):
+        if job.get("status") == "running":
+            record_id = job.get("record_id")
+            meeting_name = ""
+            if record_id:
+                rec = load_meeting(record_id)
+                if rec:
+                    meeting_name = rec.get("displayName") or rec.get("sessionName") or ""
+            return jsonify({
+                "phase": "pipeline",
+                "job_id": jid,
+                "record_id": record_id,
+                "meeting_name": meeting_name,
+                "progress": job.get("progress", 0),
+                "total": job.get("total", 5),
+                "message": job.get("message", ""),
+            })
+    # Check upload
+    for jid, job in reversed(list(_upload_jobs.items())):
+        if job.get("status") == "transcribing":
+            return jsonify({
+                "phase": "upload",
+                "job_id": jid,
+                "meeting_name": job.get("session_name") or "",
+                "progress": job.get("progress", 0),
+                "message": job.get("message", ""),
+            })
+    return jsonify({"phase": None})
 
 
 @app.get("/api/pipeline/job/<job_id>/stream")

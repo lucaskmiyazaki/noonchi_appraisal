@@ -35,6 +35,7 @@ from rules.business_rules import (
     detect_good_concern,
     detect_good_excitement,
     detect_good_feedback,
+    detect_extreme_arousal,
     detect_intensity_incoherence,
     detect_participant_unclear_concern,
     detect_participant_unclear_feedback,
@@ -559,11 +560,14 @@ def evaluate_diagram_for_reflection(diagram, session_name="", wearer_agent_overr
         good_excitement_issue = detect_good_excitement(wearer_agent)
         tone_issue = detect_tone_incoherence(wearer_agent)
         intensity_issue = detect_intensity_incoherence(wearer_agent)
+        high_arousal_no_goal_issue = detect_extreme_arousal(wearer_agent)
 
         if reflection_tree is None and tone_issue is not None:
             reflection_tree = ReflectionTree().build_from_incoherent_tone(tone_issue["goal"], wearer=wearer_agent).to_dict()
         if reflection_tree is None and intensity_issue is not None:
             reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(intensity_issue["issue"], wearer=wearer_agent).to_dict()
+        if reflection_tree is None and high_arousal_no_goal_issue is not None:
+            reflection_tree = ReflectionTree().build_from_incoherent_intensity_issue(high_arousal_no_goal_issue, wearer=wearer_agent).to_dict()
         if reflection_tree is None and unclear_feedback_issue is not None:
             reflection_tree = ReflectionTree().build_from_unclear_feedback_issue(unclear_feedback_issue, wearer=wearer_agent).to_dict()
         if reflection_tree is None and unclear_concern_issue is not None:

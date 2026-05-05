@@ -170,6 +170,48 @@
       box-sizing: border-box;
       margin-top: 4px;
     }
+    /* ── Name modal ──────────────────────────────────────────────── */
+    .mw-modal-backdrop {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(15,23,42,0.45);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .mw-modal-backdrop.mw-hidden { display: none; }
+    .mw-modal {
+      width: min(400px, 100%);
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.22);
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .mw-modal-title {
+      font-size: 17px; font-weight: 700; margin: 0;
+    }
+    .mw-modal-input {
+      width: 100%; box-sizing: border-box;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      padding: 10px 12px; font: inherit; font-size: 14px;
+      outline: none; transition: border-color 0.15s;
+    }
+    .mw-modal-input:focus { border-color: #111827; }
+    .mw-modal-actions {
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+    .mw-modal-cancel {
+      border: 1px solid #e2e8f0; border-radius: 10px;
+      background: #fff; color: #6b7280;
+      padding: 8px 16px; font: inherit; font-size: 13px;
+      font-weight: 500; cursor: pointer;
+    }
+    .mw-modal-confirm {
+      border: 0; border-radius: 10px;
+      background: #111827; color: #fff;
+      padding: 8px 16px; font: inherit; font-size: 13px;
+      font-weight: 600; cursor: pointer;
+    }
+    .mw-modal-confirm:disabled { opacity: 0.45; cursor: not-allowed; }
     /* ── Recording bar ───────────────────────────────────────────── */
     .mw-rec-bar {
       display: flex;
@@ -247,6 +289,8 @@
       this._view = 'transcript'; // 'transcript' | 'icon'
       this._finalSegments = []; // [{text, highlighted}]
       this._highlightPending = false;
+      this._qMarked = false;
+      this._meetingName = '';
       this._recorder = null;
       this._stream = null;
       this._recognition = null;
@@ -280,7 +324,11 @@
       startBtn.className = 'mw-btn';
       startBtn.type = 'button';
       startBtn.innerHTML = SVG_MIC + '<span>Start Meeting</span>';
-      startBtn.addEventListener('click', () => this._startRecording());
+      startBtn.addEventListener('click', () => {
+        this._modalInput.value = '';
+        this._modalBackdrop.classList.remove('mw-hidden');
+        setTimeout(() => this._modalInput.focus(), 50);
+      });
       this._startBtn = startBtn;
 
       /* Transcript | Icon toggle — recording only */
@@ -391,6 +439,56 @@
       pill.appendChild(elevationCard);
 
       this._mount.appendChild(pill);
+
+      /* ── Name modal (appended to body so it's truly full-screen) ── */
+      const backdrop = document.createElement('div');
+      backdrop.className = 'mw-modal-backdrop mw-hidden';
+      const modal = document.createElement('div');
+      modal.className = 'mw-modal';
+      const modalTitle = document.createElement('p');
+      modalTitle.className = 'mw-modal-title';
+      modalTitle.textContent = 'Name this meeting';
+      const modalInput = document.createElement('input');
+      modalInput.className = 'mw-modal-input';
+      modalInput.type = 'text';
+      modalInput.placeholder = 'e.g. Product review';
+      modalInput.maxLength = 80;
+      const modalActions = document.createElement('div');
+      modalActions.className = 'mw-modal-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'mw-modal-cancel';
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancel';
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'mw-modal-confirm';
+      confirmBtn.type = 'button';
+      confirmBtn.textContent = 'Start';
+      modalActions.appendChild(cancelBtn);
+      modalActions.appendChild(confirmBtn);
+      modal.appendChild(modalTitle);
+      modal.appendChild(modalInput);
+      modal.appendChild(modalActions);
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+      this._modalBackdrop = backdrop;
+      this._modalInput = modalInput;
+      this._modalConfirmBtn = confirmBtn;
+
+      cancelBtn.addEventListener('click', () => backdrop.classList.add('mw-hidden'));
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.classList.add('mw-hidden'); });
+      modalInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmBtn.click(); });
+      confirmBtn.addEventListener('click', () => {
+        const name = modalInput.value.trim();
+        if (!name) return;
+        this._meetingName = name;
+        backdrop.classList.add('mw-hidden');
+        this._startRecording();
+      });
+
+      /* Replace startBtn click to open modal instead */
+      startBtn.removeEventListener('click', () => this._startRecording());
+      startBtn._mwHandler && startBtn.removeEventListener('click', startBtn._mwHandler);
+
       this._makeDraggable(pill, dragHandle);
     }
 
@@ -518,6 +616,12 @@
     /* ── Stop ──────────────────────────────────────────────────── */
 
     _stopRecording() {
+      /* Capture before clearing */
+      const chunks = this._chunks.slice();
+      const meetingName = this._meetingName || 'meeting';
+      this._chunks = [];
+      this._meetingName = '';
+
       clearInterval(this._timerInterval);
       this._timerInterval = null;
       this._seconds = 0;
@@ -566,6 +670,80 @@
       this._startBtn.classList.remove('mw-hidden');
 
       this._syncSeg();
+
+      /* Upload + pipeline */
+      if (chunks.length) {
+        this._uploadAndProcess(chunks, meetingName);
+      }
+    }
+
+    async _uploadAndProcess(chunks, meetingName) {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const safeSession = (meetingName || 'meeting').replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+      const formData = new FormData();
+      formData.append('audio', blob, safeSession + '.webm');
+      formData.append('session_name', meetingName || 'meeting');
+      if (this._user) formData.append('username', this._user);
+
+      window.dispatchEvent(new CustomEvent('mw:processing', {
+        detail: { meetingName, phase: 'upload', progress: 0, message: 'Uploading\u2026' }
+      }));
+
+      try {
+        /* \u2500\u2500 Upload \u2500\u2500 */
+        const uploadRes = await fetch('/api/audio/upload', { method: 'POST', body: formData });
+        if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
+        const { job_id: uploadJobId } = await uploadRes.json();
+
+        /* Follow upload+transcription via SSE */
+        const sseUpload = await this._followSSE(
+          `/api/audio/upload/job/${uploadJobId}/stream`,
+          (data) => window.dispatchEvent(new CustomEvent('mw:processing', {
+            detail: { meetingName, phase: 'upload', progress: data.progress || 0, message: data.message || '' }
+          })),
+          (data) => data.record
+        );
+
+        const recordId = sseUpload.record.id;
+        window.dispatchEvent(new CustomEvent('mw:processing', {
+          detail: { meetingName, phase: 'pipeline', progress: 0, message: 'Running analysis\u2026' }
+        }));
+
+        /* \u2500\u2500 Pipeline \u2500\u2500 */
+        const pipeRes = await fetch(`/api/pipeline/run/${encodeURIComponent(recordId)}`, { method: 'POST' });
+        if (!pipeRes.ok) throw new Error('Pipeline failed: ' + pipeRes.status);
+        const { job_id: pipeJobId } = await pipeRes.json();
+
+        await this._followSSE(
+          `/api/pipeline/job/${pipeJobId}/stream`,
+          (data) => window.dispatchEvent(new CustomEvent('mw:processing', {
+            detail: { meetingName, phase: 'pipeline', progress: data.progress || 0, total: data.total || 5, message: data.message || '' }
+          })),
+          (data) => data.status === 'done' || data.status === 'error'
+        );
+
+        window.dispatchEvent(new CustomEvent('mw:processingDone', { detail: { meetingName, recordId } }));
+
+      } catch (err) {
+        console.error('Meeting upload/pipeline error:', err);
+        window.dispatchEvent(new CustomEvent('mw:processingError', { detail: { meetingName, error: err.message } }));
+      }
+    }
+
+        _followSSE(url, onMessage, isDone) {
+      return new Promise((resolve, reject) => {
+        const es = new EventSource(url);
+        es.onmessage = (e) => {
+          let data;
+          try { data = JSON.parse(e.data); } catch (_) { return; }
+          onMessage(data);
+          if (isDone(data)) {
+            es.close();
+            resolve(data);
+          }
+        };
+        es.onerror = () => { es.close(); reject(new Error('SSE error: ' + url)); };
+      });
     }
 
     _renderTranscript(interim) {

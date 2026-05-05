@@ -654,7 +654,7 @@ def save_meeting(record) -> None:
     intent_filename = existing["intent_filename"] if existing else ""
     db = get_db()
     db.execute(
-        "INSERT INTO meetings VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET "
+        "INSERT INTO meetings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET "
         "user_id=excluded.user_id, session_name=excluded.session_name, display_name=excluded.display_name, "
         "safe_session_name=excluded.safe_session_name, original_name=excluded.original_name, "
         "audio_filename=excluded.audio_filename, transcript_file=excluded.transcript_file, "
@@ -664,7 +664,8 @@ def save_meeting(record) -> None:
          str(record.get("audioFilename","")), f"{record_id}.json",
          str(record.get("uploadedAt","")),
          str(float(last_segment.get("end", 0.0) or 0.0)),
-         str(len(transcript)), intent_filename),
+         str(len(transcript)), intent_filename,
+         str(record.get("openedAt", ""))),
     )
     db.commit()
 
