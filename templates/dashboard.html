@@ -4,42 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <style>
     :root {
-      --bg-main: #f3f6fa;
+      --bg-main: #f8fafc;
       --panel-bg: #ffffff;
-      --sidebar-bg: #e5ebf4;
-      --text-dark: #111827;
+      --sidebar-bg: #f8fafc;
+      --text-dark: #1c1b1f;
       --text-muted: #6b7280;
       --border-soft: rgba(226, 232, 240, 0.9);
-      --card-radius: 16px;
+      --card-radius: 8px;
     }
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-dark); }
+    body { font-family: 'Poppins', sans-serif; background: var(--bg-main); color: var(--text-dark); }
     .dashboard-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; box-sizing: border-box; }
     .dashboard-main { min-width: 0; border-radius: var(--card-radius); background: linear-gradient(135deg, rgba(189, 219, 246, 0.85) 0%, rgba(229, 239, 248, 0.82) 50%, rgba(246, 247, 248, 0.96) 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
     .dashboard-inner { max-width: 1080px; width: 100%; margin: 0 auto; padding: 44px 36px; box-sizing: border-box; }
     .dashboard-search-btn { display: none; }
     /* Hero */
     .dashboard-hero { display: flex; flex-direction: column; align-items: center; margin-top: 8px; gap: 0; }
-    .dashboard-title { margin: 0; font-size: 54px; line-height: 1; letter-spacing: -0.05em; text-align: center; }
+    .dashboard-title { margin: 0; font-size: 72px; font-weight: 400; line-height: 1; letter-spacing: -0.03em; text-align: center; }
     .dashboard-hero-sub { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; margin-top: 32px; }
-    .dashboard-date { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: 0.06em; color: #1f2937; font-family: 'Courier New', monospace; }
+    .dashboard-date { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: -0.03em; color: var(--text-dark); font-family: 'Source Code Pro', monospace; }
     /* Device toggle */
     .dash-device-group { display: flex; align-items: center; gap: 10px; }
-    .dash-device-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: 12px; padding: 3px; gap: 0; }
-    .dash-app-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 86px; height: 80px; background: #111827; color: #fff; border: 0; border-radius: 14px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; transition: opacity 0.14s; text-decoration: none; flex-shrink: 0; }
+    .dash-device-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: 4px; padding: 3px; gap: 0; }
+    .dash-app-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 86px; height: 80px; background: #1c1b1f; color: #fff; border: 0; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: 'Source Code Pro', monospace; cursor: pointer; transition: opacity 0.14s; text-decoration: none; flex-shrink: 0; }
     .dash-app-btn:hover { opacity: 0.85; }
     .dash-app-btn svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-    .dash-app-btn.is-inactive { background: rgba(255,255,255,0.88); color: #111827; box-shadow: 0 2px 10px rgba(148,163,184,0.18); }
-    .dash-seg-toggle { display: flex; background: rgba(0,0,0,0.07); border-radius: 12px; padding: 4px; gap: 2px; align-items: center; }
-    .dash-seg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 72px; height: 68px; background: transparent; color: #374151; border: 0; border-radius: 9px; font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .dash-app-btn.is-inactive { background: rgba(255,255,255,0.88); color: #1c1b1f; box-shadow: 0 2px 10px rgba(148,163,184,0.18); }
+    .dash-seg-toggle { display: flex; background: rgba(0,0,0,0.07); border-radius: 4px; padding: 4px; gap: 2px; align-items: center; }
+    .dash-seg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 72px; height: 68px; background: transparent; color: #374151; border: 0; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: 'Source Code Pro', monospace; cursor: pointer; transition: background 0.15s, color 0.15s; }
     .dash-seg-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .dash-seg-btn.is-active { background: #111827; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.18); border-radius: 8px; }
+    .dash-seg-btn.is-active { background: #1c1b1f; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.18); border-radius: 4px; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; align-items: stretch; }
-    .dashboard-card { border-radius: 20px; background: rgba(255, 255, 255, 0.82); box-shadow: 0 18px 40px rgba(148, 163, 184, 0.14); padding: 22px 20px; backdrop-filter: blur(8px); display: flex; flex-direction: column; }
+    .dashboard-card { border-radius: 8px; background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 24px; display: flex; flex-direction: column; }
     .dashboard-card.is-link { cursor: pointer; transition: transform 0.14s ease, box-shadow 0.14s ease; }
     .dashboard-card.is-link:hover,
     .dashboard-card.is-hoverable:hover { transform: translateY(-2px); box-shadow: 0 22px 48px rgba(148, 163, 184, 0.2); }
@@ -48,31 +51,31 @@
     /* Card header with inline icon */
     .card-header { display: flex; align-items: center; gap: 10px; }
     .card-header svg { width: 18px; height: 18px; stroke: #111827; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-    .card-header h2 { margin: 0; font-size: 18px; line-height: 1.2; }
+    .card-header h2 { margin: 0; font-size: 24px; font-weight: 500; line-height: 1.2; font-family: 'Poppins', sans-serif; }
 
     /* Meeting Reflections */
-    .dashboard-metric { font-size: 38px; line-height: 1; letter-spacing: -0.04em; }
-    .dashboard-metric-copy { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
-    .dashboard-secondary-metric { margin-top: 24px; font-size: 18px; }
-    .dashboard-secondary-copy { margin-top: 6px; font-size: 13px; color: #64748b; }
+    .dashboard-metric { font-size: 32px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-family: 'Poppins', sans-serif; }
+    .dashboard-metric-copy { margin-top: 8px; font-size: 14px; line-height: 1.4; color: #475569; font-family: 'Source Code Pro', monospace; }
+    .dashboard-secondary-metric { margin-top: 24px; font-size: 18px; font-family: 'Source Code Pro', monospace; }
+    .dashboard-secondary-copy { margin-top: 6px; font-size: 14px; color: #64748b; font-family: 'Source Code Pro', monospace; }
 
     /* Upcoming */
     .dashboard-upcoming-link { display: block; color: inherit; text-decoration: none; }
     .dashboard-upcoming-link:hover .dashboard-upcoming-title,
     .dashboard-upcoming-link:hover .dashboard-upcoming-meta { opacity: 0.78; }
-    .dashboard-upcoming-title { font-size: 28px; line-height: 1.1; letter-spacing: -0.03em; }
-    .dashboard-upcoming-meta { margin-top: 12px; font-size: 13px; color: #475569; display: flex; flex-direction: column; gap: 5px; }
+    .dashboard-upcoming-title { font-size: 32px; font-weight: 300; line-height: 1.1; letter-spacing: -0.02em; font-family: 'Poppins', sans-serif; }
+    .dashboard-upcoming-meta { margin-top: 12px; font-size: 14px; color: #475569; display: flex; flex-direction: column; gap: 5px; font-family: 'Source Code Pro', monospace; }
     .dashboard-upcoming-footer { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .dashboard-avatars { display: flex; align-items: center; }
     .dashboard-avatar { width: 24px; height: 24px; border-radius: 999px; margin-right: -6px; background: linear-gradient(135deg, #fca5a5, #fcd34d); border: 2px solid rgba(255,255,255,0.92); }
     .dashboard-avatar.is-two { background: linear-gradient(135deg, #93c5fd, #c4b5fd); }
     .dashboard-avatars-more { margin-left: 8px; font-size: 11px; color: #475569; }
-    .dashboard-pill { border: 0; border-radius: 999px; padding: 6px 12px; background: #111827; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .dashboard-pill { border: 0; border-radius: 4px; padding: 4px 12px; height: 24px; background: #1c1b1f; color: #f8fafc; font-size: 12px; font-weight: 500; font-family: 'Source Code Pro', monospace; cursor: pointer; }
 
     /* Nudge sentence (read-only) */
     .nudge-sentence-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #94a3b8; margin: 14px 0 4px; }
     .nudge-sentence-label:first-child { margin-top: 0; }
-    .nudge-value { display: inline-block; border: 1.5px solid #111827; border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; color: #111827; }
+    .nudge-value { display: inline-block; border: 1.5px solid #1c1b1f; border-radius: 4px; padding: 3px 10px; font-size: 12px; font-weight: 600; color: #1c1b1f; font-family: 'Source Code Pro', monospace; }
     .nudge-value.is-empty { border-color: #e2e8f0; color: #94a3b8; font-weight: 400; font-style: italic; }
 
     @media (max-width: 1080px) {
@@ -91,18 +94,17 @@
 
     /* Processing card */
     .mw-proc-card {
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.82);
-      box-shadow: 0 18px 40px rgba(148, 163, 184, 0.14);
-      padding: 22px 20px;
-      backdrop-filter: blur(8px);
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 12px;
       grid-column: 1 / -1;
     }
     .mw-proc-header { display: flex; align-items: center; gap: 10px; }
-    .mw-proc-title { margin: 0; font-size: 15px; font-weight: 700; }
+    .mw-proc-title { margin: 0; font-size: 18px; font-weight: 500; font-family: 'Poppins', sans-serif; }
     .mw-proc-badge {
       font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
       text-transform: uppercase; background: #fef2b6; color: #9d7b27;
@@ -116,8 +118,9 @@
       transition: width 0.4s ease;
     }
     .mw-proc-log {
-      font-size: 12px; color: #6b7280;
+      font-size: 14px; color: #6b7280;
       min-height: 18px;
+      font-family: 'Source Code Pro', monospace;
     }
   </style>
 </head>

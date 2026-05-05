@@ -26,7 +26,7 @@
       background: rgba(226, 232, 240, 0.94);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border-radius: 20px;
+      border-radius: 8px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
       padding: 10px 14px 10px 10px;
       user-select: none;
@@ -55,13 +55,13 @@
       gap: 7px;
       width: 82px;
       height: 72px;
-      background: #111827;
+      background: #1c1b1f;
       color: #fff;
       border: 0;
-      border-radius: 14px;
+      border-radius: 8px;
       font-size: 11px;
       font-weight: 600;
-      font-family: inherit;
+      font-family: 'Source Code Pro', monospace;
       cursor: pointer;
       flex-shrink: 0;
       transition: opacity 0.14s;
@@ -76,7 +76,7 @@
     .mw-seg-wrap {
       display: flex;
       background: rgba(0,0,0,0.07);
-      border-radius: 12px;
+      border-radius: 4px;
       padding: 4px;
       gap: 2px;
       align-items: center;
@@ -92,10 +92,10 @@
       background: transparent;
       color: #374151;
       border: 0;
-      border-radius: 9px;
+      border-radius: 4px;
       font-size: 11px;
       font-weight: 600;
-      font-family: inherit;
+      font-family: 'Source Code Pro', monospace;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
     }
@@ -105,10 +105,10 @@
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
     .mw-seg-btn.is-active {
-      background: #111827;
+      background: #1c1b1f;
       color: #fff;
       box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-      border-radius: 8px;
+      border-radius: 4px;
     }
     /* ── Drag handle ─────────────────────────────────────────────── */
     .mw-drag-handle {
@@ -130,12 +130,12 @@
       min-height: 90px;
       max-height: 200px;
       overflow-y: auto;
-      background: rgba(255,255,255,0.7);
-      border-radius: 12px;
+      background: #fff;
+      border-radius: 8px;
       padding: 10px 12px;
       font-size: 13px;
       line-height: 1.55;
-      color: #111827;
+      color: #1c1b1f;
       word-break: break-word;
       box-sizing: border-box;
     }
@@ -144,13 +144,13 @@
     }
     .mw-transcript-interim.mw-q-active {
       background: #fef2b6;
-      color: #111827;
+      color: #1c1b1f;
       border-radius: 3px;
       padding: 0 2px;
     }
     .mw-transcript-highlight {
       background: #fef2b6;
-      color: #111827;
+      color: #1c1b1f;
       border-radius: 3px;
       padding: 0 2px;
     }
@@ -181,7 +181,7 @@
     .mw-modal {
       width: min(400px, 100%);
       background: #fff;
-      border-radius: 16px;
+      border-radius: 8px;
       padding: 24px;
       box-shadow: 0 20px 60px rgba(15,23,42,0.22);
       display: flex; flex-direction: column; gap: 16px;
@@ -191,23 +191,23 @@
     }
     .mw-modal-input {
       width: 100%; box-sizing: border-box;
-      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      border: 1.5px solid #e2e8f0; border-radius: 4px;
       padding: 10px 12px; font: inherit; font-size: 14px;
       outline: none; transition: border-color 0.15s;
     }
-    .mw-modal-input:focus { border-color: #111827; }
+    .mw-modal-input:focus { border-color: #1c1b1f; }
     .mw-modal-actions {
       display: flex; gap: 8px; justify-content: flex-end;
     }
     .mw-modal-cancel {
-      border: 1px solid #e2e8f0; border-radius: 10px;
+      border: 1px solid #e2e8f0; border-radius: 4px;
       background: #fff; color: #6b7280;
       padding: 8px 16px; font: inherit; font-size: 13px;
       font-weight: 500; cursor: pointer;
     }
     .mw-modal-confirm {
-      border: 0; border-radius: 10px;
-      background: #111827; color: #fff;
+      border: 0; border-radius: 4px;
+      background: #1c1b1f; color: #fff;
       padding: 8px 16px; font: inherit; font-size: 13px;
       font-weight: 600; cursor: pointer;
     }
@@ -233,8 +233,8 @@
     .mw-rec-time {
       font-size: 13px;
       font-weight: 600;
-      font-family: 'Courier New', monospace;
-      color: #111827;
+      font-family: 'Source Code Pro', monospace;
+      color: #1c1b1f;
       min-width: 68px;
     }
     .mw-stop-btn {
@@ -242,11 +242,11 @@
       background: #ef4444;
       color: #fff;
       border: 0;
-      border-radius: 8px;
+      border-radius: 4px;
       padding: 6px 20px;
       font-size: 13px;
       font-weight: 700;
-      font-family: inherit;
+      font-family: 'Source Code Pro', monospace;
       cursor: pointer;
       transition: background 0.14s;
     }
@@ -693,7 +693,7 @@
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center';
 
       const box = document.createElement('div');
-      box.style.cssText = 'background:#fff;border-radius:12px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18)';
+      box.style.cssText = 'background:#fff;border-radius:8px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18)';
 
       const title = document.createElement('p');
       title.style.cssText = 'margin:0 0 8px;font-size:17px;font-weight:600;color:#111';
@@ -707,11 +707,11 @@
       btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center';
 
       const discardBtn = document.createElement('button');
-      discardBtn.style.cssText = 'padding:9px 22px;border-radius:8px;border:1px solid #ddd;background:#f5f5f5;font-size:14px;cursor:pointer;color:#555';
+      discardBtn.style.cssText = 'padding:9px 22px;border-radius:4px;border:1px solid #ddd;background:#f5f5f5;font-size:14px;cursor:pointer;color:#555';
       discardBtn.textContent = 'Discard';
 
       const saveBtn = document.createElement('button');
-      saveBtn.style.cssText = 'padding:9px 22px;border-radius:8px;border:none;background:#111;color:#fff;font-size:14px;cursor:pointer;font-weight:600';
+      saveBtn.style.cssText = 'padding:9px 22px;border-radius:4px;border:none;background:#1c1b1f;color:#fff;font-size:14px;cursor:pointer;font-weight:600';
       saveBtn.textContent = 'Save & Process';
 
       btnRow.append(discardBtn, saveBtn);
