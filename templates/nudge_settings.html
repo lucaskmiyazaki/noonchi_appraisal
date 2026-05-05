@@ -152,6 +152,11 @@
       background: var(--card-icon, #1c1b1f);
       flex-shrink: 0;
     }
+    svg.trigger-card-icon {
+      background: none;
+      border-radius: 0;
+      overflow: visible;
+    }
 
     .trigger-card-title {
       margin: 0;
@@ -274,75 +279,21 @@
 
         <div class="trigger-grid">
 
-          <div class="trigger-card" data-trigger="tone_difference" style="--card-bg: #dbeafe; --card-icon: #2D6BB8;">
+          {% for t in TRIGGERS %}
+          <div class="trigger-card" data-trigger="{{ t.id }}" style="--card-bg: {{ t.card_bg }}; --card-icon: {{ t.card_icon }};">
             <div class="trigger-card-header">
-              <div class="trigger-card-icon"></div>
-              <h2 class="trigger-card-title">Tone Difference</h2>
+              {% include 'trigger_icons/' ~ t.id ~ '.svg' %}
+              <h2 class="trigger-card-title">{{ t.label }}</h2>
             </div>
-            <p class="trigger-card-desc">Your tone lands sharper or harsher than the context suggests.</p>
+            <p class="trigger-card-desc">{{ t.desc }}</p>
             <div class="trigger-card-audio">
-              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="tone_difference">
+              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="{{ t.id }}">
                 <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
               </button>
               <span class="trigger-audio-label">Example audio</span>
             </div>
           </div>
-
-          <div class="trigger-card" data-trigger="elevation" style="--card-bg: #ffe53a; --card-icon: #F45520;">
-            <div class="trigger-card-header">
-              <div class="trigger-card-icon"></div>
-              <h2 class="trigger-card-title">Elevation</h2>
-            </div>
-            <p class="trigger-card-desc">Your emotional intensity rises enough to affect how your message lands.</p>
-            <div class="trigger-card-audio">
-              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="elevation">
-                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-              </button>
-              <span class="trigger-audio-label">Example audio</span>
-            </div>
-          </div>
-
-          <div class="trigger-card" data-trigger="unclear_intent" style="--card-bg: #fef9c3; --card-icon: #9d7b27;">
-            <div class="trigger-card-header">
-              <div class="trigger-card-icon"></div>
-              <h2 class="trigger-card-title">Unclear Intent</h2>
-            </div>
-            <p class="trigger-card-desc">Your reaction shows friction but your goal or next step is missing.</p>
-            <div class="trigger-card-audio">
-              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="unclear_intent">
-                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-              </button>
-              <span class="trigger-audio-label">Example audio</span>
-            </div>
-          </div>
-
-          <div class="trigger-card" data-trigger="excellent_tone" style="--card-bg: #dcfce7; --card-icon: #16a34a;">
-            <div class="trigger-card-header">
-              <div class="trigger-card-icon"></div>
-              <h2 class="trigger-card-title">Excellent Tone</h2>
-            </div>
-            <p class="trigger-card-desc">Your tone lands especially well — recognize and repeat it.</p>
-            <div class="trigger-card-audio">
-              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="excellent_tone">
-                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-              </button>
-              <span class="trigger-audio-label">Example audio</span>
-            </div>
-          </div>
-
-          <div class="trigger-card" data-trigger="need_for_clarification" style="--card-bg: #ffd9b3; --card-icon: #c86a1d;">
-            <div class="trigger-card-header">
-              <div class="trigger-card-icon"></div>
-              <h2 class="trigger-card-title">Need for Clarification</h2>
-            </div>
-            <p class="trigger-card-desc">A participant sounds concerned and it's unclear what needs clarifying.</p>
-            <div class="trigger-card-audio">
-              <button class="trigger-audio-btn" type="button" aria-label="Play example audio" data-trigger-audio="need_for_clarification">
-                <svg viewBox="0 0 10 12" aria-hidden="true"><path d="M1 1l8 5-8 5V1z"/></svg>
-              </button>
-              <span class="trigger-audio-label">Example audio</span>
-            </div>
-          </div>
+          {% endfor %}
 
         </div>
       </div>

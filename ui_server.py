@@ -50,7 +50,7 @@ from data_store import (
     write_training_rows,
 )
 from server_helpers import (
-    _parse_bool,
+    _parse_bool,  # noqa: F401 (used via import *)
     _parse_journal_entry_map,
     _serialize_journal_entry_map,
     build_emotion_session_payload,
@@ -66,6 +66,9 @@ from server_helpers import (
 
 app = Flask(__name__)
 CORS(app)
+
+from models.triggers import TRIGGERS  # noqa: E402
+app.jinja_env.globals["TRIGGERS"] = TRIGGERS
 
 ensure_data_layout()
 
