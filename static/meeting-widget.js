@@ -142,9 +142,33 @@
     .mw-transcript-interim {
       color: #6b7280;
     }
+    .mw-transcript-interim.mw-q-active {
+      background: #fef2b6;
+      color: #111827;
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+    .mw-transcript-highlight {
+      background: #fef2b6;
+      color: #111827;
+      border-radius: 3px;
+      padding: 0 2px;
+    }
     .mw-transcript-empty {
       color: #94a3b8;
       font-style: italic;
+    }
+    /* ── Elevation card ────────────────────────────────────────── */
+    .mw-elevation-card {
+      width: 340px;
+      background: #fef2b6;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #9d7b27;
+      box-sizing: border-box;
+      margin-top: 4px;
     }
     /* ── Recording bar ───────────────────────────────────────────── */
     .mw-rec-bar {
@@ -221,7 +245,8 @@
       this._timerInterval = null;
       this._seconds = 0;
       this._view = 'transcript'; // 'transcript' | 'icon'
-      this._finalTranscript = '';
+      this._finalSegments = []; // [{text, highlighted}]
+      this._highlightPending = false;
       this._recorder = null;
       this._stream = null;
       this._recognition = null;
@@ -358,8 +383,14 @@
       pill.appendChild(row);
       pill.appendChild(transcriptPanel);
       pill.appendChild(recBar);
-      this._mount.appendChild(pill);
 
+      const elevationCard = document.createElement('div');
+      elevationCard.className = 'mw-elevation-card mw-hidden';
+      elevationCard.textContent = 'Elevation';
+      this._elevationCard = elevationCard;
+      pill.appendChild(elevationCard);
+
+      this._mount.appendChild(pill);
       this._makeDraggable(pill, dragHandle);
     }
 
@@ -384,7 +415,8 @@
 
     _startRecording() {
       this._seconds = 0;
-      this._finalTranscript = '';
+      this._finalSegments = [];
+      this._highlightPending = false;
       this._chunks = [];
       this._view = 'transcript';
 
@@ -410,6 +442,23 @@
         this._seconds++;
         this._timeEl.textContent = formatTime(this._seconds);
       }, 1000);
+
+      /* Q-key: hold shows card + highlights interim; card stays after release until phrase commits */
+      this._onKeyDown = (e) => {
+        if (e.key !== 'q' && e.key !== 'Q') return;
+        this._qMarked = true;
+        this._highlightPending = true;
+        this._elevationCard.classList.remove('mw-hidden');
+        this._renderTranscript(this._currentInterim || '');
+      };
+      this._onKeyUp = (e) => {
+        if (e.key !== 'q' && e.key !== 'Q') return;
+        this._highlightPending = false; // interim stays yellow via _qMarked below
+        this._renderTranscript(this._currentInterim || '');
+        // card + _qMarked stay until phrase finalizes
+      };
+      document.addEventListener('keydown', this._onKeyDown);
+      document.addEventListener('keyup',   this._onKeyUp);
 
       /* MediaRecorder */
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -441,19 +490,16 @@
           for (let i = e.resultIndex; i < e.results.length; i++) {
             const t = e.results[i][0].transcript;
             if (e.results[i].isFinal) {
-              this._finalTranscript += t + ' ';
+              this._finalSegments.push({ text: t + ' ', highlighted: this._qMarked });
+              this._qMarked = false;
+              this._highlightPending = false;
+              this._elevationCard.classList.add('mw-hidden');
             } else {
               interim += t;
             }
           }
-          this._transcriptPanel.innerHTML =
-            (this._finalTranscript
-              ? '<span>' + this._escHtml(this._finalTranscript) + '</span>'
-              : '') +
-            (interim
-              ? '<span class="mw-transcript-interim">' + this._escHtml(interim) + '</span>'
-              : '');
-          this._transcriptPanel.scrollTop = this._transcriptPanel.scrollHeight;
+          this._currentInterim = interim;
+          this._renderTranscript(interim);
         };
         rec.onerror = (e) => {
           if (e.error !== 'no-speech') console.warn('SpeechRecognition error:', e.error);
@@ -484,6 +530,18 @@
         try { r.stop(); } catch (_) {}
       }
 
+      /* Remove Q-key listeners */
+      if (this._onKeyDown) {
+        document.removeEventListener('keydown', this._onKeyDown);
+        document.removeEventListener('keyup',   this._onKeyUp);
+        this._onKeyDown = null;
+        this._onKeyUp   = null;
+      }
+      this._highlightPending = false;
+      this._qMarked = false;
+      this._currentInterim = '';
+      this._elevationCard.classList.add('mw-hidden');
+
       /* Stop MediaRecorder + stream */
       if (this._recorder && this._recorder.state !== 'inactive') {
         try { this._recorder.stop(); } catch (_) {}
@@ -508,6 +566,23 @@
       this._startBtn.classList.remove('mw-hidden');
 
       this._syncSeg();
+    }
+
+    _renderTranscript(interim) {
+      let html = this._finalSegments.map(seg =>
+        seg.highlighted
+          ? '<mark class="mw-transcript-highlight">' + this._escHtml(seg.text) + '</mark>'
+          : '<span>' + this._escHtml(seg.text) + '</span>'
+      ).join('');
+      if (interim) {
+        const cls = this._highlightPending || this._qMarked
+          ? 'mw-transcript-interim mw-q-active'
+          : 'mw-transcript-interim';
+        html += '<span class="' + cls + '">' + this._escHtml(interim) + '</span>';
+      }
+      if (!html) html = '<span class="mw-transcript-empty">Listening…</span>';
+      this._transcriptPanel.innerHTML = html;
+      this._transcriptPanel.scrollTop = this._transcriptPanel.scrollHeight;
     }
 
     _escHtml(str) {
