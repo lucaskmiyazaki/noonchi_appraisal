@@ -616,10 +616,7 @@
     /* ── Stop ──────────────────────────────────────────────────── */
 
     _stopRecording() {
-      /* Capture before clearing */
-      const chunks = this._chunks.slice();
       const meetingName = this._meetingName || 'meeting';
-      this._chunks = [];
       this._meetingName = '';
 
       clearInterval(this._timerInterval);
@@ -646,15 +643,32 @@
       this._currentInterim = '';
       this._elevationCard.classList.add('mw-hidden');
 
-      /* Stop MediaRecorder + stream */
-      if (this._recorder && this._recorder.state !== 'inactive') {
-        try { this._recorder.stop(); } catch (_) {}
-      }
-      if (this._stream) {
-        this._stream.getTracks().forEach(t => t.stop());
-        this._stream = null;
-      }
+      /* Stop MediaRecorder — use onstop so we get the final chunk too */
+      const recorder = this._recorder;
+      const stream   = this._stream;
       this._recorder = null;
+      this._stream   = null;
+
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.onstop = () => {
+          /* All dataavailable events have fired before onstop */
+          const chunks = this._chunks.slice();
+          this._chunks = [];
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          this._confirmSave(chunks, meetingName);
+        };
+        try { recorder.stop(); } catch (_) {
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          const chunks = this._chunks.slice();
+          this._chunks = [];
+          this._confirmSave(chunks, meetingName);
+        }
+      } else {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        const chunks = this._chunks.slice();
+        this._chunks = [];
+        if (chunks.length) this._confirmSave(chunks, meetingName);
+      }
 
       /* Restore pill */
       this._pill.classList.remove('is-fixed');
@@ -670,11 +684,48 @@
       this._startBtn.classList.remove('mw-hidden');
 
       this._syncSeg();
+    }
 
-      /* Upload + pipeline */
-      if (chunks.length) {
+    _confirmSave(chunks, meetingName) {
+      if (!chunks.length) return; /* nothing recorded */
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center';
+
+      const box = document.createElement('div');
+      box.style.cssText = 'background:#fff;border-radius:12px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18)';
+
+      const title = document.createElement('p');
+      title.style.cssText = 'margin:0 0 8px;font-size:17px;font-weight:600;color:#111';
+      title.textContent = 'Save this meeting?';
+
+      const sub = document.createElement('p');
+      sub.style.cssText = 'margin:0 0 24px;font-size:14px;color:#555';
+      sub.textContent = `"${meetingName}" will be transcribed and analysed.`;
+
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center';
+
+      const discardBtn = document.createElement('button');
+      discardBtn.style.cssText = 'padding:9px 22px;border-radius:8px;border:1px solid #ddd;background:#f5f5f5;font-size:14px;cursor:pointer;color:#555';
+      discardBtn.textContent = 'Discard';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.style.cssText = 'padding:9px 22px;border-radius:8px;border:none;background:#111;color:#fff;font-size:14px;cursor:pointer;font-weight:600';
+      saveBtn.textContent = 'Save & Process';
+
+      btnRow.append(discardBtn, saveBtn);
+      box.append(title, sub, btnRow);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      const close = () => document.body.removeChild(overlay);
+
+      discardBtn.addEventListener('click', close);
+      saveBtn.addEventListener('click', () => {
+        close();
         this._uploadAndProcess(chunks, meetingName);
-      }
+      });
     }
 
     async _uploadAndProcess(chunks, meetingName) {
