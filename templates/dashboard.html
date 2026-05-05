@@ -326,34 +326,77 @@
     const procLog   = document.getElementById('procCardLog');
 
     function phaseLblDash(phase) {
-      return phase === 'upload' ? 'Uploading' : phase === 'pipeline' ? 'Analysing' : phase === 'done' ? 'Done' : 'Error';
+      if (phase === 'upload' || phase === 'transcribe') return 'Transcribing';
+      if (phase === 'pipeline') return 'Analysing';
+      if (phase === 'reflections') return 'Reflecting';
+      if (phase === 'done') return 'Done';
+      return 'Error';
+    }
+
+    function computePct(state) {
+      return Math.round(((state.progress || 0) / (state.total || 8)) * 100);
     }
 
     function showProcCard(meetingName, phase, pct, msg) {
       procCard.style.display = '';
       procTitle.textContent  = 'Processing \u201c' + meetingName + '\u201d\u2026';
       procBadge.textContent  = phaseLblDash(phase);
-      procBar.style.width    = pct + '%';
+      procBar.style.width    = Math.min(pct, 100) + '%';
       procBar.style.background = phase === 'error' ? '#ef4444' : '';
       procLog.textContent    = msg;
     }
 
-    /* Restore processing card on load by querying active server jobs */
-    fetch('/api/processing/active').then(r => r.json()).then(state => {
-      if (state && state.phase && state.phase !== 'done') {
-        const pct = state.phase === 'upload'
-          ? Math.round((state.progress || 0) * 0.5)
-          : 50 + Math.round(((state.progress || 0) / (state.total || 5)) * 50);
-        showProcCard(state.meeting_name || 'Meeting', state.phase, pct, state.message || '');
-      }
-    }).catch(() => {});
+    let _activeProcES = null;
+
+    function connectProcSSE(jobId, meetingName) {
+      if (_activeProcES) { _activeProcES.close(); _activeProcES = null; }
+      const es = new EventSource(`/api/audio/process/job/${encodeURIComponent(jobId)}/stream`);
+      _activeProcES = es;
+      es.onmessage = (e) => {
+        let data; try { data = JSON.parse(e.data); } catch (_) { return; }
+        showProcCard(meetingName, data.phase, computePct(data), data.message || '');
+        if (data.phase === 'done' || data.phase === 'error' || data.status === 'error') {
+          es.close(); _activeProcES = null;
+          try { localStorage.removeItem('mw_process_job'); } catch (_) {}
+          if (data.phase === 'done') {
+            showProcCard(meetingName, 'done', 100, 'Reflections ready');
+            setTimeout(() => { procCard.style.display = 'none'; loadDashboard(); }, 2500);
+          } else {
+            showProcCard(meetingName, 'error', 100, data.message || 'Something went wrong');
+            setTimeout(() => { procCard.style.display = 'none'; }, 6000);
+          }
+        }
+      };
+      es.onerror = () => { es.close(); _activeProcES = null; };
+    }
+
+    /* On page load: reconnect to any active process job (mirrors wizard's upload reconnect).
+       Always ask the server — use its job_id; localStorage only provides the meeting name. */
+    (function reconnectOnLoad() {
+      let savedName = '';
+      try {
+        const raw = localStorage.getItem('mw_process_job');
+        if (raw) savedName = (JSON.parse(raw) || {}).meetingName || '';
+      } catch (_) {}
+
+      fetch('/api/processing/active').then(r => r.json()).then(state => {
+        if (!state || !state.phase || state.phase === 'done' || !state.job_id || state.job_type !== 'process') {
+          try { localStorage.removeItem('mw_process_job'); } catch (_) {}
+          return;
+        }
+        const meetingName = state.meeting_name || savedName || 'Meeting';
+        showProcCard(meetingName, state.phase, computePct(state), state.message || '');
+        connectProcSSE(state.job_id, meetingName);
+      }).catch(() => {});
+    }());
 
     window.addEventListener('mw:processing', (e) => {
-      const { meetingName, phase, progress, total, message } = e.detail;
-      const pct = phase === 'upload'
-        ? Math.round((progress || 0) * 0.5)
-        : 50 + Math.round(((progress || 0) / (total || 5)) * 50);
-      showProcCard(meetingName, phase, pct, message);
+      const { jobId, meetingName, phase, progress, total, message } = e.detail;
+      /* If we get a jobId for the first time, connect SSE directly (same page, not refresh) */
+      if (jobId && !_activeProcES) {
+        connectProcSSE(jobId, meetingName);
+      }
+      showProcCard(meetingName, phase, Math.round(((progress || 0) / (total || 8)) * 100), message);
     });
 
     window.addEventListener('mw:processingDone', (e) => {

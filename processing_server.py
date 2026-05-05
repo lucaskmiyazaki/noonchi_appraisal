@@ -324,6 +324,190 @@ def upload_job_stream(job_id):
 
 _pipeline_jobs: dict = {}  # job_id -> {status, progress, total, message, [error]}
 
+# ── Full processing jobs (upload → transcribe → pipeline → reflections) ────────
+
+_process_jobs: dict = {}   # job_id -> {phase, status, progress, total, message, meeting_name, record_id}
+PROCESS_STEPS_TOTAL = 8    # transcribe(0→1) + 6 pipeline steps + reflections(7) + done(8)
+
+
+@app.post("/api/audio/process")
+def start_full_processing():
+    """Upload audio and run the full transcribe→pipeline→reflections pipeline in one job."""
+    audio = request.files.get("audio")
+    if not audio:
+        return jsonify({"error": "No audio file uploaded."}), 400
+    if not audio.filename:
+        return jsonify({"error": "Empty filename."}), 400
+    if not allowed_audio_file(audio.filename):
+        return jsonify({"error": "Unsupported file type."}), 400
+
+    safe_name = secure_filename(audio.filename)
+    if not safe_name:
+        return jsonify({"error": "Invalid filename."}), 400
+
+    session_name = build_session_name(audio.filename, request.form.get("session_name") or "")
+    username = str(request.form.get("username") or "").strip()
+    audio_id = str(uuid.uuid4())
+    stored_filename = f"{audio_id}_{safe_name}"
+    output_path = UPLOAD_DIR / stored_filename
+
+    try:
+        audio.save(output_path)
+    except Exception as exc:
+        if output_path.exists():
+            output_path.unlink()
+        return jsonify({"error": f"Failed to save audio: {exc}"}), 500
+
+    job_id = str(uuid.uuid4())
+    _process_jobs[job_id] = {
+        "phase": "transcribe",
+        "status": "running",
+        "progress": 0,
+        "total": PROCESS_STEPS_TOTAL,
+        "message": "Transcribing audio\u2026",
+        "meeting_name": session_name,
+        "record_id": None,
+    }
+
+    _orig_filename = audio.filename  # capture before thread
+
+    def _run():
+        import pipeline as pl
+        import re as _re
+        import time as _time
+        import threading as _threading
+
+        def upd(**kw):
+            _process_jobs[job_id].update(kw)
+
+        try:
+            # ── Phase 1: Transcribe ──────────────────────────────────────────
+            _stop = _threading.Event()
+            _tick = [0]
+
+            def _heartbeat():
+                while not _stop.wait(2):
+                    _tick[0] = (_tick[0] + 10) % 91
+                    if _process_jobs.get(job_id, {}).get("phase") == "transcribe":
+                        upd(sub_progress=_tick[0])
+
+            _threading.Thread(target=_heartbeat, daemon=True).start()
+            transcript = transcribe_audio_file(output_path)
+            _stop.set()
+
+            user_id = lookup_user_id_by_username(username) if username else ""
+            record = {
+                "id": audio_id,
+                "audioUrl": f"/uploads/{stored_filename}",
+                "audioFilename": stored_filename,
+                "originalName": _orig_filename,
+                "sessionName": session_name,
+                "safeSessionName": secure_filename(session_name),
+                "uploadedAt": datetime.now(timezone.utc).isoformat(),
+                "transcript": transcript,
+                "username": username,
+                "userId": user_id,
+                "user_id": user_id,
+            }
+            save_meeting(record)
+            upd(phase="pipeline", progress=1, sub_progress=None, message="Starting pipeline\u2026", record_id=audio_id)
+
+            # ── Phase 2: Pipeline ────────────────────────────────────────────
+            json_path = audio_record_path(audio_id)
+            step = [1]
+            _seg_pattern = _re.compile(r"^Emotion analysis: (\d+)/(\d+) segments$")
+            _emo_prefix = "Emotion analysis:"
+
+            def log(msg):
+                msg_str = str(msg)
+                m = _seg_pattern.match(msg_str)
+                if m:
+                    done_s, total_s = int(m.group(1)), int(m.group(2))
+                    upd(progress=step[0], sub_progress=done_s, sub_total=total_s, message=msg_str)
+                elif msg_str.startswith(_emo_prefix):
+                    upd(progress=step[0], sub_progress=None, sub_total=None, message=msg_str)
+                else:
+                    step[0] += 1
+                    upd(progress=min(step[0], PROCESS_STEPS_TOTAL - 2), sub_progress=None, sub_total=None, message=msg_str)
+
+            pl.run_pipeline(str(json_path), log=log, wearer=username or "wearer")
+
+            # ── Phase 3: Reflections ─────────────────────────────────────────
+            upd(phase="reflections", progress=PROCESS_STEPS_TOTAL - 1, sub_progress=None, message="Generating reflections\u2026")
+            intent_filename = f"{audio_id}.intent.json"
+            intent_data = read_data_json_file(intent_filename)
+            if intent_data is not None:
+                diagrams = intent_data.get("diagrams", [])
+                session_n = intent_data.get("sessionName", "") or session_name
+                refl_rows, fieldnames = load_reflection_db_rows()
+                for diagram in diagrams:
+                    reflection_tree, wearer_id, wearer_agent = evaluate_diagram_for_reflection(diagram, session_n)
+                    if reflection_tree is None:
+                        continue
+                    timestamp = datetime.now(timezone.utc).isoformat()
+                    safe_ts = timestamp.replace(":", "-").replace("+", "Z")
+                    reflection_tree["timestamp"] = timestamp
+                    reflection_tree["startMs"] = diagram.get("startms")
+                    reflection_tree["endMs"] = diagram.get("endms")
+                    reflection_tree["session_name"] = session_n
+                    reflection_filename = f"reflection_{safe_ts}.json"
+                    write_data_json_file(reflection_filename, reflection_tree)
+                    wearer_agent_name = (
+                        getattr(wearer_agent, "name", None) or getattr(wearer_agent, "role", None) or wearer_id
+                        if wearer_agent is not None else wearer_id
+                    )
+                    resolved_user_id = lookup_user_id_by_username(wearer_agent_name) if wearer_agent_name else ""
+                    refl_rows.append({
+                        "id": str(uuid.uuid4().hex),
+                        "user_id": resolved_user_id,
+                        "reflection_tree_file": reflection_filename,
+                        "startms": reflection_tree.get("startMs", ""),
+                        "endms": reflection_tree.get("endMs", ""),
+                        "practice": "null",
+                        "meeting_id": audio_id,
+                        "tree_type": str(reflection_tree.get("type", "") or ""),
+                        "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
+                    })
+                write_reflection_db_rows(refl_rows, fieldnames)
+
+            upd(phase="done", status="done", progress=PROCESS_STEPS_TOTAL, message="Done!", record_id=audio_id)
+
+        except Exception as exc:
+            upd(phase="error", status="error", progress=PROCESS_STEPS_TOTAL, message=f"Error: {exc}")
+        finally:
+            def _cleanup():
+                import time as _t
+                _t.sleep(300)
+                _process_jobs.pop(job_id, None)
+            threading.Thread(target=_cleanup, daemon=True).start()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.get("/api/audio/process/job/<job_id>/stream")
+def process_job_stream(job_id):
+    """SSE stream for a full processing job (transcribe → pipeline → reflections)."""
+    import json as _json, time as _time
+    safe_job_id = str(job_id or "").strip()
+
+    def _generate():
+        for _ in range(14400):  # max 4 hours
+            job = _process_jobs.get(safe_job_id)
+            if not job:
+                yield f"data: {_json.dumps({'phase': 'error', 'status': 'error', 'message': 'Job not found'})}\n\n"
+                return
+            yield f"data: {_json.dumps(job)}\n\n"
+            if job["status"] in ("done", "error"):
+                return
+            _time.sleep(1)
+
+    return Response(
+        _generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
 
 @app.post("/api/pipeline/run/<record_id>")
 def run_pipeline_start(record_id):
@@ -453,9 +637,22 @@ def pipeline_jobs_active():
 @app.get("/api/processing/active")
 def processing_active():
     """Single endpoint for UI to check if any upload or pipeline is running.
-    Returns phase, job_id, meeting_name, progress, message.
+    Returns phase, job_id, job_type, meeting_name, progress, total, message.
     """
-    # Check pipeline first (upload is complete once pipeline starts)
+    # Check new unified process jobs first
+    for jid, job in reversed(list(_process_jobs.items())):
+        if job.get("status") == "running":
+            return jsonify({
+                "phase": job.get("phase"),
+                "job_id": jid,
+                "job_type": "process",
+                "record_id": job.get("record_id"),
+                "meeting_name": job.get("meeting_name", ""),
+                "progress": job.get("progress", 0),
+                "total": job.get("total", PROCESS_STEPS_TOTAL),
+                "message": job.get("message", ""),
+            })
+    # Fallback: legacy pipeline jobs
     for jid, job in reversed(list(_pipeline_jobs.items())):
         if job.get("status") == "running":
             record_id = job.get("record_id")
@@ -467,18 +664,20 @@ def processing_active():
             return jsonify({
                 "phase": "pipeline",
                 "job_id": jid,
+                "job_type": "pipeline",
                 "record_id": record_id,
                 "meeting_name": meeting_name,
                 "progress": job.get("progress", 0),
                 "total": job.get("total", 5),
                 "message": job.get("message", ""),
             })
-    # Check upload
+    # Fallback: legacy upload jobs
     for jid, job in reversed(list(_upload_jobs.items())):
         if job.get("status") == "transcribing":
             return jsonify({
                 "phase": "upload",
                 "job_id": jid,
+                "job_type": "upload",
                 "meeting_name": job.get("session_name") or "",
                 "progress": job.get("progress", 0),
                 "message": job.get("message", ""),

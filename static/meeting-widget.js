@@ -686,46 +686,41 @@
       if (this._user) formData.append('username', this._user);
 
       window.dispatchEvent(new CustomEvent('mw:processing', {
-        detail: { meetingName, phase: 'upload', progress: 0, message: 'Uploading\u2026' }
+        detail: { meetingName, phase: 'upload', progress: 0, total: 8, message: 'Uploading\u2026' }
       }));
 
       try {
-        /* \u2500\u2500 Upload \u2500\u2500 */
-        const uploadRes = await fetch('/api/audio/upload', { method: 'POST', body: formData });
-        if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
-        const { job_id: uploadJobId } = await uploadRes.json();
+        const res = await fetch('/api/audio/process', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Upload failed: ' + res.status);
+        const { job_id: jobId } = await res.json();
 
-        /* Follow upload+transcription via SSE */
-        const sseUpload = await this._followSSE(
-          `/api/audio/upload/job/${uploadJobId}/stream`,
-          (data) => window.dispatchEvent(new CustomEvent('mw:processing', {
-            detail: { meetingName, phase: 'upload', progress: data.progress || 0, message: data.message || '' }
-          })),
-          (data) => data.record
-        );
+        /* Save to localStorage so dashboard can reconnect after page refresh */
+        try { localStorage.setItem('mw_process_job', JSON.stringify({ jobId, meetingName })); } catch (_) {}
 
-        const recordId = sseUpload.record.id;
+        /* Notify dashboard of the job_id so it can also connect SSE */
         window.dispatchEvent(new CustomEvent('mw:processing', {
-          detail: { meetingName, phase: 'pipeline', progress: 0, message: 'Running analysis\u2026' }
+          detail: { jobId, meetingName, phase: 'transcribe', progress: 0, total: 8, message: 'Transcribing\u2026' }
         }));
 
-        /* \u2500\u2500 Pipeline \u2500\u2500 */
-        const pipeRes = await fetch(`/api/pipeline/run/${encodeURIComponent(recordId)}`, { method: 'POST' });
-        if (!pipeRes.ok) throw new Error('Pipeline failed: ' + pipeRes.status);
-        const { job_id: pipeJobId } = await pipeRes.json();
-
-        await this._followSSE(
-          `/api/pipeline/job/${pipeJobId}/stream`,
+        const finalData = await this._followSSE(
+          `/api/audio/process/job/${encodeURIComponent(jobId)}/stream`,
           (data) => window.dispatchEvent(new CustomEvent('mw:processing', {
-            detail: { meetingName, phase: 'pipeline', progress: data.progress || 0, total: data.total || 5, message: data.message || '' }
+            detail: { jobId, meetingName, phase: data.phase || 'pipeline', progress: data.progress || 0, total: data.total || 8, message: data.message || '' }
           })),
-          (data) => data.status === 'done' || data.status === 'error'
+          (data) => data.phase === 'done' || data.phase === 'error'
         );
 
-        window.dispatchEvent(new CustomEvent('mw:processingDone', { detail: { meetingName, recordId } }));
+        try { localStorage.removeItem('mw_process_job'); } catch (_) {}
+
+        if (finalData.phase === 'done') {
+          window.dispatchEvent(new CustomEvent('mw:processingDone', { detail: { meetingName, recordId: finalData.record_id } }));
+        } else {
+          throw new Error(finalData.message || 'Processing failed');
+        }
 
       } catch (err) {
-        console.error('Meeting upload/pipeline error:', err);
+        try { localStorage.removeItem('mw_process_job'); } catch (_) {}
+        console.error('Meeting processing error:', err);
         window.dispatchEvent(new CustomEvent('mw:processingError', { detail: { meetingName, error: err.message } }));
       }
     }

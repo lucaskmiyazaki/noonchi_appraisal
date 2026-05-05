@@ -49,7 +49,7 @@ def main(input_path, output_path=None):
             "transcript": data
         }
 
-    segments = data.get('transcript') or data
+    segments = data.get('transcript') if data.get('transcript') is not None else data
     merged = merge_transcript_segments(segments)
     data['transcript'] = merged
 
