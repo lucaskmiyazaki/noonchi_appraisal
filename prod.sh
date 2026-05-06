@@ -6,6 +6,15 @@ cd "$(dirname "$0")"
 DOMAIN="noonchi.live"
 EMAIL="admin@noonchi.live"
 CERT="./letsencrypt/live/${DOMAIN}/fullchain.pem"
+TEMP_NGINX_NAME="certbot-init-nginx"
+
+port_80_in_use() {
+  if command -v ss &>/dev/null; then
+    ss -ltn | awk 'NR>1 {print $4}' | grep -Eq '(^|.*:|.*\]):80$'
+  else
+    sudo docker ps --filter "publish=80" -q | grep -q .
+  fi
+}
 
 echo "[prod] Setting DEBUG=false..."
 sed -i 's/^DEBUG=.*/DEBUG=false/' .env
@@ -93,8 +102,30 @@ if [ ! -f "$CERT" ]; then
 
   mkdir -p ./letsencrypt ./certbot-www
 
+  # Clean up stale temporary container from previous failed attempts.
+  sudo docker rm -f "${TEMP_NGINX_NAME}" >/dev/null 2>&1 || true
+
+  # If anything is already publishing host port 80, stop it for cert issuance.
+  PORT80_CONTAINERS=$(sudo docker ps --filter "publish=80" --format '{{.ID}}')
+  if [ -n "${PORT80_CONTAINERS}" ]; then
+    echo "[prod] Port 80 is already in use by running container(s); stopping them temporarily..."
+    echo "${PORT80_CONTAINERS}" | xargs -r sudo docker stop >/dev/null || true
+  fi
+
+  # If port 80 is still occupied, it's likely a host process outside Docker.
+  if port_80_in_use; then
+    echo ""
+    echo "[prod] ⚠ Port 80 is still in use by a non-Docker process."
+    if command -v ss &>/dev/null; then
+      echo "[prod] Active listeners on :80:"
+      ss -ltnp | grep -E '(:80\s)' || true
+    fi
+    echo "[prod] Stop that process, then re-run ./prod.sh"
+    exit 1
+  fi
+
   # Start a temporary nginx on port 80 to serve the ACME challenge
-  sudo docker run -d --name certbot-init-nginx \
+  sudo docker run -d --name "${TEMP_NGINX_NAME}" \
     -p 80:80 \
     -v "$(pwd)/docker/nginx.init.conf:/etc/nginx/conf.d/default.conf:ro" \
     -v "$(pwd)/certbot-www:/var/www/certbot" \
@@ -110,7 +141,7 @@ if [ ! -f "$CERT" ]; then
       -d "${DOMAIN}" -d "www.${DOMAIN}"
 
   # Stop temporary nginx
-  sudo docker stop certbot-init-nginx && sudo docker rm certbot-init-nginx
+  sudo docker stop "${TEMP_NGINX_NAME}" >/dev/null && sudo docker rm "${TEMP_NGINX_NAME}" >/dev/null
 
   echo "[prod] Certificate issued successfully."
 else
