@@ -15,9 +15,9 @@
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .practice-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
 
-    .practice-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; min-height: 0; height: calc(100vh - 32px); background: var(--panel-bg); border: 1px solid var(--border-soft); border-radius: var(--card-radius); overflow: hidden; }
-    .practice-main { background: transparent; padding: 24px; min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
-    .practice-sidebar { min-width: 0; overflow: visible; }
+    .practice-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: calc(100vh - 32px); background: var(--panel-bg); border: 1px solid var(--border-soft); border-radius: var(--card-radius); overflow: hidden; }
+    .practice-main { grid-column: 3; background: transparent; padding: 24px; min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
+    .practice-sidebar { grid-column: 1 / span 2; min-width: 0; overflow: hidden; }
     .practice-sidebar-panel { height: 100%; background: transparent; padding: 24px 0 24px 24px; overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
     .practice-detail { padding: 0; border-radius: 0; background: transparent; border: 0; }
     .practice-detail[hidden] { display: none; }
@@ -54,9 +54,9 @@
     .practice-filter-btn.is-active { background: #1c1b1f; color: #fff; }
     .practice-list-divider { margin: 0 24px 16px 0; border-top: 1px solid var(--border-soft); }
     .practice-list { display: flex; flex-direction: column; gap: 12px; }
-    .practice-item { position: relative; z-index: 1; width: calc(100% - 24px); margin-right: 24px; display: block; padding: 14px 16px; border-radius: var(--card-radius); background: var(--practice-bg, #fff); border: 1px solid transparent; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
+    .practice-item { position: relative; z-index: 1; margin-right: 24px; display: block; padding: 14px 16px; border-radius: var(--card-radius); background: var(--practice-bg, #fff); border: 1px solid transparent; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
     .practice-item:hover { transform: translateY(-1px); }
-    .practice-item.is-selected { z-index: 2; margin-right: -16px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .practice-item.is-selected { z-index: 2; margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
     .practice-item-row { display: flex; align-items: center; gap: 12px; }
     .practice-item-icon { width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: var(--practice-icon, #1c1b1f); }
     .practice-item-icon svg { width: 24px; height: 24px; display: block; }
@@ -87,7 +87,9 @@
       .practice-main { border-left: 0; border-top: 1px solid var(--border-soft); }
       .practice-main { min-height: 60vh; }
       .practice-sidebar-panel { height: auto; min-height: 0; }
-      .practice-item { width: 100%; margin-right: 0; }
+      .practice-sidebar { grid-column: auto; }
+      .practice-main { grid-column: auto; }
+      .practice-item { margin-right: 0; }
       .practice-item.is-selected { margin-right: 0; border-radius: var(--card-radius); }
     }
   </style>
