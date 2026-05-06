@@ -127,7 +127,7 @@
     <main class="dashboard-main">
       <div class="dashboard-inner">
         <div class="dashboard-hero">
-          <h1 class="dashboard-title">Welcome, {{ resolved_user }}!</h1>
+          <h1 class="dashboard-title">Welcome, {{ resolved_user|capitalize }}!</h1>
           <div class="dashboard-hero-sub">
             <p id="dashboardDate" class="dashboard-date"></p>
             <div id="meetingWidget"></div>
@@ -224,6 +224,11 @@
 
     async function saveDevice(value) {
       if (!currentUser) return;
+
+      const currentType = nudgeTypeEl?.classList.contains('is-empty') ? '' : valueOfNudgeDisplay(nudgeTypeEl.textContent, TYPE_LABELS);
+      const currentTrigger = nudgeTriggerEl?.classList.contains('is-empty') ? '' : valueOfNudgeDisplay(nudgeTriggerEl.textContent, TRIGGER_LABELS);
+      setNudgeDisplay(value, currentType, currentTrigger);
+
       try {
         await fetch(`/api/users/${encodeURIComponent(currentUser)}`, {
           method: 'PATCH',
@@ -242,6 +247,10 @@
     };
     const TYPE_LABELS = { vibration: 'vibrate', sound: 'make a sound', banner: 'show a banner' };
     const DEVICE_LABELS = { smartwatch: 'smartwatch', desktop: 'desktop' };
+
+    function valueOfNudgeDisplay(displayValue, labels) {
+      return Object.entries(labels).find(([, label]) => label === String(displayValue || '').trim())?.[0] || '';
+    }
 
     function setNudgeDisplay(device, type, trigger) {
       function applyValue(el, label) {

@@ -41,10 +41,11 @@
       gap: 8px;
     }
     .mw-logo {
-      width: 28px;
-      height: 34px;
+      width: 52px;
+      height: 52px;
       flex-shrink: 0;
-      margin-right: 2px;
+      margin-right: 4px;
+      object-fit: contain;
     }
     /* ── Large dark button (Start Meeting) ───────────────────────── */
     .mw-btn {
@@ -88,7 +89,7 @@
       justify-content: center;
       gap: 6px;
       width: 68px;
-      height: 64px;
+      height: 72px;
       background: transparent;
       color: #374151;
       border: 0;
@@ -98,6 +99,14 @@
       font-family: 'Source Code Pro', monospace;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
+    }
+    .mw-seg-btn--view {
+      width: auto;
+      min-width: 90px;
+      padding: 0 6px;
+    }
+    .mw-seg-btn--transcript {
+      min-width: 90px;
     }
     .mw-seg-btn svg {
       width: 22px; height: 22px;
@@ -126,7 +135,8 @@
     .mw-drag-handle:active { cursor: grabbing; }
     /* ── Transcript panel ────────────────────────────────────────── */
     .mw-transcript-panel {
-      width: 340px;
+      width: var(--mw-content-width, 340px);
+      margin-left: var(--mw-content-offset, 0px);
       min-height: 90px;
       max-height: 200px;
       overflow-y: auto;
@@ -160,15 +170,25 @@
     }
     /* ── Elevation card ────────────────────────────────────────── */
     .mw-elevation-card {
-      width: 340px;
-      background: #fef2b6;
+      width: var(--mw-content-width, 340px);
+      margin-left: var(--mw-content-offset, 0px);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffe53a;
       border-radius: 8px;
       padding: 10px 14px;
       font-size: 13px;
       font-weight: 600;
-      color: #9d7b27;
+      color: #1f503b;
       box-sizing: border-box;
       margin-top: 4px;
+    }
+    .mw-elevation-card svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      display: block;
     }
     /* ── Name modal ──────────────────────────────────────────────── */
     .mw-modal-backdrop {
@@ -216,8 +236,12 @@
     .mw-rec-bar {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
-      padding: 0 4px;
+      width: var(--mw-content-width, 340px);
+      margin-left: var(--mw-content-offset, 0px);
+      padding: 0;
+      box-sizing: border-box;
     }
     .mw-rec-dot {
       width: 8px; height: 8px;
@@ -238,7 +262,6 @@
       min-width: 68px;
     }
     .mw-stop-btn {
-      margin-left: auto;
       background: #ef4444;
       color: #fff;
       border: 0;
@@ -274,6 +297,7 @@
   const SVG_DESKTOP  = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
   const SVG_WATCH    = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/><line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/></svg>`;
   const SVG_ICON     = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
+  const SVG_ELEVATION = `<svg viewBox="0 0 23.6522 32" fill="none" aria-hidden="true"><path d="M21.2638 2.48451C21.2638 2.48451 16.4204 1.37238 14.7459 3.32667C13.0714 5.28095 11.3519 8.97881 11.3519 8.97881C11.3519 8.97881 15.4143 8.88842 17.8698 8.13665C20.3252 7.38487 21.2638 2.48451 21.2638 2.48451Z" fill="#1F503B"/><ellipse cx="11.8261" cy="20.1741" rx="11.8261" ry="11.8259" fill="#F45520"/></svg>`;
   const SVG_DRAG     = `<svg viewBox="0 0 10 18" width="10" height="18" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/><circle cx="2.5" cy="9" r="1.5"/><circle cx="7.5" cy="9" r="1.5"/><circle cx="2.5" cy="15.5" r="1.5"/><circle cx="7.5" cy="15.5" r="1.5"/></svg>`;
 
   /* ------------------------------------------------------------------ */
@@ -298,6 +322,25 @@
 
       injectStyles();
       this._build();
+    }
+
+    async _persistDeviceSelection(device) {
+      const user = String(this._user || '').trim();
+      if (!user) return;
+
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(user)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nudge_device: device }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to save device selection: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Failed to persist meeting widget device selection', error);
+      }
     }
 
     _build() {
@@ -337,15 +380,15 @@
       this._viewToggle = viewToggle;
 
       const transcriptTabBtn = document.createElement('button');
-      transcriptTabBtn.className = 'mw-seg-btn is-active';
+      transcriptTabBtn.className = 'mw-seg-btn mw-seg-btn--view mw-seg-btn--transcript is-active';
       transcriptTabBtn.type = 'button';
       transcriptTabBtn.innerHTML = SVG_DOCUMENT + '<span>Transcript</span>';
       this._transcriptTabBtn = transcriptTabBtn;
 
       const iconTabBtn = document.createElement('button');
-      iconTabBtn.className = 'mw-seg-btn';
+      iconTabBtn.className = 'mw-seg-btn mw-seg-btn--view';
       iconTabBtn.type = 'button';
-      iconTabBtn.innerHTML = SVG_ICON + '<span>Icon</span>';
+      iconTabBtn.innerHTML = SVG_ICON + '<span>Banner</span>';
       this._iconTabBtn = iconTabBtn;
 
       transcriptTabBtn.addEventListener('click', () => this._setView('transcript'));
@@ -374,10 +417,20 @@
       this._watchSegBtn = watchBtn;
 
       [desktopBtn, watchBtn].forEach(btn => {
-        btn.addEventListener('click', () => {
-          this._device = btn.dataset.mwDevice;
+        btn.addEventListener('click', async () => {
+          const nextDevice = btn.dataset.mwDevice;
+          if (!nextDevice || nextDevice === this._device) {
+            return;
+          }
+
+          this._device = nextDevice;
           this._syncSeg();
-          if (this._onDeviceChange) this._onDeviceChange(this._device);
+
+          await this._persistDeviceSelection(this._device);
+
+          if (this._onDeviceChange) {
+            this._onDeviceChange(this._device);
+          }
         });
       });
       segWrap.appendChild(desktopBtn);
@@ -434,7 +487,7 @@
 
       const elevationCard = document.createElement('div');
       elevationCard.className = 'mw-elevation-card mw-hidden';
-      elevationCard.textContent = 'Elevation';
+      elevationCard.innerHTML = `${SVG_ELEVATION}<span>Elevation</span>`;
       this._elevationCard = elevationCard;
       pill.appendChild(elevationCard);
 
@@ -492,6 +545,20 @@
       this._makeDraggable(pill, dragHandle);
     }
 
+    _syncRecordingLayout() {
+      if (!this._pill || !this._logo || !this._segWrap) return;
+      const pillRect = this._pill.getBoundingClientRect();
+      const logoRect = this._logo.getBoundingClientRect();
+      const segRect = this._segWrap.getBoundingClientRect();
+      if (!pillRect.width || !logoRect.width || !segRect.width) return;
+
+      const contentOffset = Math.max(0, Math.round(logoRect.left - pillRect.left));
+      const contentWidth = Math.max(260, Math.round(segRect.right - logoRect.left));
+
+      this._pill.style.setProperty('--mw-content-offset', `${contentOffset}px`);
+      this._pill.style.setProperty('--mw-content-width', `${contentWidth}px`);
+    }
+
     _syncSeg() {
       this._desktopSegBtn.classList.toggle('is-active', this._device === 'desktop');
       this._watchSegBtn.classList.toggle('is-active',   this._device === 'smartwatch');
@@ -534,6 +601,10 @@
       this._transcriptPanel.classList.remove('mw-hidden');
       this._transcriptPanel.innerHTML = '<span class="mw-transcript-empty">Listening…</span>';
       this._recBar.classList.remove('mw-hidden');
+      this._pill.classList.add('is-recording');
+      this._syncRecordingLayout();
+      this._onResize = () => this._syncRecordingLayout();
+      window.addEventListener('resize', this._onResize);
 
       /* Timer */
       this._timerInterval = setInterval(() => {
@@ -682,6 +753,13 @@
       this._transcriptPanel.classList.add('mw-hidden');
       this._recBar.classList.add('mw-hidden');
       this._startBtn.classList.remove('mw-hidden');
+      this._pill.classList.remove('is-recording');
+      this._pill.style.removeProperty('--mw-content-offset');
+      this._pill.style.removeProperty('--mw-content-width');
+      if (this._onResize) {
+        window.removeEventListener('resize', this._onResize);
+        this._onResize = null;
+      }
 
       this._syncSeg();
     }
