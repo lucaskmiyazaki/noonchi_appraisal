@@ -8,51 +8,67 @@
   <style>
     :root {
       /* page-specific tokens — shared tokens inherited from styles.css */
-      --right-panel-bg: #fafbfc;
+      --right-panel-bg: var(--panel-bg);
       --highlight: #fdf4d7;
     }
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
-    .journal-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .journal-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
 
-    .journal-main { background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 32px; min-width: 0; overflow-y: auto; }
-    .journal-sidebar { min-width: 0; }
-    .journal-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; border-radius: var(--card-radius); border: 1px solid var(--border-soft); }
-    .journal-detail { padding: 24px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); }
+    .journal-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: calc(100vh - 32px); background: var(--panel-bg); border: 1px solid var(--border-soft); border-radius: var(--card-radius); overflow: hidden; }
+    .journal-main { grid-column: 3; background: transparent; padding: 24px; min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
+    .journal-sidebar { grid-column: 1 / span 2; min-width: 0; overflow: hidden; }
+    .journal-sidebar-panel { height: 100%; background: transparent; padding: 24px 0 24px 24px; overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
+    .journal-detail { padding: 0; border-radius: 0; background: transparent; border: 0; }
     .journal-detail[hidden] { display: none; }
-    .journal-detail-title { margin: 0; font-size: 24px; line-height: 1.2; }
-    .journal-section-title { margin: 20px 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; font-weight: 700; }
-    .journal-copy { margin: 10px 0 0; font-size: 16px; line-height: 1.7; color: #374151; white-space: pre-wrap; }
-    .journal-path-list { margin: 12px 0 0; display: flex; flex-direction: column; gap: 10px; }
-    .journal-path-item { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: #f8fafc; }
-    .journal-path-question { margin: 0; font-size: 14px; font-weight: 700; color: #334155; }
-    .journal-path-answer { margin: 6px 0 0; font-size: 14px; color: #475569; }
-    .journal-entry-field { margin-top: 12px; width: 100%; min-height: 220px; padding: 14px 16px; border-radius: 12px; border: 1px solid #cbd5e1; font: inherit; color: var(--text-dark); line-height: 1.6; resize: vertical; box-sizing: border-box; }
+    .journal-detail-title { margin: 0; font-size: var(--fs-h2); font-weight: var(--fw-medium); line-height: 1.2; color: var(--text-dark); }
+    .journal-section-title { margin: 16px 0 8px; font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: var(--fw-bold); font-family: var(--font-mono); }
+    .journal-copy { margin: 8px 0 0; font-size: var(--fs-body); line-height: 1.65; color: #374151; white-space: pre-wrap; }
+    .journal-path-list { margin: 8px 0 0; display: flex; flex-direction: column; gap: 12px; }
+    .journal-path-item { padding: 12px 14px; border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
+    .journal-path-question { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: #334155; font-family: var(--font-mono); }
+    .journal-path-answer { margin: 6px 0 0; font-size: var(--fs-body); color: #475569; }
+    .journal-entry-field { margin-top: 12px; width: 100%; min-height: 220px; padding: 12px 14px; border-radius: var(--card-radius); border: 1px solid #cbd5e1; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-dark); line-height: 1.6; resize: vertical; box-sizing: border-box; }
     .journal-entry-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
     .journal-actions { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
-    .journal-save-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 140px; padding: 11px 16px; border: 0; border-radius: 999px; background: #0f172a; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease; }
+    .journal-save-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 140px; padding: 10px 16px; border: 0; border-radius: var(--radius-full); background: #0f172a; color: #fff; font-size: var(--fs-body); font-weight: var(--fw-semibold); font-family: var(--font-mono); cursor: pointer; transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease; }
     .journal-save-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18); }
     .journal-save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .journal-save-status { margin: 0; min-height: 18px; font-size: 13px; color: #64748b; }
-    .journal-detail-empty { padding: 24px; border-radius: 16px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 15px; }
-    .session-search-bar { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
-    .session-search-input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; color: var(--text-dark); }
-    .journal-sidebar-title { margin: 0 0 18px; font-size: 14px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .journal-save-status { margin: 0; min-height: 18px; font-size: var(--fs-body); color: #64748b; font-family: var(--font-mono); }
+    .journal-detail-empty { padding: 0; border-radius: 0; background: transparent; border: 0; color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
+    .journal-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-right: 24px; margin-bottom: 16px; }
+    .journal-sidebar-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: var(--text-dark); letter-spacing: -0.02em; }
+    .journal-search-btn { width: 34px; height: 34px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+    .journal-search-btn:hover { background: rgba(15, 23, 42, 0.06); color: var(--text-dark); }
+    .journal-search-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .session-search-bar { background: #fff; border: 1px solid var(--border-soft); border-radius: var(--card-radius); padding: 10px 12px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: var(--fs-body); margin: 0 24px 16px 0; }
+    .session-search-bar[hidden] { display: none; }
+    .session-search-input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; color: var(--text-dark); font-family: var(--font-mono); }
+    .journal-list-divider { margin: 0 24px 16px 0; border-top: 1px solid var(--border-soft); }
     .journal-list { display: flex; flex-direction: column; gap: 12px; }
-    .journal-item { width: 100%; display: block; padding: 14px 16px; border-radius: 12px; background: #fff; border: 1px solid var(--border-soft); text-align: left; color: inherit; transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; cursor: pointer; }
-    .journal-item:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); border-color: rgba(148, 163, 184, 0.5); }
-    .journal-item.is-selected { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); border-color: rgba(37, 99, 235, 0.35); }
-    .journal-item-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-dark); }
-    .journal-item-subtitle { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); }
+    .journal-item { position: relative; z-index: 1; margin-right: 24px; display: block; padding: 14px 16px; border-radius: var(--card-radius); background: var(--journal-bg, var(--highlight)); border: 1px solid transparent; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
+    .journal-item:hover { transform: translateY(-1px); }
+    .journal-item.is-selected { z-index: 2; margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .journal-item-row { display: flex; align-items: center; gap: 12px; }
+    .journal-item-icon { width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: var(--journal-icon, #1c1b1f); }
+    .journal-item-icon svg { width: 24px; height: 24px; display: block; }
+    .journal-item-copy { min-width: 0; flex: 1; }
+    .journal-item-title { margin: 0; font-size: var(--fs-h3); font-weight: var(--fw-medium); color: var(--text-dark); font-family: var(--font-mono); }
+    .journal-item-subtitle { margin: 8px 0 0; font-size: var(--fs-label); color: var(--text-muted); font-family: var(--font-mono); }
     .journal-empty { padding: 16px; border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: 14px; }
 
     @media (max-width: 1180px) {
       body { overflow: auto; }
       .journal-layout { grid-template-columns: 1fr; }
       .app-nav { display: none; }
+      .journal-workspace { grid-column: auto; grid-template-columns: 1fr; height: auto; }
+      .journal-sidebar { grid-column: auto; }
+      .journal-main { grid-column: auto; border-left: 0; border-top: 1px solid var(--border-soft); }
       .journal-main { min-height: 60vh; }
       .journal-sidebar-panel { height: auto; min-height: 0; }
+      .journal-item { margin-right: 0; }
+      .journal-item.is-selected { margin-right: 0; border-radius: var(--card-radius); }
     }
   </style>
 </head>
@@ -66,44 +82,55 @@
   <div class="journal-layout">
     {% include '_left_sidebar.html' %}
 
-    <main class="journal-main">
-      <section id="journalDetailEmpty" class="journal-detail-empty">Select a journaling node from the sidebar.</section>
-
-      <section id="journalDetail" class="journal-detail" hidden>
-        <h2 id="journalDetailTitle" class="journal-detail-title"></h2>
-
-        <p class="journal-section-title">Question And Answer Path</p>
-        <div id="journalPathList" class="journal-path-list"></div>
-
-        <p class="journal-section-title">Journaling Prompt</p>
-        <p id="journalPrompt" class="journal-copy"></p>
-
-        <p class="journal-section-title">Your Journal Entry</p>
-        <textarea id="journalEntryField" class="journal-entry-field" placeholder="Write your journal entry here..."></textarea>
-
-        <div class="journal-actions">
-          <button id="journalSaveBtn" class="journal-save-btn" type="button">Save entry</button>
-          <p id="journalSaveStatus" class="journal-save-status" aria-live="polite"></p>
+    <div class="journal-workspace">
+      <aside class="journal-sidebar">
+        <div class="journal-sidebar-panel">
+          <div class="journal-sidebar-header">
+            <h2 class="journal-sidebar-title">Journaling</h2>
+            <button id="journalSearchToggle" class="journal-search-btn" type="button" aria-label="Toggle search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+          </div>
+          <label id="journalSearchBar" class="session-search-bar" aria-label="Search journaling items" hidden>
+            <span>🔍</span>
+            <input id="journalSearchInput" class="session-search-input" type="text" placeholder="Search">
+          </label>
+          <div class="journal-list-divider" aria-hidden="true"></div>
+          <div id="journalList" class="journal-list"></div>
         </div>
-      </section>
-    </main>
+      </aside>
 
-    <aside class="journal-sidebar">
-      <div class="journal-sidebar-panel">
-        <label class="session-search-bar" aria-label="Search journaling items">
-          <span>🔍</span>
-          <input id="journalSearchInput" class="session-search-input" type="text" placeholder="Search">
-        </label>
-        <h2 class="journal-sidebar-title">Journaling Nodes</h2>
-        <div id="journalList" class="journal-list"></div>
-      </div>
-    </aside>
+      <main class="journal-main">
+        <section id="journalDetailEmpty" class="journal-detail-empty">Select a journaling node from the sidebar.</section>
+
+        <section id="journalDetail" class="journal-detail" hidden>
+          <h2 id="journalDetailTitle" class="journal-detail-title"></h2>
+
+          <p class="journal-section-title">Question And Answer Path</p>
+          <div id="journalPathList" class="journal-path-list"></div>
+
+          <p class="journal-section-title">Journaling Prompt</p>
+          <p id="journalPrompt" class="journal-copy"></p>
+
+          <p class="journal-section-title">Your Journal Entry</p>
+          <textarea id="journalEntryField" class="journal-entry-field" placeholder="Write your journal entry here..."></textarea>
+
+          <div class="journal-actions">
+            <button id="journalSaveBtn" class="journal-save-btn" type="button">Save entry</button>
+            <p id="journalSaveStatus" class="journal-save-status" aria-live="polite"></p>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
 
+  <script id="triggerThemeData" type="application/json">{{ TRIGGERS|tojson }}</script>
   <script>
     const currentUser = document.body.dataset.currentUser || '';
 
     const journalList = document.getElementById('journalList');
+    const journalSearchBar = document.getElementById('journalSearchBar');
+    const journalSearchToggle = document.getElementById('journalSearchToggle');
     const journalSearchInput = document.getElementById('journalSearchInput');
     const journalDetail = document.getElementById('journalDetail');
     const journalDetailEmpty = document.getElementById('journalDetailEmpty');
@@ -113,6 +140,27 @@
     const journalEntryField = document.getElementById('journalEntryField');
     const journalSaveBtn = document.getElementById('journalSaveBtn');
     const journalSaveStatus = document.getElementById('journalSaveStatus');
+
+    const triggerThemeRaw = JSON.parse(document.getElementById('triggerThemeData')?.textContent || '[]');
+    const triggerThemeById = (Array.isArray(triggerThemeRaw) ? triggerThemeRaw : []).reduce((acc, trigger) => {
+      if (!trigger || !trigger.id) {
+        return acc;
+      }
+      acc[trigger.id] = {
+        id: trigger.id,
+        label: trigger.label,
+        cardBg: trigger.card_bg,
+        cardIcon: trigger.card_icon,
+      };
+      return acc;
+    }, {});
+    const triggerIconSvgById = {
+      tone_difference: `{% include 'trigger_icons/tone_difference.svg' %}`,
+      elevation: `{% include 'trigger_icons/elevation.svg' %}`,
+      unclear_intent: `{% include 'trigger_icons/unclear_intent.svg' %}`,
+      excellent_tone: `{% include 'trigger_icons/excellent_tone.svg' %}`,
+      need_for_clarification: `{% include 'trigger_icons/need_for_clarification.svg' %}`,
+    };
 
     let journalingItemsState = [];
     let selectedItemId = '';
@@ -153,6 +201,44 @@
       });
     }
 
+    function getJournalTriggerId(item) {
+      const haystack = [
+        item?.title || '',
+        item?.tree_type || '',
+        item?.display_name || '',
+      ].join(' ').trim().toLowerCase().replace(/[_-]+/g, ' ');
+
+      if (haystack.includes('participant unclear concern') || haystack.includes('participant unclear feedback') || haystack.includes('need for clarification') || haystack.includes('clarification')) {
+        return 'need_for_clarification';
+      }
+
+      if (haystack.includes('unclear feedback') || haystack.includes('unclear concern') || haystack.includes('unclear intent')) {
+        return 'unclear_intent';
+      }
+
+      if (haystack.includes('good feedback') || haystack.includes('good concern') || haystack.includes('good excitement') || haystack.includes('excellent tone')) {
+        return 'excellent_tone';
+      }
+
+      if (haystack.includes('incoherent intensity') || haystack.includes('elevation')) {
+        return 'elevation';
+      }
+
+      if (haystack.includes('incoherent tone') || haystack.includes('tone difference')) {
+        return 'tone_difference';
+      }
+
+      return 'tone_difference';
+    }
+
+    function getJournalTheme(item) {
+      const triggerId = getJournalTriggerId(item);
+      return {
+        triggerId,
+        theme: triggerThemeById[triggerId] || { cardBg: '#e2e8f0', cardIcon: '#64748b' },
+      };
+    }
+
     function renderList() {
       const filtered = getFilteredItems();
       if (!filtered.length) {
@@ -164,12 +250,21 @@
         return;
       }
 
-      journalList.innerHTML = filtered.map((item) => `
-        <button class="journal-item" type="button" data-item-id="${escapeHtml(item.item_id)}">
-          <p class="journal-item-title">${escapeHtml(item.title || 'Journaling node')}</p>
-          <p class="journal-item-subtitle">${escapeHtml(item.display_name || item.session_name || '')}</p>
+      journalList.innerHTML = filtered.map((item) => {
+        const { triggerId, theme } = getJournalTheme(item);
+        const iconMarkup = triggerIconSvgById[triggerId] || '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.35"></circle></svg>';
+        return `
+        <button class="journal-item" type="button" data-item-id="${escapeHtml(item.item_id)}" style="--journal-bg:${escapeHtml(theme.cardBg)}; --journal-icon:${escapeHtml(theme.cardIcon)};">
+          <div class="journal-item-row">
+            <span class="journal-item-icon" aria-hidden="true">${iconMarkup}</span>
+            <div class="journal-item-copy">
+              <p class="journal-item-title">${escapeHtml(item.title || 'Journaling node')}</p>
+              <p class="journal-item-subtitle">${escapeHtml(item.display_name || item.session_name || '')}</p>
+            </div>
+          </div>
         </button>
-      `).join('');
+      `;
+      }).join('');
 
       journalList.querySelectorAll('.journal-item').forEach((item) => {
         item.addEventListener('click', () => {
@@ -281,6 +376,17 @@
 
     journalSearchInput.addEventListener('input', () => {
       renderList();
+    });
+
+    journalSearchToggle?.addEventListener('click', () => {
+      const nextHidden = !journalSearchBar.hidden;
+      journalSearchBar.hidden = nextHidden;
+      if (nextHidden) {
+        journalSearchInput.value = '';
+        renderList();
+        return;
+      }
+      journalSearchInput.focus();
     });
 
     loadJournalingItems().catch((error) => {

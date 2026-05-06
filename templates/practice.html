@@ -262,12 +262,31 @@
     }
 
     function getPracticeTriggerId(reflection) {
-      const title = String(reflection?.title || '').trim().toLowerCase();
-      if (title.includes('tone difference')) return 'tone_difference';
-      if (title.includes('elevation')) return 'elevation';
-      if (title.includes('unclear intent')) return 'unclear_intent';
-      if (title.includes('excellent tone')) return 'excellent_tone';
-      if (title.includes('clarification')) return 'need_for_clarification';
+      const haystack = [
+        reflection?.title || '',
+        reflection?.tree_type || '',
+        reflection?.reflectionType || '',
+      ].join(' ').trim().toLowerCase().replace(/[_-]+/g, ' ');
+
+      if (haystack.includes('participant unclear concern') || haystack.includes('participant unclear feedback') || haystack.includes('need for clarification') || haystack.includes('clarification')) {
+        return 'need_for_clarification';
+      }
+
+      if (haystack.includes('unclear feedback') || haystack.includes('unclear concern') || haystack.includes('unclear intent')) {
+        return 'unclear_intent';
+      }
+
+      if (haystack.includes('good feedback') || haystack.includes('good concern') || haystack.includes('good excitement') || haystack.includes('excellent tone')) {
+        return 'excellent_tone';
+      }
+
+      if (haystack.includes('incoherent intensity') || haystack.includes('elevation')) {
+        return 'elevation';
+      }
+
+      if (haystack.includes('incoherent tone') || haystack.includes('tone difference')) {
+        return 'tone_difference';
+      }
 
       const type = String(reflection?.type || '').trim().toLowerCase();
       if (type === 'arousal') return 'elevation';
