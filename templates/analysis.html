@@ -160,6 +160,16 @@
       return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
+    function formatCardTitle(value) {
+      return String(value || '')
+        .replace(/_/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+
     function ordinal(n) {
       const s = ['th','st','nd','rd'], v = n % 100;
       return n + (s[(v-20)%10]||s[v]||s[0]);
@@ -225,7 +235,7 @@
                   <span class="ref-card-date">${escapeHtml(formatCardDate(s.uploadedAt))}</span>
                   ${badge}
                 </div>
-                <div class="ref-card-name">${escapeHtml(s.displayName || s.sessionName)}</div>
+                <div class="ref-card-name">${escapeHtml(formatCardTitle(s.displayName || s.sessionName))}</div>
                 <div class="ref-card-meta">
                   <span class="ref-card-meta-row">
                     <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"/></svg>
@@ -301,7 +311,7 @@
                 <span class="ref-card-date">In progress</span>
                 <span class="ref-card-badge-proc" id="procBadge">${escapeHtml(phaseLbl(phase))}</span>
               </div>
-              <div class="ref-card-name">${escapeHtml(meetingName || 'Meeting')}</div>
+              <div class="ref-card-name">${escapeHtml(formatCardTitle(meetingName || 'Meeting'))}</div>
               <div class="ref-proc-bar-wrap"><div class="ref-proc-bar" id="procBar" style="width:${pct || 0}%"></div></div>
               <div class="ref-proc-log" id="procLog">${escapeHtml(msg || '')}</div>
             </article>
