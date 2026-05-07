@@ -22,13 +22,13 @@
     .mw-widget {
       display: inline-flex;
       flex-direction: column;
-      gap: 8px;
+      gap: var(--sp-3);
       background: rgba(226, 232, 240, 0.94);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border-radius: 8px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
-      padding: 10px 14px 10px 10px;
+      padding: var(--sp-4) var(--sp-6) var(--sp-4) var(--sp-4);
       user-select: none;
     }
     .mw-widget.is-fixed {
@@ -38,13 +38,13 @@
     .mw-top-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--sp-3);
     }
     .mw-logo {
       width: 52px;
       height: 52px;
       flex-shrink: 0;
-      margin-right: 4px;
+      margin-right: var(--sp-1);
       object-fit: contain;
     }
     /* ── Large dark button (Start Meeting) ───────────────────────── */
@@ -77,26 +77,26 @@
     /* Homepage-only: keep widget attached look but show icon inline with text. */
     .mw-widget:not(.is-fixed) .mw-btn {
       flex-direction: row;
-      gap: 8px;
+      gap: var(--sp-3);
       width: auto;
       min-width: 148px;
       height: 48px;
-      padding: 0 14px;
+      padding: 0 var(--sp-6);
     }
     .mw-widget:not(.is-fixed) .mw-seg-btn {
       flex-direction: row;
-      gap: 8px;
+      gap: var(--sp-3);
       width: auto;
       min-width: 106px;
       height: 48px;
-      padding: 0 14px;
+      padding: 0 var(--sp-6);
     }
     /* ── Segmented toggles (shared) ──────────────────────────────── */
     .mw-seg-wrap {
       display: flex;
       background: rgba(0,0,0,0.07);
       border-radius: 4px;
-      padding: 4px;
+      padding: var(--sp-1);
       gap: 2px;
       align-items: center;
     }
@@ -105,7 +105,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: var(--sp-2);
       width: 68px;
       height: 72px;
       background: var(--control-bg);
@@ -121,7 +121,7 @@
     .mw-seg-btn--view {
       width: auto;
       min-width: 90px;
-      padding: 0 6px;
+      padding: 0 var(--sp-2);
     }
     .mw-seg-btn--transcript {
       min-width: 90px;
@@ -138,9 +138,9 @@
     }
     /* ── Drag handle ─────────────────────────────────────────────── */
     .mw-drag-handle {
-      margin-left: 4px;
+      margin-left: var(--sp-1);
       cursor: grab;
-      padding: 6px 4px;
+      padding: var(--sp-2) var(--sp-1);
       display: flex;
       align-items: center;
       color: #6b7280;
@@ -159,7 +159,7 @@
       overflow-y: auto;
       background: #fff;
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: var(--sp-4) var(--sp-5);
       font-size: 13px;
       line-height: 1.55;
       color: #1c1b1f;
@@ -191,15 +191,15 @@
       margin-left: var(--mw-content-offset, 0px);
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--sp-3);
       background: #ffe53a;
       border-radius: 8px;
-      padding: 10px 14px;
+      padding: var(--sp-4) var(--sp-6);
       font-size: 13px;
       font-weight: 600;
       color: #1f503b;
       box-sizing: border-box;
-      margin-top: 4px;
+      margin-top: var(--sp-1);
     }
     .mw-elevation-card svg {
       width: 18px;
@@ -212,16 +212,16 @@
       position: fixed; inset: 0; z-index: 9999;
       background: rgba(15,23,42,0.45);
       display: flex; align-items: center; justify-content: center;
-      padding: 24px;
+      padding: var(--sp-9);
     }
     .mw-modal-backdrop.mw-hidden { display: none; }
     .mw-modal {
       width: min(400px, 100%);
       background: #fff;
       border-radius: 8px;
-      padding: 24px;
+      padding: var(--sp-9);
       box-shadow: 0 20px 60px rgba(15,23,42,0.22);
-      display: flex; flex-direction: column; gap: 16px;
+      display: flex; flex-direction: column; gap: var(--sp-7);
     }
     .mw-modal-title {
       font-size: 17px; font-weight: 700; margin: 0;
@@ -229,12 +229,12 @@
     .mw-modal-input {
       width: 100%; box-sizing: border-box;
       border: 1.5px solid #e2e8f0; border-radius: 4px;
-      padding: 10px 12px; font: inherit; font-size: 14px;
+      padding: var(--sp-4) var(--sp-5); font: inherit; font-size: 14px;
       outline: none; transition: border-color 0.15s;
     }
     .mw-modal-input:focus { border-color: #1c1b1f; }
     .mw-modal-actions {
-      display: flex; gap: 8px; justify-content: flex-end;
+      display: flex; gap: var(--sp-3); justify-content: flex-end;
     }
     .mw-modal-cancel {
       border: 1px solid var(--control-border-color);
@@ -265,7 +265,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: var(--sp-3);
       width: var(--mw-content-width, 340px);
       margin-left: var(--mw-content-offset, 0px);
       padding: 0;
@@ -294,7 +294,7 @@
       color: var(--control-active-fg);
       border: 1px solid var(--control-border-color);
       border-radius: var(--control-radius);
-      padding: var(--control-pad-y) calc(var(--control-pad-x) + 6px);
+      padding: var(--control-pad-y) calc(var(--control-pad-x) + var(--sp-2));
       font-size: var(--control-font-size);
       font-weight: var(--control-font-weight);
       font-family: var(--control-font-family);
@@ -322,26 +322,26 @@
       box-shadow: 0 8px 32px rgba(0,0,0,.18);
     }
     .mw-confirm-title {
-      margin: 0 0 8px;
+      margin: 0 0 var(--sp-3);
       font-size: var(--fs-h4);
       font-weight: var(--fw-semibold);
       color: #111;
       font-family: var(--font-heading);
     }
     .mw-confirm-sub {
-      margin: 0 0 24px;
+      margin: 0 0 var(--sp-9);
       font-size: var(--fs-body);
       color: #555;
       font-family: var(--font-mono);
     }
     .mw-confirm-actions {
       display: flex;
-      gap: 12px;
+      gap: var(--sp-5);
       justify-content: center;
     }
     .mw-confirm-discard,
     .mw-confirm-save {
-      padding: var(--control-pad-y) calc(var(--control-pad-x) + 6px);
+      padding: var(--control-pad-y) calc(var(--control-pad-x) + var(--sp-2));
       border-radius: var(--control-radius);
       font-size: var(--control-font-size);
       font-family: var(--control-font-family);

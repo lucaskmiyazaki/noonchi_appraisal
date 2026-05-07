@@ -11,24 +11,24 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: var(--sp-9);
       background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
     }
     .login-card {
       width: min(420px, 100%);
-      padding: 32px;
+      padding: var(--sp-10);
       border-radius: 18px;
       background: #fff;
       box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
     }
     .login-title {
-      margin: 0 0 8px;
+      margin: 0 0 var(--sp-3);
       font-size: var(--fs-h1);
       font-weight: var(--fw-medium);
       line-height: 1.1;
     }
     .login-copy {
-      margin: 0 0 24px;
+      margin: 0 0 var(--sp-9);
       color: #6b7280;
       font-size: var(--fs-body);
       line-height: 1.5;
@@ -36,7 +36,7 @@
     }
     .login-label {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: var(--sp-3);
       font-size: var(--fs-label);
       font-weight: var(--fw-semibold);
       color: #111827;
@@ -44,18 +44,18 @@
     }
     .login-row {
       display: flex;
-      gap: 12px;
+      gap: var(--sp-5);
     }
     .login-input {
       flex: 1;
-      padding: 12px 14px;
+      padding: var(--sp-5) var(--sp-6);
       border: 1px solid #d1d5db;
       border-radius: 12px;
       font-size: var(--fs-body);
       font-family: var(--font-mono);
     }
     .login-button {
-      padding: 12px 16px;
+      padding: var(--sp-5) var(--sp-7);
       border: 0;
       border-radius: 12px;
       background: #111827;

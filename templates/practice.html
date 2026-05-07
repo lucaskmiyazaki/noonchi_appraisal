@@ -13,63 +13,63 @@
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
-    .practice-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
+    .practice-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--sp-7); height: 100vh; width: 100vw; padding: var(--sp-7); }
 
-    .practice-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: calc(100vh - 32px); background: var(--panel-bg); border: 1px solid var(--border-soft); border-radius: var(--card-radius); overflow: hidden; }
-    .practice-main { grid-column: 3; background: transparent; padding: 24px; min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
+    .practice-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: calc(100vh - var(--sp-10)); background: var(--panel-bg); border: 1px solid var(--border-soft); border-radius: var(--card-radius); overflow: hidden; }
+    .practice-main { grid-column: 3; background: transparent; padding: var(--sp-9); min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
     .practice-sidebar { grid-column: 1 / span 2; min-width: 0; overflow: hidden; }
-    .practice-sidebar-panel { height: 100%; background: transparent; padding: 24px 0 24px 24px; overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
+    .practice-sidebar-panel { height: 100%; background: transparent; padding: var(--sp-9) 0 var(--sp-9) var(--sp-9); overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
     .practice-detail { padding: 0; border-radius: 0; background: transparent; border: 0; }
     .practice-detail[hidden] { display: none; }
     .practice-detail-title { margin: 0; font-size: var(--fs-h2); font-weight: var(--fw-medium); line-height: 1.2; color: var(--text-dark); }
-    .practice-detail-section-title { margin: 16px 0 8px; font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: var(--fw-bold); font-family: var(--font-mono); }
-    .practice-detail-copy { margin: 8px 0 0; font-size: var(--fs-body); line-height: 1.65; color: #374151; white-space: pre-wrap; font-family: var(--font-mono); }
-    .practice-detail-audio { width: 100%; margin-top: 12px; }
-    .practice-detail-instruction { margin: 16px 0 0; font-size: var(--fs-body); line-height: 1.6; color: #4b5563; font-family: var(--font-mono); }
-    .practice-ai-list { margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
-    .practice-ai-item { padding: 12px 14px; border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
+    .practice-detail-section-title { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: var(--fw-bold); font-family: var(--font-mono); }
+    .practice-detail-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: #374151; white-space: pre-wrap; font-family: var(--font-mono); }
+    .practice-detail-audio { width: 100%; margin-top: var(--sp-5); }
+    .practice-detail-instruction { margin: var(--sp-7) 0 0; font-size: var(--fs-body); line-height: 1.6; color: #4b5563; font-family: var(--font-mono); }
+    .practice-ai-list { margin-top: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-5); }
+    .practice-ai-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
     .practice-ai-item-title { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: #334155; font-family: var(--font-mono); }
-    .practice-ai-item-copy { margin: 6px 0 0; font-size: var(--fs-body); line-height: 1.5; color: #475569; white-space: pre-wrap; font-family: var(--font-mono); }
-    .practice-recordings { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
-    .practice-recording-item { padding: 12px 14px; border-radius: var(--card-radius); background: #f8fafc; border: 1px solid var(--border-soft); }
-    .practice-recording-label { margin: 0 0 8px; font-size: var(--fs-label); font-weight: var(--fw-medium); color: #475569; font-family: var(--font-mono); }
-    .practice-recording-empty { margin: 0; padding: 12px 14px; border-radius: var(--card-radius); background: #f8fafc; border: 1px dashed rgba(148, 163, 184, 0.5); color: #64748b; font-size: var(--fs-body); font-family: var(--font-mono); }
+    .practice-ai-item-copy { margin: var(--sp-2) 0 0; font-size: var(--fs-body); line-height: 1.5; color: #475569; white-space: pre-wrap; font-family: var(--font-mono); }
+    .practice-recordings { margin-top: var(--sp-7); display: flex; flex-direction: column; gap: var(--sp-5); }
+    .practice-recording-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); background: #f8fafc; border: 1px solid var(--border-soft); }
+    .practice-recording-label { margin: 0 0 var(--sp-3); font-size: var(--fs-label); font-weight: var(--fw-medium); color: #475569; font-family: var(--font-mono); }
+    .practice-recording-empty { margin: 0; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); background: #f8fafc; border: 1px dashed rgba(148, 163, 184, 0.5); color: #64748b; font-size: var(--fs-body); font-family: var(--font-mono); }
     .practice-record-button { margin-top: 16px; display: inline-flex; align-items: center; justify-content: center; min-width: 168px; min-height: var(--control-height); padding: var(--control-pad-y) var(--control-pad-x); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-active-bg); color: var(--control-active-fg); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; transition: background 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease; }
     .practice-record-button:hover { background: #2a2930; box-shadow: var(--control-active-shadow); }
     .practice-record-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .practice-record-status { margin: 12px 0 0; min-height: 20px; font-size: var(--fs-body); color: #64748b; font-family: var(--font-mono); }
+    .practice-record-status { margin: var(--sp-5) 0 0; min-height: 20px; font-size: var(--fs-body); color: #64748b; font-family: var(--font-mono); }
     .practice-record-status.is-recording { color: #b91c1c; }
     .practice-detail-empty { padding: 0; border-radius: 0; background: transparent; border: 0; color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
-    .practice-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-right: 24px; margin-bottom: 16px; }
+    .practice-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-right: var(--sp-9); margin-bottom: var(--sp-7); }
     .practice-sidebar-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: var(--text-dark); letter-spacing: -0.02em; }
-    .practice-search-btn { width: 34px; height: 34px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-    .practice-search-btn:hover { background: rgba(15, 23, 42, 0.06); color: var(--text-dark); }
+    .practice-search-btn { width: var(--control-height); height: var(--control-height); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-bg); color: var(--control-fg); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease; }
+    .practice-search-btn:hover { background: var(--control-hover-bg); color: var(--control-fg); }
     .practice-search-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .session-search-bar { background: #fff; border: 1px solid var(--border-soft); border-radius: var(--card-radius); padding: 10px 12px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); margin: 0 24px 16px 0; }
+    .session-search-bar { background: #fff; border: 1px solid var(--border-soft); border-radius: var(--card-radius); padding: var(--sp-4) var(--sp-5); display: flex; align-items: center; gap: var(--sp-3); color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); margin: 0 var(--sp-9) var(--sp-7) 0; }
     .session-search-bar[hidden] { display: none; }
     .session-search-input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; color: var(--text-dark); font-family: var(--font-mono); }
-    .practice-filters { display: flex; align-items: center; gap: 8px; margin: 0 24px 16px 0; }
-    .practice-filter-btn { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-height); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-bg); color: var(--control-fg); padding: var(--control-pad-y) var(--control-pad-x); font-family: var(--control-font-family); font-size: var(--control-font-size); font-weight: var(--control-font-weight); cursor: pointer; transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease; }
+    .practice-filters { display: flex; align-items: center; gap: var(--sp-3); margin: 0 var(--sp-9) var(--sp-7) 0; }
+    .practice-filter-btn { display: inline-flex; align-items: center; gap: var(--sp-3); min-height: var(--control-height); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-bg); color: var(--control-fg); padding: var(--control-pad-y) var(--control-pad-x); font-family: var(--control-font-family); font-size: var(--control-font-size); font-weight: var(--control-font-weight); cursor: pointer; transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease; }
     .practice-filter-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .practice-filter-btn.is-active { background: var(--control-active-bg); color: var(--control-active-fg); box-shadow: var(--control-active-shadow); }
-    .practice-list-divider { margin: 0 24px 16px 0; border-top: 1px solid var(--border-soft); }
-    .practice-list { display: flex; flex-direction: column; gap: 12px; }
-    .practice-item { position: relative; z-index: 1; margin-right: 24px; display: block; padding: 14px 16px; border-radius: var(--card-radius); background: var(--practice-bg, #fff); border: 1px solid transparent; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
+    .practice-list-divider { margin: 0 var(--sp-9) var(--sp-7) 0; border-top: 1px solid var(--border-soft); }
+    .practice-list { display: flex; flex-direction: column; gap: var(--sp-5); }
+    .practice-item { position: relative; z-index: 1; margin-right: var(--sp-9); display: block; padding: var(--sp-6) var(--sp-7); border-radius: var(--card-radius); background: var(--practice-bg, #fff); border: 1px solid transparent; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
     .practice-item:hover { transform: translateY(-1px); }
     .practice-item.is-selected { z-index: 2; margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-    .practice-item-row { display: flex; align-items: center; gap: 12px; }
+    .practice-item-row { display: flex; align-items: center; gap: var(--sp-5); }
     .practice-item-icon { width: 26px; height: 26px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; color: var(--practice-icon, #1c1b1f); }
     .practice-item-icon svg { width: 24px; height: 24px; display: block; }
     .practice-item-title { font-size: var(--fs-h3); font-weight: var(--fw-medium); color: var(--text-dark); font-family: var(--font-heading); flex: 1; text-align: left; }
     .practice-item-checkbox { width: 22px; height: 22px; flex: 0 0 auto; border-radius: var(--radius-full); border: 1px solid #94a3b8; background: rgba(255,255,255,0.8); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: 1; color: transparent; font-family: var(--font-mono); }
     .practice-item-checkbox.is-done { border-color: #059669; background: #d1fae5; color: #065f46; }
-    .practice-empty { padding: 16px; border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
+    .practice-empty { padding: var(--sp-7); border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
 
     .voice-gen-notice {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 16px; border-radius: 10px;
+      display: flex; align-items: center; gap: var(--sp-4);
+      padding: var(--sp-4) var(--sp-7); border-radius: 10px;
       background: #fef9ec; border: 1px solid #fcd34d; color: #92400e;
-      font-size: var(--fs-body); font-family: var(--font-mono); margin-top: 16px;
+      font-size: var(--fs-body); font-family: var(--font-mono); margin-top: var(--sp-7);
     }
     .voice-gen-notice[hidden] { display: none; }
     .voice-gen-spinner {

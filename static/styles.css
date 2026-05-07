@@ -50,14 +50,36 @@
   --type-button-family: var(--font-mono);
   --type-button-size: var(--fs-body);
   --type-button-weight: var(--fw-semibold);
+  /* Spacing scale — 4 px grid
+   * --sp-1  =  4px  tight: icon gaps, inline element spacing
+   * --sp-2  =  6px  compact: chip/badge gaps, label margins
+   * --sp-3  =  8px  base: standard component gap
+   * --sp-4  = 10px  inner: field padding, dense card gaps
+   * --sp-5  = 12px  card: card inner padding, form fields
+   * --sp-6  = 14px  control: button/tab horizontal padding
+   * --sp-7  = 16px  section: page inset, grid padding
+   * --sp-8  = 20px  panel: topbar / sidebar padding
+   * --sp-9  = 24px  modal: large panel & modal padding
+   * --sp-10 = 32px  layout: large layout gaps
+   */
+  --sp-1:   4px;
+  --sp-2:   6px;
+  --sp-3:   8px;
+  --sp-4:  10px;
+  --sp-5:  12px;
+  --sp-6:  14px;
+  --sp-7:  16px;
+  --sp-8:  20px;
+  --sp-9:  24px;
+  --sp-10: 32px;
   /* Unified controls standard (tabs + buttons) */
   --control-font-family: var(--font-mono);
   --control-font-size: var(--fs-body);
   --control-font-weight: var(--fw-semibold);
   --control-radius: var(--card-radius);
   --control-height: 40px;
-  --control-pad-y: 8px;
-  --control-pad-x: 14px;
+  --control-pad-y: var(--sp-3);
+  --control-pad-x: var(--sp-6);
   --control-border-color: transparent;
   --control-bg: #e8edf3;
   --control-fg: #1c1b1f;
@@ -94,7 +116,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-3);
   min-height: var(--control-height);
   padding: var(--control-pad-y) var(--control-pad-x);
   border: 1px solid var(--control-border-color);
@@ -123,14 +145,14 @@ body {
 
 #tab-bar {
   position: fixed;
-  top: 16px;
-  left: 16px;
-  right: 16px;
+  top: var(--sp-7);
+  left: var(--sp-7);
+  right: var(--sp-7);
   z-index: 25;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-6);
   background: rgba(255, 255, 255, 0.95);
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -138,7 +160,7 @@ body {
 
 #tabs {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-2);
   flex: 1;
   overflow-x: auto;
 }
@@ -146,11 +168,11 @@ body {
 .tab-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .tab-button {
-  padding: 7px 14px;
+  padding: 7px var(--sp-6);
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #f9fafb;
@@ -202,7 +224,7 @@ body {
   color: #6b7280;
   border: 1px dashed #d1d5db;
   border-radius: 8px;
-  padding: 7px 12px;
+  padding: 7px var(--sp-5);
   font-size: var(--fs-body-sm);
   font-weight: var(--fw-semibold);
   font-family: var(--font-mono);
@@ -214,11 +236,11 @@ body {
 #toolbar {
   position: fixed;
   top: 76px;
-  left: 16px;
+  left: var(--sp-7);
   z-index: 20;
   display: flex;
   align-items: center;
-  padding: 12px 14px;
+  padding: var(--sp-5) var(--sp-6);
   background: rgba(255, 255, 255, 0.95);
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -227,7 +249,7 @@ body {
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-4);
 }
 
 .toolbar-actions[hidden] {
@@ -247,7 +269,7 @@ body {
 .reflection-meta-item {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 3px; /* intentionally tight — optical label stack */
   min-width: 120px;
 }
 
@@ -297,7 +319,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: var(--sp-5) var(--sp-6);
   color: #fff;
   font-weight: var(--fw-bold);
   cursor: grab;
@@ -311,7 +333,7 @@ body {
 }
 
 .node-body {
-  padding: 14px;
+  padding: var(--sp-6);
   background: #fff;
   border-bottom-left-radius: 18px;
   border-bottom-right-radius: 18px;
@@ -364,12 +386,12 @@ body {
 }
 
 .field {
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-5);
 }
 
 .field label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-2);
   font-size: var(--fs-label);
   font-weight: var(--fw-bold);
   color: #374151;
@@ -391,8 +413,8 @@ body {
   display: grid;
   grid-template-columns: 20px 1fr 44px;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-3);
 }
 
 .slider-row span {
@@ -413,8 +435,8 @@ body {
 .emotion-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
+  gap: var(--sp-2);
+  margin-top: 2px; /* micro optical offset */
 }
 
 .emotion-chip {
@@ -468,12 +490,12 @@ input[type="range"] {
 .button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
 }
 
 button {
-  padding: 10px 12px;
+  padding: var(--sp-4) var(--sp-5);
   font-size: var(--type-button-size);
   font-weight: var(--type-button-weight);
   font-family: var(--type-button-family);
@@ -523,7 +545,7 @@ button:disabled {
 }
 
 .small-tag {
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-3);
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
   color: rgba(255, 255, 255, 0.9);
@@ -637,18 +659,18 @@ button:disabled {
 }
 
 .transcript-sidebar-header {
-  padding: 16px;
+  padding: var(--sp-7);
   border-bottom: 1px solid #e5e7eb;
   background: rgba(255, 255, 255, 0.96);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-4);
 }
 
 .transcript-sidebar-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-3);
 }
 
 .transcript-sidebar-title {
@@ -678,7 +700,7 @@ button:disabled {
 .session-name-input {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .session-name-input label {
@@ -688,7 +710,7 @@ button:disabled {
 }
 
 .session-name-input input {
-  padding: 6px 8px;
+  padding: var(--sp-2) var(--sp-3);
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: var(--fs-body);
@@ -697,7 +719,7 @@ button:disabled {
 
 .transcript-sidebar-controls {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-3);
 }
 
 .transcript-control-btn {
@@ -741,7 +763,7 @@ button:disabled {
 }
 
 .pipeline-progress-bar-wrap {
-  margin-top: 8px;
+  margin-top: var(--sp-3);
   height: 10px;
   background: #e5e7eb;
   border-radius: 3px;
@@ -756,7 +778,7 @@ button:disabled {
 }
 
 .pipeline-log {
-  margin-top: 6px;
+  margin-top: var(--sp-2);
   max-height: 140px;
   overflow-y: auto;
   font-size: var(--fs-xs);
@@ -768,11 +790,11 @@ button:disabled {
 }
 
 .session-list {
-  padding: 12px;
+  padding: var(--sp-5);
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-3);
   max-height: 220px;
   overflow-y: auto;
   background: #f8fafc;
@@ -788,7 +810,7 @@ button:disabled {
   border-radius: 12px;
   background: #fff;
   color: #6b7280;
-  padding: 12px;
+  padding: var(--sp-5);
   font-size: var(--fs-body-sm);
   font-family: var(--font-mono);
 }
@@ -798,10 +820,10 @@ button:disabled {
   border: 1px solid #d1d5db;
   border-radius: 12px;
   background: #fff;
-  padding: 8px;
+  padding: var(--sp-3);
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--sp-3);
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -867,7 +889,7 @@ button:disabled {
 
 .session-item-meta {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--sp-1);
   font-size: var(--fs-label);
   line-height: 1.4;
   color: #6b7280;
@@ -877,10 +899,10 @@ button:disabled {
 .transcript-list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-4);
 }
 
 .transcript-empty {
@@ -888,7 +910,7 @@ button:disabled {
   border-radius: 12px;
   background: #fff;
   color: #6b7280;
-  padding: 14px;
+  padding: var(--sp-6);
   font-size: var(--fs-body);
   font-family: var(--font-mono);
 }
@@ -897,7 +919,7 @@ button:disabled {
   border: 1px solid #d1d5db;
   background: #fff;
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: var(--sp-4) var(--sp-5);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
@@ -926,8 +948,8 @@ button:disabled {
 .transcript-meta {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 6px;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-2);
   font-size: var(--fs-label);
   color: #6b7280;
   font-family: var(--font-mono);
@@ -962,10 +984,10 @@ button:disabled {
 .fb-strip {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
   background: #18181f;
   border-radius: 18px;
-  padding: 6px;
+  padding: var(--sp-2);
   pointer-events: auto;
   box-shadow: 0 8px 32px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.16);
 }
@@ -992,9 +1014,9 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 5px; /* intentionally tight for dark bar icon/label */
   min-width: 84px;
-  padding: 10px 14px;
+  padding: var(--sp-4) var(--sp-6);
   border: none;
   border-radius: 13px;
   background: transparent;
@@ -1035,8 +1057,8 @@ button:disabled {
   flex-shrink: 0;
   color: rgba(255,255,255,0.25);
   cursor: grab;
-  margin-left: 4px;
-  margin-right: 2px;
+  margin-left: var(--sp-1);
+  margin-right: 2px; /* asymmetric optical balance */
 }
 
 .fb-drag:active {
@@ -1054,7 +1076,7 @@ button:disabled {
 .fb-timer {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   color: #374151;
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
