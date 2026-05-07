@@ -74,6 +74,23 @@
       stroke: currentColor; fill: none;
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
+    /* Homepage-only: keep widget attached look but show icon inline with text. */
+    .mw-widget:not(.is-fixed) .mw-btn {
+      flex-direction: row;
+      gap: 8px;
+      width: auto;
+      min-width: 148px;
+      height: 48px;
+      padding: 0 14px;
+    }
+    .mw-widget:not(.is-fixed) .mw-seg-btn {
+      flex-direction: row;
+      gap: 8px;
+      width: auto;
+      min-width: 106px;
+      height: 48px;
+      padding: 0 14px;
+    }
     /* ── Segmented toggles (shared) ──────────────────────────────── */
     .mw-seg-wrap {
       display: flex;
