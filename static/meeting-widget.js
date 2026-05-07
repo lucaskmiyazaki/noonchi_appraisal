@@ -56,18 +56,19 @@
       gap: 7px;
       width: 82px;
       height: 72px;
-      background: #1c1b1f;
-      color: #fff;
-      border: 0;
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      font-family: 'Source Code Pro', monospace;
+      background: var(--control-active-bg);
+      color: var(--control-active-fg);
+      border: 1px solid var(--control-border-color);
+      border-radius: var(--control-radius);
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      font-family: var(--control-font-family);
       cursor: pointer;
       flex-shrink: 0;
-      transition: opacity 0.14s;
+      box-shadow: var(--control-active-shadow);
+      transition: background 0.12s ease, box-shadow 0.12s ease;
     }
-    .mw-btn:hover { opacity: 0.82; }
+    .mw-btn:hover { background: #2a2930; }
     .mw-btn svg {
       width: 22px; height: 22px;
       stroke: currentColor; fill: none;
@@ -90,15 +91,15 @@
       gap: 6px;
       width: 68px;
       height: 72px;
-      background: transparent;
-      color: #374151;
-      border: 0;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      font-family: 'Source Code Pro', monospace;
+      background: var(--control-bg);
+      color: var(--control-fg);
+      border: 1px solid var(--control-border-color);
+      border-radius: var(--control-radius);
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      font-family: var(--control-font-family);
       cursor: pointer;
-      transition: background 0.15s, color 0.15s;
+      transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
     }
     .mw-seg-btn--view {
       width: auto;
@@ -114,10 +115,9 @@
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
     .mw-seg-btn.is-active {
-      background: #1c1b1f;
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-      border-radius: 4px;
+      background: var(--control-active-bg);
+      color: var(--control-active-fg);
+      box-shadow: var(--control-active-shadow);
     }
     /* ── Drag handle ─────────────────────────────────────────────── */
     .mw-drag-handle {
@@ -220,16 +220,27 @@
       display: flex; gap: 8px; justify-content: flex-end;
     }
     .mw-modal-cancel {
-      border: 1px solid #e2e8f0; border-radius: 4px;
-      background: #fff; color: #6b7280;
-      padding: 8px 16px; font: inherit; font-size: 13px;
-      font-weight: 500; cursor: pointer;
+      border: 1px solid var(--control-border-color);
+      border-radius: var(--control-radius);
+      background: var(--control-bg);
+      color: var(--control-fg);
+      padding: var(--control-pad-y) var(--control-pad-x);
+      font-family: var(--control-font-family);
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      cursor: pointer;
     }
     .mw-modal-confirm {
-      border: 0; border-radius: 4px;
-      background: #1c1b1f; color: #fff;
-      padding: 8px 16px; font: inherit; font-size: 13px;
-      font-weight: 600; cursor: pointer;
+      border: 1px solid var(--control-border-color);
+      border-radius: var(--control-radius);
+      background: var(--control-active-bg);
+      color: var(--control-active-fg);
+      padding: var(--control-pad-y) var(--control-pad-x);
+      font-family: var(--control-font-family);
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      cursor: pointer;
+      box-shadow: var(--control-active-shadow);
     }
     .mw-modal-confirm:disabled { opacity: 0.45; cursor: not-allowed; }
     /* ── Recording bar ───────────────────────────────────────────── */
@@ -255,25 +266,84 @@
       50%       { opacity: 0.35; }
     }
     .mw-rec-time {
-      font-size: 13px;
-      font-weight: 600;
-      font-family: 'Source Code Pro', monospace;
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      font-family: var(--control-font-family);
       color: #1c1b1f;
       min-width: 68px;
     }
     .mw-stop-btn {
-      background: #ef4444;
-      color: #fff;
-      border: 0;
-      border-radius: 4px;
-      padding: 6px 20px;
-      font-size: 13px;
-      font-weight: 700;
-      font-family: 'Source Code Pro', monospace;
+      background: var(--control-active-bg);
+      color: var(--control-active-fg);
+      border: 1px solid var(--control-border-color);
+      border-radius: var(--control-radius);
+      padding: var(--control-pad-y) calc(var(--control-pad-x) + 6px);
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      font-family: var(--control-font-family);
       cursor: pointer;
-      transition: background 0.14s;
+      box-shadow: var(--control-active-shadow);
+      transition: background 0.12s ease;
     }
-    .mw-stop-btn:hover { background: #dc2626; }
+    .mw-stop-btn:hover { background: #2a2930; }
+    .mw-confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mw-confirm-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 28px 32px;
+      max-width: 340px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    }
+    .mw-confirm-title {
+      margin: 0 0 8px;
+      font-size: var(--fs-h4);
+      font-weight: var(--fw-semibold);
+      color: #111;
+      font-family: var(--font-heading);
+    }
+    .mw-confirm-sub {
+      margin: 0 0 24px;
+      font-size: var(--fs-body);
+      color: #555;
+      font-family: var(--font-mono);
+    }
+    .mw-confirm-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .mw-confirm-discard,
+    .mw-confirm-save {
+      padding: var(--control-pad-y) calc(var(--control-pad-x) + 6px);
+      border-radius: var(--control-radius);
+      font-size: var(--control-font-size);
+      font-family: var(--control-font-family);
+      font-weight: var(--control-font-weight);
+      cursor: pointer;
+      line-height: 1;
+      min-height: var(--control-height);
+    }
+    .mw-confirm-discard {
+      border: 1px solid var(--control-border-color);
+      background: var(--control-bg);
+      color: var(--control-fg);
+    }
+    .mw-confirm-save {
+      border: 1px solid var(--control-border-color);
+      background: var(--control-active-bg);
+      color: var(--control-active-fg);
+      box-shadow: var(--control-active-shadow);
+    }
     .mw-hidden { display: none !important; }
   `;
 
@@ -768,28 +838,28 @@
       if (!chunks.length) return; /* nothing recorded */
 
       const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center';
+      overlay.className = 'mw-confirm-overlay';
 
       const box = document.createElement('div');
-      box.style.cssText = 'background:#fff;border-radius:8px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18)';
+      box.className = 'mw-confirm-box';
 
       const title = document.createElement('p');
-      title.style.cssText = 'margin:0 0 8px;font-size:17px;font-weight:600;color:#111';
+      title.className = 'mw-confirm-title';
       title.textContent = 'Save this meeting?';
 
       const sub = document.createElement('p');
-      sub.style.cssText = 'margin:0 0 24px;font-size:14px;color:#555';
+      sub.className = 'mw-confirm-sub';
       sub.textContent = `"${meetingName}" will be transcribed and analysed.`;
 
       const btnRow = document.createElement('div');
-      btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center';
+      btnRow.className = 'mw-confirm-actions';
 
       const discardBtn = document.createElement('button');
-      discardBtn.style.cssText = 'padding:9px 22px;border-radius:4px;border:1px solid #ddd;background:#f5f5f5;font-size:14px;cursor:pointer;color:#555';
+      discardBtn.className = 'mw-confirm-discard';
       discardBtn.textContent = 'Discard';
 
       const saveBtn = document.createElement('button');
-      saveBtn.style.cssText = 'padding:9px 22px;border-radius:4px;border:none;background:#1c1b1f;color:#fff;font-size:14px;cursor:pointer;font-weight:600';
+      saveBtn.className = 'mw-confirm-save';
       saveBtn.textContent = 'Save & Process';
 
       btnRow.append(discardBtn, saveBtn);

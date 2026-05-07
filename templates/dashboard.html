@@ -25,14 +25,14 @@
     /* Device toggle */
     .dash-device-group { display: flex; align-items: center; gap: 10px; }
     .dash-device-toggle { display: flex; background: rgba(0,0,0,0.08); border-radius: var(--radius-sm); padding: 3px; gap: 0; }
-    .dash-app-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 86px; height: 80px; background: #1c1b1f; color: #fff; border: 0; border-radius: var(--card-radius); font-size: var(--fs-label); font-weight: var(--fw-semibold); font-family: var(--font-mono); cursor: pointer; transition: opacity 0.14s; text-decoration: none; flex-shrink: 0; }
-    .dash-app-btn:hover { opacity: 0.85; }
+    .dash-app-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 86px; height: 80px; background: var(--control-active-bg); color: var(--control-active-fg); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; transition: background 0.12s ease, box-shadow 0.12s ease; text-decoration: none; flex-shrink: 0; box-shadow: var(--control-active-shadow); }
+    .dash-app-btn:hover { background: #2a2930; }
     .dash-app-btn svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-    .dash-app-btn.is-inactive { background: rgba(255,255,255,0.88); color: #1c1b1f; box-shadow: 0 2px 10px rgba(148,163,184,0.18); }
+    .dash-app-btn.is-inactive { background: var(--control-bg); color: var(--control-fg); box-shadow: none; }
     .dash-seg-toggle { display: flex; background: rgba(0,0,0,0.07); border-radius: var(--radius-sm); padding: 4px; gap: 2px; align-items: center; }
-    .dash-seg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 72px; height: 68px; background: transparent; color: #374151; border: 0; border-radius: var(--radius-sm); font-size: var(--fs-xs); font-weight: var(--fw-semibold); font-family: var(--font-mono); cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .dash-seg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 72px; height: 68px; background: var(--control-bg); color: var(--control-fg); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease; }
     .dash-seg-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .dash-seg-btn.is-active { background: #1c1b1f; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.18); border-radius: var(--radius-sm); }
+    .dash-seg-btn.is-active { background: var(--control-active-bg); color: var(--control-active-fg); box-shadow: var(--control-active-shadow); }
     .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; align-items: stretch; }
     .dashboard-card { border-radius: var(--card-radius); background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 24px; display: flex; flex-direction: column; }
     .dashboard-card.is-link { cursor: pointer; transition: transform 0.14s ease, box-shadow 0.14s ease; }
@@ -48,7 +48,7 @@
     /* Meeting Reflections */
     .dashboard-metric { font-size: var(--fs-h1); font-weight: var(--fw-light); line-height: 1; letter-spacing: -0.02em; font-family: var(--font-heading); }
     .dashboard-metric-copy { margin-top: 8px; font-size: var(--fs-body); line-height: 1.4; color: #475569; font-family: var(--font-mono); }
-    .dashboard-secondary-metric { margin-top: 24px; font-size: var(--fs-h3); font-family: var(--font-mono); }
+    .dashboard-secondary-metric { margin-top: 24px; font-size: var(--fs-h1); font-weight: var(--fw-light); line-height: 1; letter-spacing: -0.02em; font-family: var(--font-heading); }
     .dashboard-secondary-copy { margin-top: 6px; font-size: var(--fs-body); color: #64748b; font-family: var(--font-mono); }
 
     /* Upcoming */
@@ -62,13 +62,13 @@
     .dashboard-avatar { width: 24px; height: 24px; border-radius: var(--radius-full); margin-right: -6px; background: linear-gradient(135deg, #fca5a5, #fcd34d); border: 2px solid rgba(255,255,255,0.92); }
     .dashboard-avatar.is-two { background: linear-gradient(135deg, #93c5fd, #c4b5fd); }
     .dashboard-avatars-more { margin-left: 8px; font-size: var(--fs-xs); color: #475569; }
-    .dashboard-pill { border: 0; border-radius: var(--radius-sm); padding: 4px 12px; height: 24px; background: #1c1b1f; color: #f8fafc; font-size: var(--fs-label); font-weight: var(--fw-medium); font-family: var(--font-mono); cursor: pointer; }
+    .dashboard-pill { border: 1px solid var(--control-border-color); border-radius: var(--control-radius); padding: var(--control-pad-y) var(--control-pad-x); min-height: var(--control-height); background: var(--control-active-bg); color: var(--control-active-fg); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; box-shadow: var(--control-active-shadow); }
 
     /* Nudge sentence (read-only) */
     .nudge-sentence-label { font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.07em; text-transform: uppercase; color: #94a3b8; margin: 14px 0 4px; }
     .nudge-sentence-label:first-child { margin-top: 0; }
     .nudge-value { display: inline-block; border: 1.5px solid #1c1b1f; border-radius: var(--radius-sm); padding: 3px 10px; font-size: var(--fs-label); font-weight: var(--fw-semibold); color: #1c1b1f; font-family: var(--font-mono); }
-    .nudge-value.is-empty { border-color: #e2e8f0; color: #94a3b8; font-weight: 400; font-style: italic; }
+    .nudge-value.is-empty { border-color: #e2e8f0; color: #94a3b8; font-weight: var(--fw-regular); font-style: italic; }
 
     @media (max-width: 1080px) {
       .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -80,7 +80,7 @@
       .app-nav { display: none; }
       .dashboard-inner { padding: 24px 18px 34px; }
       .dashboard-hero { grid-template-columns: 1fr; }
-      .dashboard-title { font-size: 42px; text-align: left; }
+      .dashboard-title { font-size: var(--fs-h1); text-align: left; }
       .dashboard-grid { grid-template-columns: 1fr; }
     }
 

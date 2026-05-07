@@ -11,7 +11,9 @@
   --fs-h1:      32px;   /* page titles, big metrics */
   --fs-h2:      24px;   /* card headers */
   --fs-h3:      18px;   /* sub-headers, secondary metrics */
+  --fs-h4:      16px;   /* compact section headings */
   --fs-body:    14px;   /* body text */
+  --fs-body-sm: 13px;   /* dense body/meta text */
   --fs-label:   12px;   /* labels, nav items */
   --fs-xs:      11px;   /* badges, tiny labels */
   /* Fonts — weight */
@@ -20,6 +22,49 @@
   --fw-medium:   500;
   --fw-semibold: 600;
   --fw-bold:     700;
+  /* Explicit semantic type definitions */
+  --type-h1-family: var(--font-heading);
+  --type-h1-size: var(--fs-h1);
+  --type-h1-weight: var(--fw-medium);
+  --type-h2-family: var(--font-heading);
+  --type-h2-size: var(--fs-h2);
+  --type-h2-weight: var(--fw-medium);
+  --type-h3-family: var(--font-heading);
+  --type-h3-size: var(--fs-h3);
+  --type-h3-weight: var(--fw-medium);
+  --type-h4-family: var(--font-heading);
+  --type-h4-size: var(--fs-h4);
+  --type-h4-weight: var(--fw-semibold);
+  --type-body1-family: var(--font-mono);
+  --type-body1-size: var(--fs-body);
+  --type-body1-weight: var(--fw-regular);
+  --type-body2-family: var(--font-mono);
+  --type-body2-size: var(--fs-body-sm);
+  --type-body2-weight: var(--fw-regular);
+  --type-label1-family: var(--font-mono);
+  --type-label1-size: var(--fs-label);
+  --type-label1-weight: var(--fw-medium);
+  --type-label2-family: var(--font-mono);
+  --type-label2-size: var(--fs-xs);
+  --type-label2-weight: var(--fw-semibold);
+  --type-button-family: var(--font-mono);
+  --type-button-size: var(--fs-body);
+  --type-button-weight: var(--fw-semibold);
+  /* Unified controls standard (tabs + buttons) */
+  --control-font-family: var(--font-mono);
+  --control-font-size: var(--fs-body);
+  --control-font-weight: var(--fw-semibold);
+  --control-radius: var(--card-radius);
+  --control-height: 40px;
+  --control-pad-y: 8px;
+  --control-pad-x: 14px;
+  --control-border-color: transparent;
+  --control-bg: #e8edf3;
+  --control-fg: #1c1b1f;
+  --control-hover-bg: #dde5ef;
+  --control-active-bg: #1c1b1f;
+  --control-active-fg: #ffffff;
+  --control-active-shadow: 0 2px 10px rgba(17, 24, 39, 0.16);
   /* Colours */
   --bg-main:      #f8fafc;
   --panel-bg:     #ffffff;
@@ -42,6 +87,38 @@ body {
   font-family: var(--font-heading);
   background: var(--bg-main);
   overflow: hidden;
+}
+
+/* Shared controls baseline: use directly or mirror in page-specific selectors. */
+.ui-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: var(--control-pad-y) var(--control-pad-x);
+  border: 1px solid var(--control-border-color);
+  border-radius: var(--control-radius);
+  background: var(--control-bg);
+  color: var(--control-fg);
+  font-family: var(--control-font-family);
+  font-size: var(--control-font-size);
+  font-weight: var(--control-font-weight);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.ui-control:hover {
+  background: var(--control-hover-bg);
+}
+
+.ui-control.is-active,
+.ui-control[aria-selected='true'],
+.ui-control[aria-pressed='true'] {
+  background: var(--control-active-bg);
+  color: var(--control-active-fg);
+  box-shadow: var(--control-active-shadow);
 }
 
 #tab-bar {
@@ -78,8 +155,9 @@ body {
   border-radius: 8px;
   background: #f9fafb;
   color: #374151;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-body-sm);
+  font-family: var(--font-mono);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -107,8 +185,9 @@ body {
   border-radius: 8px;
   background: #f5f3ff;
   color: #6d28d9;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-mono);
   line-height: 1;
 }
 
@@ -124,8 +203,9 @@ body {
   border: 1px dashed #d1d5db;
   border-radius: 8px;
   padding: 7px 12px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-mono);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -172,17 +252,19 @@ body {
 }
 
 .reflection-meta-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #6b7280;
+  font-family: var(--font-mono);
 }
 
 .reflection-meta-value {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-bold);
   color: #111827;
+  font-family: var(--font-heading);
 }
 
 #canvas {
@@ -217,10 +299,11 @@ body {
   justify-content: space-between;
   padding: 12px 14px;
   color: #fff;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   cursor: grab;
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
+  font-family: var(--font-heading);
 }
 
 .node-header:active {
@@ -256,10 +339,11 @@ body {
 }
 
 .reflection-text {
-  font-size: 14px;
+  font-size: var(--fs-body);
   color: #374151;
   line-height: 1.45;
   white-space: pre-wrap;
+  font-family: var(--font-mono);
 }
 
 .edge-label {
@@ -268,8 +352,9 @@ body {
   background: #fff;
   border: 1px solid #c4b5fd;
   color: #6d28d9;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-mono);
   padding: 3px 10px;
   border-radius: 999px;
   pointer-events: none;
@@ -285,16 +370,18 @@ body {
 .field label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
   color: #374151;
+  font-family: var(--font-mono);
 }
 
 .field input[type="text"],
 .field select {
   width: 100%;
   padding: 10px 11px;
-  font-size: 14px;
+  font-size: var(--fs-body);
+  font-family: var(--font-mono);
   background: #fff;
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -309,16 +396,18 @@ body {
 }
 
 .slider-row span {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
   color: #374151;
+  font-family: var(--font-mono);
 }
 
 .slider-row output {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: #111827;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
 
 .emotion-chips {
@@ -330,13 +419,14 @@ body {
 
 .emotion-chip {
   padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   border-radius: 999px;
   border: 1.5px solid transparent;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
   text-transform: capitalize;
+  font-family: var(--font-mono);
 }
 
 .emotion-chip.positive {
@@ -384,8 +474,9 @@ input[type="range"] {
 
 button {
   padding: 10px 12px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--type-button-size);
+  font-weight: var(--type-button-weight);
+  font-family: var(--type-button-family);
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -433,16 +524,17 @@ button:disabled {
 
 .small-tag {
   padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.2);
   border-radius: 999px;
+  font-family: var(--font-mono);
 }
 
 .delete-btn {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-bold);
   line-height: 1;
   color: #fff;
   background: transparent;
@@ -451,9 +543,10 @@ button:disabled {
 
 .hint {
   max-width: 380px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.4;
   color: #6b7280;
+  font-family: var(--font-mono);
 }
 
 @media (max-width: 900px) {
@@ -479,8 +572,8 @@ button:disabled {
   justify-content: center;
   width: 22px;
   height: 22px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-bold);
   color: #fff;
   background: #111827;
   border-radius: 999px;
@@ -489,6 +582,7 @@ button:disabled {
   opacity: 0;
   transform: scale(0.7);
   transition: opacity 0.15s ease, transform 0.15s ease;
+  font-family: var(--font-mono);
 }
 
 .node:hover .port {
@@ -558,21 +652,23 @@ button:disabled {
 }
 
 .transcript-sidebar-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-bold);
   color: #111827;
   flex: 1;
+  font-family: var(--font-heading);
 }
 
 .transcript-nav-btn {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   padding: 2px 8px;
   border-radius: 6px;
   background: #e0e7ff;
   color: #3730a3;
   text-decoration: none;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
 
 .transcript-nav-btn:hover {
@@ -586,15 +682,17 @@ button:disabled {
 }
 
 .session-name-input label {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: #374151;
+  font-family: var(--font-mono);
 }
 
 .session-name-input input {
   padding: 6px 8px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: var(--fs-body);
+  font-family: var(--font-mono);
 }
 
 .transcript-sidebar-controls {
@@ -611,15 +709,16 @@ button:disabled {
 }
 
 .transcript-status {
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.4;
   color: #6b7280;
   white-space: pre-line;
+  font-family: var(--font-mono);
 }
 
 .transcript-status.status-transcribing {
   color: #6366f1;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 @keyframes transcribing-pulse {
@@ -634,10 +733,11 @@ button:disabled {
 }
 
 .transcript-file-name {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: #374151;
   min-height: 16px;
   word-break: break-word;
+  font-family: var(--font-mono);
 }
 
 .pipeline-progress-bar-wrap {
@@ -659,11 +759,12 @@ button:disabled {
   margin-top: 6px;
   max-height: 140px;
   overflow-y: auto;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: #374151;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  font-family: var(--font-mono);
 }
 
 .session-list {
@@ -688,7 +789,8 @@ button:disabled {
   background: #fff;
   color: #6b7280;
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
+  font-family: var(--font-mono);
 }
 
 .session-item {
@@ -757,17 +859,19 @@ button:disabled {
 
 .session-item-title {
   display: block;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
   color: #111827;
+  font-family: var(--font-heading);
 }
 
 .session-item-meta {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.4;
   color: #6b7280;
+  font-family: var(--font-mono);
 }
 
 .transcript-list {
@@ -785,7 +889,8 @@ button:disabled {
   background: #fff;
   color: #6b7280;
   padding: 14px;
-  font-size: 14px;
+  font-size: var(--fs-body);
+  font-family: var(--font-mono);
 }
 
 .transcript-segment {
@@ -823,16 +928,18 @@ button:disabled {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: #6b7280;
+  font-family: var(--font-mono);
 }
 
 .transcript-text {
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.4;
   color: #111827;
   white-space: pre-wrap;
-}}
+  font-family: var(--font-mono);
+}
 
 /* ================================================
    Floating Bar
@@ -892,9 +999,9 @@ button:disabled {
   border-radius: 13px;
   background: transparent;
   color: #e2e8f0;
-  font-size: 11.5px;
-  font-weight: 500;
-  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  font-family: var(--font-mono);
   cursor: pointer;
   transition: background 0.14s, color 0.14s;
   white-space: nowrap;
@@ -949,10 +1056,11 @@ button:disabled {
   align-items: center;
   gap: 6px;
   color: #374151;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+  font-family: var(--font-mono);
 }
 
 .fb-rec-dot {
@@ -969,9 +1077,9 @@ button:disabled {
   border-radius: 8px;
   background: #ef4444;
   color: #fff;
-  font-size: 12.5px;
-  font-weight: 700;
-  font-family: inherit;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-mono);
   cursor: pointer;
   transition: background 0.14s;
 }
@@ -1028,9 +1136,9 @@ button:disabled {
   border-radius: 999px;
   background: #18181f;
   color: #e2e8f0;
-  font-size: 12.5px;
-  font-weight: 600;
-  font-family: inherit;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-mono);
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0,0,0,0.24);
   transition: background 0.14s;

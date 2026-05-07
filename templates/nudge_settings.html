@@ -67,17 +67,18 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      border: none;
+      min-height: var(--control-height);
+      padding: var(--control-pad-y) var(--control-pad-x);
+      border-radius: var(--control-radius);
+      border: 1px solid var(--control-border-color);
       font: inherit;
-      font-size: var(--fs-h3);
-      font-weight: var(--fw-medium);
-      font-family: var(--font-mono);
+      font-size: var(--control-font-size);
+      font-weight: var(--control-font-weight);
+      font-family: var(--control-font-family);
       cursor: pointer;
-      background: transparent;
-      color: var(--text-dark);
-      transition: background 0.12s, color 0.12s;
+      background: var(--control-bg);
+      color: var(--control-fg);
+      transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
     }
 
     .nudge-tab svg {
@@ -91,8 +92,8 @@
       flex-shrink: 0;
     }
 
-    .nudge-tab.is-selected { background: #1c1b1f; color: #fff; }
-    .nudge-tab:not(.is-selected):hover { background: rgba(0,0,0,0.05); }
+    .nudge-tab.is-selected { background: var(--control-active-bg); color: var(--control-active-fg); box-shadow: var(--control-active-shadow); }
+    .nudge-tab:not(.is-selected):hover { background: var(--control-hover-bg); }
 
     /* ── Scrollable content ── */
     .nudge-scroll {
