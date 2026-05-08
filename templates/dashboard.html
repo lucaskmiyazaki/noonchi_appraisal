@@ -20,19 +20,19 @@
       position: absolute;
       top: 0;
       right: 0;
-      width: min(48vw, 700px);
-      height: min(50vh, 460px);
+      width: min(58vw, 860px);
+      height: min(60vh, 560px);
       background: url('/static/images/background.png') top right / contain no-repeat;
       opacity: 1;
       pointer-events: none;
       z-index: 0;
     }
-    .dashboard-inner { position: relative; z-index: 1; max-width: 1080px; width: 100%; margin: 0 auto; padding: 44px 36px; box-sizing: border-box; }
+    .dashboard-inner { position: relative; z-index: 1; max-width: 1280px; width: 100%; margin: 0 auto; padding: 44px 36px; box-sizing: border-box; }
     .dashboard-search-btn { display: none; }
     /* Hero */
     .dashboard-hero { display: flex; flex-direction: column; align-items: center; margin-top: var(--sp-3); gap: 0; }
     .dashboard-title { margin: 0; font-size: var(--fs-display); font-weight: var(--fw-regular); line-height: 1; letter-spacing: -0.03em; text-align: center; }
-    .dashboard-hero-sub { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; margin-top: var(--sp-10); }
+    .dashboard-hero-sub { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; margin-top: calc(var(--sp-10) + var(--sp-10)); }
     .dashboard-date { margin: 0; font-size: var(--fs-body); font-weight: var(--fw-regular); letter-spacing: -0.03em; color: var(--text-dark); font-family: var(--font-mono); }
     /* Device toggle */
     .dash-device-group { display: flex; align-items: center; gap: var(--sp-4); }
@@ -45,8 +45,8 @@
     .dash-seg-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); width: 72px; height: 68px; background: var(--control-bg); color: var(--control-fg); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease; }
     .dash-seg-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .dash-seg-btn.is-active { background: var(--control-active-bg); color: var(--control-active-fg); box-shadow: var(--control-active-shadow); }
-    .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; align-items: stretch; }
-    .dashboard-card { border-radius: var(--card-radius); background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: var(--sp-9); display: flex; flex-direction: column; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; align-items: stretch; grid-auto-rows: minmax(292px, auto); }
+    .dashboard-card { border-radius: var(--card-radius); background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: calc(var(--sp-9) + var(--sp-2)); min-height: 292px; display: flex; flex-direction: column; justify-content: space-between; }
     #meetingAnalysisCard { background: linear-gradient(to top right, #6c58e6 0%, #4F36D7 100%); color: #ffffff; }
     #meetingAnalysisCard .card-header svg,
     #meetingAnalysisCard .dashboard-metric-copy,
@@ -63,7 +63,7 @@
     .dashboard-card.is-link { cursor: pointer; transition: transform 0.14s ease, box-shadow 0.14s ease; }
     .dashboard-card.is-link:hover,
     .dashboard-card.is-hoverable:hover { transform: translateY(-2px); box-shadow: 0 22px 48px rgba(148, 163, 184, 0.2); }
-    .dashboard-card-body { margin-top: var(--sp-8); flex: 1; }
+    .dashboard-card-body { margin-top: var(--sp-8); flex: 0 0 auto; }
 
     /* Card header with inline icon */
     .card-header { display: flex; align-items: center; gap: var(--sp-4); }
@@ -114,7 +114,8 @@
       border-radius: var(--card-radius);
       background: #ffffff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      padding: var(--sp-9);
+      padding: calc(var(--sp-9) + var(--sp-2));
+      min-height: 292px;
       display: flex;
       flex-direction: column;
       gap: var(--sp-5);
