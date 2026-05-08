@@ -113,12 +113,25 @@
     }
   }
 
+  // Send data to Bangle over BLE UART.  Uses Write-Without-Response when available
+  // (much faster than Write-With-Response).  A small periodic pause yields to the
+  // BLE stack so the Espruino UART buffer is never overwhelmed.
   async function writeLineToBangle(characteristic, line) {
     const text = String(line || '');
+    const useNoRsp = (typeof characteristic.writeValueWithoutResponse === 'function');
+    const enc = new TextEncoder();
     for (let offset = 0; offset < text.length; offset += MAX_BLE_CHUNK) {
       const chunk = text.slice(offset, offset + MAX_BLE_CHUNK);
-      const bytes = new TextEncoder().encode(chunk);
-      await characteristic.writeValue(bytes);
+      const bytes = enc.encode(chunk);
+      if (useNoRsp) {
+        await characteristic.writeValueWithoutResponse(bytes);
+      } else {
+        await characteristic.writeValue(bytes);
+      }
+      // Pace every ~180 bytes to give Espruino time to drain its buffer
+      if (offset > 0 && (offset / MAX_BLE_CHUNK) % 10 === 0) {
+        await new Promise(r => setTimeout(r, 8));
+      }
     }
   }
 
@@ -140,6 +153,37 @@
       force_vibrate: true
     };
   }
+
+  // Pixel-faithful 2bpp (4-colour indexed) icon images, rasterised directly from the
+  // SVG source via resvg-js.  Each entry: { w, h, b64 (base64 pixel bytes), pal (RGB565
+  // palette as comma-separated ints), dy (half-height for vertical centring at cy=50) }.
+  const BANGLE_ICONS = {
+    elevation: {
+      w: 32, h: 43,
+      b64: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqqoAAAAAAAKqqgAAAAAACqqoAAAAAAAqqqgAAAAAACqqoAAAAAAAqqqgAAAAAACqqoAAAAAAAqqqAAAAAABVWoAAAAAAFVVVQAAAAAFVVVVUAAAAFVVVVVVAAABVVVVVVVAAAVVVVVVVVAAFVVVVVVVVABVVVVVVVVUAFVVVVVVVVUBVVVVVVVVVUFVVVVVVVVVQVVVVVVVVVVFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVBVVVVVVVVVUFVVVVVVVVVQFVVVVVVVVUAVVVVVVVVVQAVVVVVVVVUAAVVVVVVVVAAAVVVVVVVQAAAVVVVVVUAAAAVVVVVVAAAAAFVVVVAAAAAAAVVUAAAA=',
+      pal: '65535,64195,6791,65535', dy: 21
+    },
+    tone_difference: {
+      w: 32, h: 32,
+      b64: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAAAAAAAAAKoAAAAAAAACaoAAAAAAAAlagAAAAAAAJVqgAAAAAACVVqAAAAAAAlVWqAAAAAAJVVaoAAAAACVVVagAAAAAlVVVqAAAAAJVVVWoAAAACVVVVagAAAAlVVVVqAAAAJVVVVWoAAACVVVVVqgAAAlVVVVWqAAAJVVVVVagAACVVVVVWqAAAlVVVVVagAAJVVVVVWqAACVVVVVVqgAAqVVVVVaoAACqlVVVaqgAACqpVVaqgAAACqqqqqoAAAAAqqqqoAAAAAAKqqoAAAA==',
+      pal: '65535,57898,28109,65535', dy: 16
+    },
+    unclear_intent: {
+      w: 32, h: 40,
+      b64: 'ABVQAAAVUAAAFVVAAVVQAAAFVVAFVVAAAAVVUBVVUAAABVVUFVVQAAAFVVRVVVAAAAFVVVVVQAAAAVVVVVUAAAAAVVVVVAAAAAAFVVVAAAAAEAAVVAAEAAaqABqkAKqQGqqAqqoCqqQqqqGqqkqqqKqqpqqqmqqqqqqqqqqqqqqqqqqqqqqqqmqqpqqqmqqpKqqhqqpKqqgaqoCqqgKqpAaqqmqpqqqAAAKqpBqqgAAACqqoKqqgAAAKqqlqqqAAABqqqqqqpAAAGqqqqqqkAAAaqqqqqqQAAAqqqWqqoAAABqqoKqqQAAABqqVaqkAAAAAVaqlUAAAAAACqqgAAAAAAAqqqgAAAAAACqqqAAAAAAAKqqoAAAAAAAqqqgAAAAAACqqqAAAAAAAGqqkAAAAAAAGqpAAAAAAAACpAAAAA=',
+      pal: '65535,18674,26971,65535', dy: 20
+    },
+    excellent_tone: {
+      w: 32, h: 32,
+      b64: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACVpWAAAAAAAVWlVAAAAAAFVaVVAAAAABVVpVVAAAAAlVWlVWAAAABVVaVVUAAAAFVVpVVQAAAAVVWlVVAAAABVVaVVUAAAAFVVpVVQAAAAVVWlVVAAAACVVaVVYAAAABVVpVVAAAAAFVWlVUAAAAAFVaVVAAAAAAlVpVYAAAAAAVWlVAAAAAAAVaVQAAAAAACVpWAAAAAAACWlgAAAAAAAAaQAAAAAAAAAoAAAAAAAAACgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+      pal: '65535,5385,49082,65535', dy: 16
+    },
+    need_for_clarification: {
+      w: 32, h: 32,
+      b64: 'AAABVVVAAAAAABVVVVQAAAABVVVVVUAAAAVVVVVVUAAAFVVVVVVUAABVVVVVVVUAAVVVVVVVVUAFVVVVVVVVUAVVVVVVVVVQFVVVVVVVVVQVVVVVVVVVVFVVVVaVVVVVVVVVVpVVVVVVVVWqqlVVVVVVVaqqVVVVVVVVqqpVVVVVVVaqqpVVVVVVVaqqVVVVVVVVaqlVVVVVVVVqqVVVVVVVVVVVVVVVFVVVVVVVVVQVVVVVVVVVVAVVVVVVVVVQBVVVVVVVVVABVVVVVVVVQABVVVVVVVUAABVVVVVVVAAABVVVVVVQAAABVVVVVUAAAAAVVVVUAAAAAAFVVUAAAA==',
+      pal: '65535,11095,6339,65535', dy: 16
+    }
+  };
 
   function buildEspruinoCommand(payload) {
     const msg = String(payload.message || payload.type || 'Noonchi');
@@ -163,38 +207,39 @@
     const typeLabel = String(payload.type || 'Elevation').trim() || 'Elevation';
     const messageLabel = fullMessage;
 
+    // Select the pre-rasterised icon data for this trigger
+    const img = BANGLE_ICONS[triggerKey] || BANGLE_ICONS.elevation;
+
     const command = [
       '(function(){',
       'try{',
       `var k=${JSON.stringify(triggerKey)};`,
       `var title=${JSON.stringify(typeLabel)};`,
       `var message=${JSON.stringify(messageLabel)};`,
-      'var W=g.getWidth(),H=g.getHeight;',
+      'var W=g.getWidth(),H=g.getHeight();',
       'function wrap(t,m){var w=t.split(" "),l=[],c="";for(var i=0;i<w.length;i++){var n=(c+" "+w[i]).trim();if(n.length>m){if(c)l.push(c);c=w[i];}else c=n;}if(c)l.push(c);return l;}',
-      'function buzz(kind){if(kind==="elevation")return Bangle.buzz(120).then(()=>Bangle.buzz(120));if(kind==="tone_difference")return Bangle.buzz(220);if(kind==="unclear_intent")return Bangle.buzz(80).then(()=>Bangle.buzz(80)).then(()=>Bangle.buzz(80));if(kind==="excellent_tone")return Bangle.buzz(60);if(kind==="need_for_clarification")return Bangle.buzz(100).then(()=>Bangle.buzz(100));return Bangle.buzz(150);}',
+      'function buzz(kind){if(kind==="elevation")return Bangle.buzz(120).then(function(){return Bangle.buzz(120);});if(kind==="tone_difference")return Bangle.buzz(220);if(kind==="unclear_intent")return Bangle.buzz(80).then(function(){return Bangle.buzz(80);}).then(function(){return Bangle.buzz(80);});if(kind==="excellent_tone")return Bangle.buzz(60);if(kind==="need_for_clarification")return Bangle.buzz(100).then(function(){return Bangle.buzz(100);});return Bangle.buzz(150);}',
       'var T={',
-      'elevation:{bg:"#F6E53A",fg:"#111111",accent:"#FF5A1F",title:"Elevation"},',
-      'tone_difference:{bg:"#8FD0F2",fg:"#111111",accent:"#2E73CC",title:"Tone Difference"},',
-      'unclear_intent:{bg:"#D95A9C",fg:"#111111",accent:"#7A0B3B",title:"Unclear Intent"},',
-      'excellent_tone:{bg:"#86EFAC",fg:"#111111",accent:"#16A34A",title:"Excellent"},',
-      'need_for_clarification:{bg:"#93C5FD",fg:"#111111",accent:"#2563EB",title:"Clarification"}',
+      'elevation:{bg:"#FFFFFF",fg:"#111111",title:"Elevation"},',
+      'tone_difference:{bg:"#FFFFFF",fg:"#111111",title:"Tone Difference"},',
+      'unclear_intent:{bg:"#FFFFFF",fg:"#111111",title:"Unclear Intent"},',
+      'excellent_tone:{bg:"#FFFFFF",fg:"#111111",title:"Excellent"},',
+      'need_for_clarification:{bg:"#FFFFFF",fg:"#111111",title:"Clarification"}',
       '};',
       'var s=T[k]||T.elevation;',
-      'g.setBgColor(s.bg);g.clear();g.setColor(s.fg);',
+      'g.setBgColor(s.bg);g.clear();',
       'var cx=(W/2)|0,cy=50;',
-      'if(k==="elevation"){g.setColor(s.accent);g.fillCircle(cx,cy,16);g.setColor("#1B6B49");g.fillPoly([cx+1,cy-18,cx+10,cy-24,cx+13,cy-20,cx+5,cy-14]);}',
-      'else if(k==="tone_difference"){g.setColor(s.accent);g.fillCircle(cx,cy,16);g.setColor("#111111");g.fillCircle(cx,cy,3);}',
-      'else if(k==="unclear_intent"){g.setColor(s.accent);g.fillCircle(cx,cy-6,5);g.fillCircle(cx-6,cy+2,5);g.fillCircle(cx+6,cy+2,5);g.fillCircle(cx-10,cy+10,5);g.fillCircle(cx,cy+10,5);g.fillCircle(cx+10,cy+10,5);g.fillCircle(cx-5,cy+18,5);g.fillCircle(cx+5,cy+18,5);}',
-      'else if(k==="excellent_tone"){g.setColor(s.accent);g.fillCircle(cx,cy,16);g.setColor("#DCFCE7");g.fillPoly([cx-8,cy,cx-2,cy+6,cx+9,cy-5,cx+6,cy-8,cx-2,cy+1,cx-5,cy-2]);}',
-      'else if(k==="need_for_clarification"){g.setColor(s.accent);g.fillCircle(cx,cy,16);g.setColor("#111111");g.fillPoly([cx,cy-10,cx+3,cy-3,cx+10,cy,cx+3,cy+3,cx,cy+10,cx-3,cy+3,cx-10,cy,cx-3,cy-3]);g.setColor("#DBEAFE");g.fillCircle(cx,cy,3);}',
-      'else {g.setColor(s.accent);g.fillCircle(cx,cy,16);g.setColor("#111111");g.setFontAlign(0,0);g.setFont("6x8",2);g.drawString("?",cx,cy+1);}',
+      // Embed the 2bpp pixel-faithful icon for this trigger
+      `var I={width:${img.w},height:${img.h},bpp:2,buffer:atob("${img.b64}"),palette:new Uint16Array([${img.pal}])};`,
+      `g.drawImage(I,cx-16,cy-${img.dy});`,
       'g.setColor(s.fg);g.setFontAlign(0,0);g.setFont("6x8",2);',
-      'g.drawString((k==="excellent_tone"||k==="need_for_clarification")?s.title:(title||s.title),cx,98);',
+      // For need_for_clarification always show "Clarification" regardless of typeLabel
+      `g.drawString(${JSON.stringify(triggerKey === 'need_for_clarification' ? 'Clarification' : typeLabel)}||s.title,cx,98);`,
       'g.setFont("6x8",1);',
       'var lines=wrap(message||"",24);',
       'for(var i=0;i<Math.min(lines.length,3);i++)g.drawString(lines[i],cx,124+i*10);',
       'buzz(k);',
-      'setTimeout(function(){if(Bangle.showClock)Bangle.showClock();else load();},3500);',
+      'setTimeout(function(){if(Bangle.showClock)Bangle.showClock();else load();},5000);',
       '}catch(e){Bangle.buzz(120);E.showMessage("Noonchi nudge");}',
       '})();\n'
     ].join('');
