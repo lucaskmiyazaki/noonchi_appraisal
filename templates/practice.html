@@ -15,29 +15,33 @@
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .practice-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; height: 100vh; width: 100vw; padding: 0; }
 
-    .practice-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; background: var(--panel-bg); border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
-    .practice-main { grid-column: 3; background: transparent; padding: var(--sp-9); min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
-    .practice-sidebar { grid-column: 1 / span 2; min-width: 0; overflow: hidden; }
+    .practice-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; background: var(--panel-bg); border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
+    .practice-main { grid-column: 2; background: transparent; padding: var(--sp-9); min-width: 0; overflow-y: auto; border-left: none; display: flex; flex-direction: column; height: 100%; }
+    .practice-sidebar { grid-column: 1; min-width: 0; overflow: hidden; }
     .practice-sidebar-panel { height: 100%; background: transparent; padding: var(--sp-9) 0 var(--sp-9) var(--sp-9); overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
     .practice-detail { padding: 0; border-radius: 0; background: transparent; border: 0; }
     .practice-detail[hidden] { display: none; }
-    .practice-detail-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: var(--text-dark); letter-spacing: -0.02em; }
-    .practice-detail-section-title { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: var(--fw-bold); font-family: var(--font-mono); }
-    .practice-detail-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: var(--text-muted); white-space: pre-wrap; font-family: var(--font-mono); }
-    .practice-detail-audio { width: 100%; margin-top: var(--sp-5); }
-    .practice-detail-instruction { margin: var(--sp-7) 0 0; font-size: var(--fs-body); line-height: 1.6; color: var(--text-muted); font-family: var(--font-mono); }
+    .practice-detail-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: #ffffff; letter-spacing: -0.02em; display: flex; align-items: flex-start; gap: var(--sp-4); }
+    .practice-detail-title-icon { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+    .practice-detail-title-icon svg { width: 36px; height: 36px; }
+    .practice-detail-section-title { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dark); font-weight: var(--fw-bold); font-family: var(--font-mono); }
+    .practice-detail-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: var(--text-dark); white-space: pre-wrap; font-family: var(--font-mono); padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: rgba(255,255,255,0.5); }
+    .practice-detail-audio { width: 100%; margin-top: 0; padding: var(--sp-4) var(--sp-5); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: rgba(255,255,255,0.5); box-sizing: border-box; }
+    .practice-recording-item .practice-detail-audio,
+    .practice-ai-item .practice-detail-audio { margin-top: var(--sp-3); border: none; background: transparent; padding: 0; }
+    .practice-detail-instruction { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dark); font-weight: var(--fw-bold); font-family: var(--font-mono); }
     .practice-ai-list { margin-top: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-5); }
-    .practice-ai-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
-    .practice-ai-item-title { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: var(--text-muted); font-family: var(--font-mono); }
-    .practice-ai-item-copy { margin: var(--sp-2) 0 0; font-size: var(--fs-body); line-height: 1.5; color: var(--text-muted); white-space: pre-wrap; font-family: var(--font-mono); }
-    .practice-recordings { margin-top: var(--sp-7); display: flex; flex-direction: column; gap: var(--sp-5); }
-    .practice-recording-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); background: #f8fafc; border: 1px solid var(--border-soft); }
-    .practice-recording-label { margin: 0 0 var(--sp-3); font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-muted); font-family: var(--font-mono); }
-    .practice-recording-empty { margin: 0; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); background: #f8fafc; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
-    .practice-record-button { margin-top: 16px; display: inline-flex; align-items: center; justify-content: center; min-width: 168px; min-height: var(--control-height); padding: var(--control-pad-y) var(--control-pad-x); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-active-bg); color: var(--control-active-fg); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; transition: background 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease; }
+    .practice-ai-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: rgba(255,255,255,0.5); }
+    .practice-ai-item-title { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: var(--text-dark); font-family: var(--font-mono); }
+    .practice-ai-item-copy { margin: var(--sp-2) 0 0; font-size: var(--fs-body); line-height: 1.5; color: var(--text-dark); white-space: pre-wrap; font-family: var(--font-mono); }
+    .practice-recordings { margin-top: 0; display: flex; flex-direction: column; gap: var(--sp-5); }
+    .practice-recording-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); background: rgba(255,255,255,0.5); border: 1px solid var(--border-soft); }
+    .practice-recording-label { margin: 0 0 var(--sp-3); font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-dark); font-family: var(--font-mono); }
+    .practice-recording-empty { margin: 0; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); background: rgba(255,255,255,0.5); border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-dark); font-size: var(--fs-body); font-family: var(--font-mono); }
+    .practice-record-button { margin-top: var(--sp-5); display: inline-flex; align-items: center; justify-content: center; min-width: 168px; min-height: var(--control-height); padding: var(--control-pad-y) var(--control-pad-x); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-active-bg); color: var(--control-active-fg); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; transition: background 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease; }
     .practice-record-button:hover { background: #2a2930; box-shadow: var(--control-active-shadow); }
     .practice-record-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .practice-record-status { margin: var(--sp-5) 0 0; min-height: 20px; font-size: var(--fs-body); color: var(--text-muted); font-family: var(--font-mono); }
+    .practice-record-status { margin: var(--sp-5) 0 0; min-height: 20px; font-size: var(--fs-body); color: var(--text-dark); font-family: var(--font-mono); }
     .practice-record-status.is-recording { color: var(--text-dark); }
     .practice-detail-empty { padding: 0; border-radius: 0; background: transparent; border: 0; color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
     .practice-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-right: var(--sp-9); margin-bottom: var(--sp-7); }
@@ -84,7 +88,7 @@
       .practice-layout { grid-template-columns: 1fr; }
       .app-nav { display: none; }
       .practice-workspace { grid-column: auto; grid-template-columns: 1fr; height: auto; }
-      .practice-main { border-left: 0; border-top: 1px solid var(--border-soft); }
+      .practice-main { border-left: none; border-top: 1px solid var(--border-soft); }
       .practice-main { min-height: 60vh; }
       .practice-sidebar-panel { height: auto; min-height: 0; }
       .practice-sidebar { grid-column: auto; }
@@ -138,7 +142,7 @@
       <section id="practiceDetailEmpty" class="practice-detail-empty">Select a practice reflection from the sidebar.</section>
 
       <section id="practiceDetail" class="practice-detail" hidden>
-        <h2 id="practiceDetailTitle" class="practice-detail-title"></h2>
+        <h2 id="practiceDetailTitle" class="practice-detail-title"><span id="practiceDetailTitleIcon" class="practice-detail-title-icon" aria-hidden="true"></span><span id="practiceDetailTitleText"></span></h2>
         <p class="practice-detail-section-title">Summary</p>
         <p id="practiceDetailSummary" class="practice-detail-copy"></p>
         <p class="practice-detail-section-title">Transcript</p>
@@ -585,7 +589,14 @@
       const endTime = Number(reflection.endms || 0) / 1000;
       const originalAudioUrl = String(reflection.original_audio_url || '').trim();
 
-      practiceDetailTitle.textContent = title;
+      const { triggerId: _tid, theme: _theme } = getPracticeTheme(reflection);
+      const practiceMain = document.querySelector('.practice-main');
+      if (practiceMain) {
+        practiceMain.style.background = _theme.cardBg || '';
+      }
+      const iconMarkup = triggerIconSvgById[_tid] || '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.35"></circle></svg>';
+      document.getElementById('practiceDetailTitleIcon').innerHTML = iconMarkup;
+      document.getElementById('practiceDetailTitleText').textContent = title;
       practiceDetailSummary.textContent = summary;
       practiceDetailTranscript.textContent = transcript;
       practiceDetail.hidden = false;
