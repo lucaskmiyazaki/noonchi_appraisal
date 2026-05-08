@@ -822,6 +822,7 @@
       const nudgeType = String(this._nudgeTypeLabel || 'Vibrate').trim() || 'Vibrate';
 
       window.sendSimpleMessageToBangle({
+        trigger_key: this._nudgeTriggerKey,
         type: trigger,
         message: `${trigger} (${nudgeType})`,
         speaker: '',
