@@ -382,11 +382,11 @@
     return pad2(Math.floor(s / 3600)) + ':' + pad2(Math.floor((s % 3600) / 60)) + ':' + pad2(s % 60);
   }
 
-  const SVG_DOCUMENT = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0121 8.414V19a2 2 0 01-2 2z"/></svg>`;
-  const SVG_MIC      = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3" ry="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
-  const SVG_DESKTOP  = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
-  const SVG_WATCH    = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><line x1="5" y1="8" x2="3" y2="8"/><line x1="5" y1="12" x2="1" y2="12"/><line x1="5" y1="16" x2="3" y2="16"/><line x1="19" y1="8" x2="21" y2="8"/><line x1="19" y1="12" x2="23" y2="12"/><line x1="19" y1="16" x2="21" y2="16"/></svg>`;
-  const SVG_ICON     = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
+  const SVG_DOCUMENT = `<svg aria-hidden="true"><use href="#icon-document"></use></svg>`;
+  const SVG_MIC      = `<svg aria-hidden="true"><use href="#icon-mic"></use></svg>`;
+  const SVG_DESKTOP  = `<svg aria-hidden="true"><use href="#icon-desktop"></use></svg>`;
+  const SVG_WATCH    = `<svg aria-hidden="true"><use href="#icon-watch"></use></svg>`;
+  const SVG_ICON     = `<svg aria-hidden="true"><use href="#icon-bell"></use></svg>`;
   const SVG_ELEVATION = `<svg viewBox="0 0 23.6522 32" fill="none" aria-hidden="true"><path d="M21.2638 2.48451C21.2638 2.48451 16.4204 1.37238 14.7459 3.32667C13.0714 5.28095 11.3519 8.97881 11.3519 8.97881C11.3519 8.97881 15.4143 8.88842 17.8698 8.13665C20.3252 7.38487 21.2638 2.48451 21.2638 2.48451Z" fill="#1F503B"/><ellipse cx="11.8261" cy="20.1741" rx="11.8261" ry="11.8259" fill="#F45520"/></svg>`;
   const SVG_DRAG     = `<svg viewBox="0 0 10 18" width="10" height="18" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/><circle cx="2.5" cy="9" r="1.5"/><circle cx="7.5" cy="9" r="1.5"/><circle cx="2.5" cy="15.5" r="1.5"/><circle cx="7.5" cy="15.5" r="1.5"/></svg>`;
 
