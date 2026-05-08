@@ -1,7 +1,7 @@
 <style>
   .app-nav {
     background: var(--sidebar-bg, #f8fafc);
-    border-radius: 0 var(--card-radius) var(--card-radius) 0;
+    border-radius: 0;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -49,7 +49,7 @@
     color: #1c1b1f;
     font-weight: var(--fw-semibold);
     border-color: var(--border-soft);
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    box-shadow: none;
     border-radius: var(--radius-sm);
   }
   .app-nav-bottom {
@@ -120,7 +120,7 @@
       <span>Light Mode</span>
     </button>
     <button class="app-nav-bottom-item" type="button" id="navVoiceAssistToggle" aria-label="Toggle voice assist" aria-pressed="false">
-      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 10v2a7 7 0 11-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H3v6h3l5 4V5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 9.5a4 4 0 010 5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.8 7a7 7 0 010 10"/></svg>
       <span id="navVoiceAssistLabel">Voice Assist</span>
     </button>
     <a class="app-nav-bottom-item" href="#" aria-label="Account">
@@ -159,7 +159,7 @@
 
     function applyUi(enabled) {
       toggle.setAttribute('aria-pressed', String(enabled));
-      label.textContent = enabled ? 'Voice Assist On' : 'Voice Assist Off';
+      label.textContent = enabled ? 'Voice Assist On' : 'Voice Assist';
     }
 
     function broadcast(enabled) {

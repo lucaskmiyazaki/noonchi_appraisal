@@ -21,13 +21,13 @@
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
 
     /* Top-level grid: nav col + content col */
-    .session-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--sp-7); height: 100vh; width: 100vw; padding: var(--sp-7); }
+    .session-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; height: 100vh; width: 100vw; padding: 0; }
 
     /* Content column: header + body stacked */
     .session-col { display: flex; flex-direction: column; gap: 0; min-width: 0; min-height: 0; }
 
     /* Header card */
-    .session-header { flex: 0 0 auto; background: var(--panel-bg); border-radius: var(--card-radius) var(--card-radius) 0 0; padding: var(--sp-9) var(--sp-9) var(--sp-7); border-bottom: 1px solid var(--session-panel-border); }
+    .session-header { flex: 0 0 auto; background: var(--panel-bg); border-radius: 0; padding: var(--sp-9) var(--sp-9) var(--sp-7); border-bottom: 1px solid var(--session-panel-border); }
     .session-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-7); margin-bottom: var(--sp-7); }
     .session-header-title-row { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; }
     .session-header-content { margin-left: 5px; width: calc(100% - 5px); }
@@ -55,11 +55,11 @@
     .session-body.transcript-hidden { grid-template-columns: minmax(0, 1fr); }
 
     /* Reflections panel */
-    .session-sidebar { position: relative; z-index: 1; min-width: 0; background: var(--panel-bg); border-radius: 0 0 0 var(--card-radius); display: flex; flex-direction: column; overflow: hidden; }
+    .session-sidebar { position: relative; z-index: 1; min-width: 0; background: var(--panel-bg); border-radius: 0; display: flex; flex-direction: column; overflow: hidden; }
     .session-sidebar-panel { flex: 1; min-height: 0; padding: var(--sp-5) var(--sp-9); overflow-x: hidden; overflow-y: auto; }
 
     /* Transcript panel */
-    .session-main { position: relative; z-index: 1; background: var(--right-panel-bg); border-radius: 0 0 var(--card-radius) 0; border-left: 1px solid var(--session-panel-border); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    .session-main { position: relative; z-index: 1; background: var(--right-panel-bg); border-radius: 0; border-left: 1px solid var(--session-panel-border); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
     .session-main.is-hidden { display: none; }
     .session-content { position: relative; flex: 1; min-height: 0; }
     .transcript-scroll { position: relative; height: 100%; overflow-y: auto; padding: var(--sp-9); }

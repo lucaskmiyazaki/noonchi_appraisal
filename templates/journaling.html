@@ -14,9 +14,9 @@
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
-    .journal-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--sp-7); height: 100vh; width: 100vw; padding: var(--sp-7); }
+    .journal-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; height: 100vh; width: 100vw; padding: 0; }
 
-    .journal-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: calc(100vh - var(--sp-10)); background: var(--panel-bg); border: 1px solid var(--border-soft); border-radius: var(--card-radius); overflow: hidden; }
+    .journal-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; background: var(--panel-bg); border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
     .journal-main { grid-column: 3; background: transparent; padding: var(--sp-9); min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
     .journal-sidebar { grid-column: 1 / span 2; min-width: 0; overflow: hidden; }
     .journal-sidebar-panel { height: 100%; background: transparent; padding: var(--sp-9) 0 var(--sp-9) var(--sp-9); overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
@@ -47,7 +47,7 @@
     .session-search-input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; color: var(--text-dark); font-family: var(--font-mono); }
     .journal-list-divider { margin: 0 var(--sp-9) var(--sp-7) 0; border-top: 1px solid var(--border-soft); }
     .journal-list { display: flex; flex-direction: column; gap: var(--sp-5); }
-    .journal-item { position: relative; z-index: 1; margin-right: var(--sp-9); display: block; padding: var(--sp-6) var(--sp-7); border-radius: var(--card-radius); background: var(--journal-bg, var(--highlight)); border: 1px solid transparent; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
+    .journal-item { position: relative; z-index: 1; margin-right: var(--sp-9); display: block; padding: var(--sp-6) var(--sp-7); border-radius: var(--card-radius); background: var(--journal-bg, var(--highlight)); border: 1px solid transparent; box-shadow: none; text-align: left; color: inherit; transition: transform 0.12s ease, margin-right 0.14s ease; cursor: pointer; }
     .journal-item:hover { transform: translateY(-1px); }
     .journal-item.is-selected { z-index: 2; margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
     .journal-item-row { display: flex; align-items: center; gap: var(--sp-5); }

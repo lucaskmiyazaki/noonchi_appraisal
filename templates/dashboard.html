@@ -13,9 +13,21 @@
 
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
-    .dashboard-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--sp-7); height: 100vh; width: 100vw; padding: var(--sp-7); box-sizing: border-box; }
-    .dashboard-main { min-width: 0; border-radius: var(--card-radius); background: linear-gradient(135deg, rgba(189, 219, 246, 0.85) 0%, rgba(229, 239, 248, 0.82) 50%, rgba(246, 247, 248, 0.96) 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
-    .dashboard-inner { max-width: 1080px; width: 100%; margin: 0 auto; padding: 44px 36px; box-sizing: border-box; }
+    .dashboard-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; height: 100vh; width: 100vw; padding: 0; box-sizing: border-box; }
+    .dashboard-main { position: relative; min-width: 0; background: var(--panel-bg); border-radius: 0; box-shadow: none; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
+    .dashboard-main::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(48vw, 700px);
+      height: min(50vh, 460px);
+      background: url('/static/images/background.png') top right / contain no-repeat;
+      opacity: 1;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .dashboard-inner { position: relative; z-index: 1; max-width: 1080px; width: 100%; margin: 0 auto; padding: 44px 36px; box-sizing: border-box; }
     .dashboard-search-btn { display: none; }
     /* Hero */
     .dashboard-hero { display: flex; flex-direction: column; align-items: center; margin-top: var(--sp-3); gap: 0; }
