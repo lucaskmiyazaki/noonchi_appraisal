@@ -64,12 +64,12 @@
     .ref-card--completed .ref-card-name { color: var(--text-dark); }
     .ref-card--completed .ref-card-meta { color: var(--text-muted); }
     .ref-card--completed .ref-card-summary-label { color: var(--text-muted); }
-    .ref-card--completed .ref-card-summary-text { color: #374151; }
-    .ref-card--completed .ref-card-arrow { color: #9ca3af; }
+    .ref-card--completed .ref-card-summary-text { color: var(--text-muted); }
+    .ref-card--completed .ref-card-arrow { color: var(--text-muted); }
 
     /* Card internals */
     .ref-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: var(--sp-3); }
-    .ref-card-badge { font-size: var(--fs-xs); font-weight: var(--fw-medium); padding: 3px 9px; border-radius: var(--radius-sm); background: #fff; color: #4f46e5; font-family: var(--font-mono); }
+    .ref-card-badge { font-size: var(--fs-xs); font-weight: var(--fw-medium); padding: 3px 9px; border-radius: var(--radius-sm); background: #fff; color: var(--text-dark); font-family: var(--font-mono); }
     .ref-card-name { font-size: var(--fs-h2); font-weight: var(--fw-medium); line-height: 1.15; letter-spacing: -0.02em; margin-bottom: var(--sp-3); font-family: var(--font-heading); }
     .ref-card-meta { display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-label); margin-bottom: var(--sp-5); font-family: var(--font-mono); }
     .ref-card-meta-row { display: flex; align-items: center; gap: 5px; }
@@ -98,7 +98,7 @@
     /* ── Processing card ── */
     .ref-card--processing { background: #fff; border: 1px solid #fde68a; cursor: default; }
     .ref-card--processing:hover { transform: none; box-shadow: none; }
-    .ref-card-badge-proc { font-size: var(--fs-xs); font-weight: var(--fw-medium); padding: 3px 9px; border-radius: var(--radius-sm); background: #fef2b6; color: #9d7b27; font-family: var(--font-mono); }
+    .ref-card-badge-proc { font-size: var(--fs-xs); font-weight: var(--fw-medium); padding: 3px 9px; border-radius: var(--radius-sm); background: #fef2b6; color: var(--text-dark); font-family: var(--font-mono); }
     .ref-proc-bar-wrap { height: 4px; background: #fef9c3; border-radius: var(--radius-sm); overflow: hidden; margin: var(--sp-4) 0 var(--sp-2); }
     .ref-proc-bar { height: 100%; background: #d97706; border-radius: var(--radius-sm); transition: width 0.4s ease; }
     .ref-proc-log { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--font-mono); }

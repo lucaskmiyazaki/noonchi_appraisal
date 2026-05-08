@@ -32,11 +32,11 @@
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .session-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
     .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
-    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: #64748b; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
     .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; background: transparent; font-size: 18px; text-decoration: none; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
     .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
-    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-icon.is-active { color: var(--text-dark); }
     .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
     .session-main { position: relative; z-index: 1; background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
     .session-main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; border-bottom: 1px solid #f0f0f0; }
@@ -56,37 +56,37 @@
     .session-play-btn svg { width: 22px; height: 22px; fill: currentColor; }
     .session-transcript { font-size: var(--fs-body); line-height: 1.9; }
     .session-transcript-empty { font-size: var(--fs-body); color: var(--text-muted); font-family: var(--font-mono); }
-    .session-chunk { display: inline; padding: 4px 6px; margin-right: 2px; border-radius: 8px; color: #0f172a; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+    .session-chunk { display: inline; padding: 4px 6px; margin-right: 2px; border-radius: 8px; color: var(--text-dark); cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
     .session-chunk:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08); }
     .session-chunk.is-active { outline: 2px solid rgba(15, 23, 42, 0.72); outline-offset: 1px; }
     .session-chunk.is-read { opacity: 0.82; }
     .session-sidebar { position: relative; z-index: 1; min-width: 0; }
     .session-sidebar-panel { height: calc(100vh - 32px); background: var(--right-panel-bg); padding: 32px 24px; overflow-x: hidden; overflow-y: auto; }
-    .session-summary { font-size: var(--fs-body); margin: 0 0 20px; line-height: 1.6; color: #334155; font-family: var(--font-mono); }
+    .session-summary { font-size: var(--fs-body); margin: 0 0 20px; line-height: 1.6; color: var(--text-muted); font-family: var(--font-mono); }
     .session-sidebar-title { margin: 24px 0 12px; font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .session-sidebar-empty { font-size: 13px; color: var(--text-muted); }
     .metric-panel { padding: 18px; border-radius: 18px; background: #ffffff; border: 1px solid var(--border-soft); box-shadow: 0 14px 30px rgba(148, 163, 184, 0.12); }
-    .metric-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
-    .metric-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; color: #0f172a; padding: 12px 14px; font: inherit; }
+    .metric-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+    .metric-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; color: var(--text-dark); padding: 12px 14px; font: inherit; }
     .metric-gradient-bar { position: relative; height: 12px; margin-top: 16px; border-radius: 999px; background: linear-gradient(90deg, var(--metric-low) 0%, var(--metric-mid) 50%, var(--metric-high) 100%); overflow: hidden; }
-    .metric-gradient-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #64748b; }
+    .metric-gradient-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
     .metric-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
     .metric-stat { padding: 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
-    .metric-stat-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; }
-    .metric-stat-value { display: block; margin-top: 8px; font-size: 18px; font-weight: 700; color: #0f172a; }
+    .metric-stat-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+    .metric-stat-value { display: block; margin-top: 8px; font-size: 18px; font-weight: 700; color: var(--text-dark); }
     .segment-list { display: flex; flex-direction: column; gap: 12px; }
     .segment-card { width: 100%; border: 1px solid rgba(226, 232, 240, 0.95); border-radius: 16px; padding: 14px; text-align: left; background: #fff; cursor: pointer; }
     .segment-card.is-active { border-color: rgba(15, 23, 42, 0.72); box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08); }
     .segment-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .segment-card-time { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
-    .segment-card-score { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .segment-card-time { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+    .segment-card-score { font-size: 13px; font-weight: 700; color: var(--text-dark); }
     .segment-card-bar { height: 8px; margin-top: 12px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
     .segment-card-fill { height: 100%; border-radius: inherit; }
-    .segment-card-text { margin-top: 12px; font-size: 13px; line-height: 1.55; color: #334155; }
+    .segment-card-text { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text-muted); }
     .segment-card-meta { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .emotion-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #0f172a; }
+    .emotion-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dark); }
     .emotion-chip-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.8; }
-    .state-message { padding: 18px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); color: #475569; }
+    .state-message { padding: 18px; border-radius: 16px; background: #fff; border: 1px solid var(--border-soft); color: var(--text-muted); }
 
     @media (max-width: 1180px) {
       body { overflow: auto; }
@@ -947,7 +947,7 @@
         let fillWidth = value === null ? 0 : Math.round(value * 100);
         let metaChip = emotionLabel
           ? renderEmotionChip(emotionLabel)
-          : '<span class="emotion-chip" style="background: rgba(148,163,184,0.16); color: #64748b;"><span class="emotion-chip-dot"></span>Unknown</span>';
+          : '<span class="emotion-chip" style="background: rgba(148,163,184,0.16); color: var(--text-muted);"><span class="emotion-chip-dot"></span>Unknown</span>';
 
         if (metricName === 'arousal_label') {
           displayValue = clampUnit(segment?.arousal).toFixed(2);

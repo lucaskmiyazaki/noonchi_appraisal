@@ -189,7 +189,7 @@ body {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #f9fafb;
-  color: #374151;
+  color: var(--text-muted);
   font-weight: var(--fw-semibold);
   font-size: var(--fs-body-sm);
   font-family: var(--font-mono);
@@ -205,7 +205,7 @@ body {
 
 .tab-button.reflection {
   background: #f5f3ff;
-  color: #6d28d9;
+  color: var(--text-dark);
   border-color: #c4b5fd;
 }
 
@@ -219,7 +219,7 @@ body {
   border: 1px solid #c4b5fd;
   border-radius: 8px;
   background: #f5f3ff;
-  color: #6d28d9;
+  color: var(--text-dark);
   font-size: var(--fs-body-sm);
   font-weight: var(--fw-bold);
   font-family: var(--font-mono);
@@ -229,12 +229,12 @@ body {
 .tab-close-button.active {
   background: #6d28d9;
   color: #fff;
-  border-color: #6d28d9;
+  border-color: var(--text-dark);
 }
 
 .new-tab-btn {
   background: transparent;
-  color: #6b7280;
+  color: var(--text-muted);
   border: 1px dashed #d1d5db;
   border-radius: 8px;
   padding: 7px var(--sp-5);
@@ -291,14 +291,14 @@ body {
   font-weight: var(--fw-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
 .reflection-meta-value {
   font-size: var(--fs-body);
   font-weight: var(--fw-bold);
-  color: #111827;
+  color: var(--text-dark);
   font-family: var(--font-heading);
 }
 
@@ -375,7 +375,7 @@ body {
 
 .reflection-text {
   font-size: var(--fs-body);
-  color: #374151;
+  color: var(--text-muted);
   line-height: 1.45;
   white-space: pre-wrap;
   font-family: var(--font-mono);
@@ -386,7 +386,7 @@ body {
   transform: translate(-50%, -50%);
   background: #fff;
   border: 1px solid #c4b5fd;
-  color: #6d28d9;
+  color: var(--text-dark);
   font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
   font-family: var(--font-mono);
@@ -407,7 +407,7 @@ body {
   margin-bottom: var(--sp-2);
   font-size: var(--fs-label);
   font-weight: var(--fw-bold);
-  color: #374151;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
@@ -433,13 +433,13 @@ body {
 .slider-row span {
   font-size: var(--fs-label);
   font-weight: var(--fw-bold);
-  color: #374151;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
 .slider-row output {
   font-size: var(--fs-label);
-  color: #111827;
+  color: var(--text-dark);
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
@@ -466,7 +466,7 @@ body {
 
 .emotion-chip.positive {
   background: #eff6ff;
-  color: #1d4ed8;
+  color: var(--text-dark);
   border-color: #bfdbfe;
 }
 
@@ -482,7 +482,7 @@ body {
 
 .emotion-chip.negative {
   background: #fef2f2;
-  color: #b91c1c;
+  color: var(--text-dark);
   border-color: #fecaca;
 }
 
@@ -534,12 +534,12 @@ button:disabled {
 
 .followup-button {
   background: #eab308;
-  color: #111827;
+  color: var(--text-dark);
 }
 
 .followup .node-header {
   background: #eab308;
-  color: #111827;
+  color: var(--text-dark);
 }
 
 .followup .small-tag {
@@ -580,7 +580,7 @@ button:disabled {
   max-width: 380px;
   font-size: var(--fs-label);
   line-height: 1.4;
-  color: #6b7280;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
@@ -689,7 +689,7 @@ button:disabled {
 .transcript-sidebar-title {
   font-size: var(--fs-h3);
   font-weight: var(--fw-bold);
-  color: #111827;
+  color: var(--text-dark);
   flex: 1;
   font-family: var(--font-heading);
 }
@@ -700,7 +700,7 @@ button:disabled {
   padding: 2px 8px;
   border-radius: 6px;
   background: #e0e7ff;
-  color: #3730a3;
+  color: var(--text-dark);
   text-decoration: none;
   white-space: nowrap;
   font-family: var(--font-mono);
@@ -718,7 +718,7 @@ button:disabled {
 
 .session-name-input label {
   font-size: var(--fs-label);
-  color: #374151;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
@@ -737,7 +737,7 @@ button:disabled {
 
 .transcript-control-btn {
   background: #ffffff;
-  color: #111827;
+  color: var(--text-dark);
   border: 1px solid #d1d5db;
   border-radius: 10px;
   padding: 9px 12px;
@@ -746,13 +746,13 @@ button:disabled {
 .transcript-status {
   font-size: var(--fs-label);
   line-height: 1.4;
-  color: #6b7280;
+  color: var(--text-muted);
   white-space: pre-line;
   font-family: var(--font-mono);
 }
 
 .transcript-status.status-transcribing {
-  color: #6366f1;
+  color: var(--text-dark);
   font-weight: var(--fw-semibold);
 }
 
@@ -769,7 +769,7 @@ button:disabled {
 
 .transcript-file-name {
   font-size: var(--fs-label);
-  color: #374151;
+  color: var(--text-muted);
   min-height: 16px;
   word-break: break-word;
   font-family: var(--font-mono);
@@ -795,7 +795,7 @@ button:disabled {
   max-height: 140px;
   overflow-y: auto;
   font-size: var(--fs-xs);
-  color: #374151;
+  color: var(--text-muted);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -822,7 +822,7 @@ button:disabled {
   border: 1px dashed #d1d5db;
   border-radius: 12px;
   background: #fff;
-  color: #6b7280;
+  color: var(--text-muted);
   padding: var(--sp-5);
   font-size: var(--fs-body-sm);
   font-family: var(--font-mono);
@@ -868,7 +868,7 @@ button:disabled {
   border: 0;
   border-radius: 14px;
   background: #fee2e2;
-  color: #b91c1c;
+  color: var(--text-dark);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -896,7 +896,7 @@ button:disabled {
   display: block;
   font-size: var(--fs-body-sm);
   font-weight: var(--fw-bold);
-  color: #111827;
+  color: var(--text-dark);
   font-family: var(--font-heading);
 }
 
@@ -905,7 +905,7 @@ button:disabled {
   margin-top: var(--sp-1);
   font-size: var(--fs-label);
   line-height: 1.4;
-  color: #6b7280;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
@@ -922,7 +922,7 @@ button:disabled {
   border: 1px dashed #d1d5db;
   border-radius: 12px;
   background: #fff;
-  color: #6b7280;
+  color: var(--text-muted);
   padding: var(--sp-6);
   font-size: var(--fs-body);
   font-family: var(--font-mono);
@@ -964,14 +964,14 @@ button:disabled {
   gap: var(--sp-4);
   margin-bottom: var(--sp-2);
   font-size: var(--fs-label);
-  color: #6b7280;
+  color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
 .transcript-text {
   font-size: var(--fs-body);
   line-height: 1.4;
-  color: #111827;
+  color: var(--text-dark);
   white-space: pre-wrap;
   font-family: var(--font-mono);
 }
@@ -1033,7 +1033,7 @@ button:disabled {
   border: none;
   border-radius: 13px;
   background: transparent;
-  color: #e2e8f0;
+  color: var(--text-muted);
   font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
   font-family: var(--font-mono);
@@ -1049,7 +1049,7 @@ button:disabled {
 
 .fb-btn--active {
   background: #ffffff !important;
-  color: #111111 !important;
+  color: var(--text-dark) !important;
 }
 
 .fb-btn--active:hover {
@@ -1090,7 +1090,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  color: #374151;
+  color: var(--text-muted);
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
@@ -1170,7 +1170,7 @@ button:disabled {
   border: none;
   border-radius: 999px;
   background: #18181f;
-  color: #e2e8f0;
+  color: var(--text-muted);
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
   font-family: var(--font-mono);

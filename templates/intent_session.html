@@ -25,11 +25,11 @@
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .session-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; height: 100vh; width: 100vw; padding: 16px; }
     .app-nav { background: var(--sidebar-bg); border-radius: 0 24px 24px 0; display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 3; }
-    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: #64748b; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
+    .app-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--text-muted); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 700; margin-bottom: auto; text-decoration: none; }
     .app-nav-icons { display: flex; flex-direction: column; gap: 24px; margin-bottom: auto; }
-    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; background: transparent; font-size: 18px; text-decoration: none; }
+    .app-nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); background: transparent; font-size: 18px; text-decoration: none; }
     .app-nav-icon svg { width: 24px; height: 24px; stroke: currentColor; }
-    .app-nav-icon.is-active { color: #111827; }
+    .app-nav-icon.is-active { color: var(--text-dark); }
     .app-nav-avatar { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
     .session-main { position: relative; z-index: 1; background: var(--panel-bg); border-radius: var(--card-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
     .session-main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; border-bottom: 1px solid #f0f0f0; }
@@ -45,7 +45,7 @@
     .section-title { font-size: var(--fs-h2); font-weight: var(--fw-semibold); margin: 0 0 24px; }
     .session-transcript { font-size: var(--fs-body); line-height: 1.9; }
     .session-transcript-empty { font-size: var(--fs-body); color: var(--text-muted); font-family: var(--font-mono); }
-    .session-chunk { display: inline; padding: 4px 6px; margin-right: 2px; border-radius: 8px; color: #0f172a; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+    .session-chunk { display: inline; padding: 4px 6px; margin-right: 2px; border-radius: 8px; color: var(--text-dark); cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
     .session-chunk:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08); }
     .session-chunk.is-active { outline: 2px solid rgba(15, 23, 42, 0.72); outline-offset: 1px; }
     .session-chunk.is-read { opacity: 0.82; }
@@ -75,7 +75,7 @@
           </div>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
-          <label for="vizTypeSelect" style="font-size:13px;color:#64748b;font-weight:600;">View:</label>
+          <label for="vizTypeSelect" style="font-size:13px;color: var(--text-muted);font-weight:600;">View:</label>
           <select id="vizTypeSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
             <option value="intent">Intent</option>
             <option value="goal_blocker">Goal/Blocker</option>
@@ -83,13 +83,13 @@
             <option value="goal_status">Goal Status</option>
           </select>
           <span id="intentFilterBox">
-            <label for="intentFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Intent Filter:</label>
+            <label for="intentFilterSelect" style="font-size:13px;color: var(--text-muted);font-weight:600;">Intent Filter:</label>
             <select id="intentFilterSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
               <option value="">All</option>
             </select>
           </span>
           <span id="goalBlockerFilterBox" style="display:none;">
-            <label for="goalBlockerFilterSelect" style="font-size:13px;color:#64748b;font-weight:600;">Goal/Blocker Filter:</label>
+            <label for="goalBlockerFilterSelect" style="font-size:13px;color: var(--text-muted);font-weight:600;">Goal/Blocker Filter:</label>
             <select id="goalBlockerFilterSelect" style="padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
               <option value="">All</option>
             </select>
@@ -254,7 +254,7 @@
               chip.style.cssText = `background:${color}1f;color:${color};font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.05em;padding:4px 8px;margin-right:8px;border-radius:999px;`;
               chip.textContent = status;
               const preview = document.createElement('span');
-              preview.style.cssText = 'font-size:12px;color:#64748b;';
+              preview.style.cssText = 'font-size:12px;color: var(--text-muted);';
               const goal = segment.rephrased_goal;
               preview.textContent = goal && goal !== 'none' ? ` ${goal.slice(0, 36)}${goal.length > 36 ? '…' : ''}` : (segment.text ? ` ${segment.text.slice(0, 32)}${segment.text.length > 32 ? '…' : ''}` : '');
               const row = document.createElement('div');
