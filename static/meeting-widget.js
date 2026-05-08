@@ -404,6 +404,10 @@
       this._finalSegments = []; // [{text, highlighted}]
       this._highlightPending = false;
       this._qMarked = false;
+      this._arousalMarked = false;
+      this._arousalCooldownUntil = 0;
+      this._arousalReleaseTimer = null;
+      this._arousalMonitor = null;
       this._meetingName = '';
       this._recorder = null;
       this._stream = null;
@@ -666,12 +670,57 @@
       this._transcriptPanel.classList.toggle('mw-hidden',  view !== 'transcript');
     }
 
+    _signalArousalHighlight() {
+      if (this._device !== 'smartwatch') return;
+
+      const now = Date.now();
+      if (now < this._arousalCooldownUntil) return;
+      this._arousalCooldownUntil = now + 1800;
+
+      this._arousalMarked = true;
+      this._highlightPending = true;
+      this._elevationCard.classList.remove('mw-hidden');
+      this._renderTranscript(this._currentInterim || '');
+
+      if (this._arousalReleaseTimer) {
+        clearTimeout(this._arousalReleaseTimer);
+      }
+      this._arousalReleaseTimer = setTimeout(() => {
+        this._highlightPending = false;
+        this._renderTranscript(this._currentInterim || '');
+      }, 1300);
+    }
+
+    _startAudioArousalMonitor(stream) {
+      if (typeof window.createMeetingWidgetArousalMonitor !== 'function') {
+        return;
+      }
+
+      if (!this._arousalMonitor) {
+        this._arousalMonitor = window.createMeetingWidgetArousalMonitor(() => this._signalArousalHighlight());
+      }
+      this._arousalMonitor.start(stream);
+    }
+
+    _stopAudioArousalMonitor() {
+      if (this._arousalMonitor && typeof this._arousalMonitor.stop === 'function') {
+        this._arousalMonitor.stop();
+      }
+    }
+
     /* ── Start ─────────────────────────────────────────────────── */
 
     _startRecording() {
       this._seconds = 0;
       this._finalSegments = [];
       this._highlightPending = false;
+      this._qMarked = false;
+      this._arousalMarked = false;
+      this._arousalCooldownUntil = 0;
+      if (this._arousalReleaseTimer) {
+        clearTimeout(this._arousalReleaseTimer);
+        this._arousalReleaseTimer = null;
+      }
       this._chunks = [];
       this._view = 'transcript';
 
@@ -696,14 +745,9 @@
       this._onResize = () => this._syncRecordingLayout();
       window.addEventListener('resize', this._onResize);
 
-      /* Timer */
-      this._timerInterval = setInterval(() => {
-        this._seconds++;
-        this._timeEl.textContent = formatTime(this._seconds);
-      }, 1000);
-
-      /* Q-key: hold shows card + highlights interim; card stays after release until phrase commits */
+      /* Desktop-only: hold Q to mark current phrase for highlight */
       this._onKeyDown = (e) => {
+        if (this._device !== 'desktop') return;
         if (e.key !== 'q' && e.key !== 'Q') return;
         this._qMarked = true;
         this._highlightPending = true;
@@ -711,19 +755,26 @@
         this._renderTranscript(this._currentInterim || '');
       };
       this._onKeyUp = (e) => {
+        if (this._device !== 'desktop') return;
         if (e.key !== 'q' && e.key !== 'Q') return;
-        this._highlightPending = false; // interim stays yellow via _qMarked below
+        this._highlightPending = false;
         this._renderTranscript(this._currentInterim || '');
-        // card + _qMarked stay until phrase finalizes
       };
       document.addEventListener('keydown', this._onKeyDown);
       document.addEventListener('keyup',   this._onKeyUp);
+
+      /* Timer */
+      this._timerInterval = setInterval(() => {
+        this._seconds++;
+        this._timeEl.textContent = formatTime(this._seconds);
+      }, 1000);
 
       /* MediaRecorder */
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then(stream => {
             this._stream = stream;
+            this._startAudioArousalMonitor(stream);
             try {
               this._recorder = new MediaRecorder(stream);
               this._recorder.ondataavailable = (e) => {
@@ -749,9 +800,14 @@
           for (let i = e.resultIndex; i < e.results.length; i++) {
             const t = e.results[i][0].transcript;
             if (e.results[i].isFinal) {
-              this._finalSegments.push({ text: t + ' ', highlighted: this._qMarked });
+              this._finalSegments.push({ text: t + ' ', highlighted: this._qMarked || this._arousalMarked });
               this._qMarked = false;
+              this._arousalMarked = false;
               this._highlightPending = false;
+              if (this._arousalReleaseTimer) {
+                clearTimeout(this._arousalReleaseTimer);
+                this._arousalReleaseTimer = null;
+              }
               this._elevationCard.classList.add('mw-hidden');
             } else {
               interim += t;
@@ -792,7 +848,11 @@
         try { r.stop(); } catch (_) {}
       }
 
-      /* Remove Q-key listeners */
+      this._stopAudioArousalMonitor();
+      if (this._arousalReleaseTimer) {
+        clearTimeout(this._arousalReleaseTimer);
+        this._arousalReleaseTimer = null;
+      }
       if (this._onKeyDown) {
         document.removeEventListener('keydown', this._onKeyDown);
         document.removeEventListener('keyup',   this._onKeyUp);
@@ -801,6 +861,7 @@
       }
       this._highlightPending = false;
       this._qMarked = false;
+      this._arousalMarked = false;
       this._currentInterim = '';
       this._elevationCard.classList.add('mw-hidden');
 
@@ -967,7 +1028,7 @@
           : '<span>' + this._escHtml(seg.text) + '</span>'
       ).join('');
       if (interim) {
-        const cls = this._highlightPending || this._qMarked
+        const cls = this._highlightPending || this._qMarked || this._arousalMarked
           ? 'mw-transcript-interim mw-q-active'
           : 'mw-transcript-interim';
         html += '<span class="' + cls + '">' + this._escHtml(interim) + '</span>';

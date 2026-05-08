@@ -1,0 +1,17 @@
+{
+  "id": "noonchi",
+  "name": "Noonchi",
+  "shortName": "Noonchi",
+  "version": "0.01",
+  "description": "Ambient social nudge app.",
+  "type": "app",
+  "src": "noonchi.app.js",
+  "tags": "tool,bluetooth",
+  "supports": ["BANGLEJS2"],
+  "storage": [
+    { "name": "noonchi.app.js", "url": "noonchi.app.js" },
+    { "name": "noonchi.boot.js", "url": "noonchi.boot.js" },
+    { "name": "noonchi.wid.js", "url": "noonchi.wid.js" },
+    { "name": "noonchinudge.app.js", "url": "noonchinudge.app.js" }
+  ]
+}
