@@ -403,13 +403,6 @@
         });
       });
 
-      if (!filteredReflections.some((reflection) => reflection.reflectionKey === selectedPracticeKey)) {
-        selectPracticeReflection(filteredReflections[0]?.reflectionKey || '').catch((error) => {
-          console.error('Failed to select practice reflection', error);
-        });
-        return;
-      }
-
       updatePracticeSelectionUi();
     }
 
@@ -696,7 +689,6 @@
         practiceList.innerHTML = '<div class="practice-empty">No practice items found in training data.</div>';
         return;
       }
-      await selectPracticeReflection(practiceReflections[0]?.reflectionKey || '');
       renderPracticeList();
     }
 

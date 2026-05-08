@@ -25,13 +25,13 @@
     .journal-detail-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: #ffffff; letter-spacing: -0.02em; display: flex; align-items: flex-start; gap: var(--sp-4); }
     .journal-detail-title-icon { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
     .journal-detail-title-icon svg { width: 36px; height: 36px; }
-    .journal-section-title { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dark); font-weight: var(--fw-bold); font-family: var(--font-mono); }
-    .journal-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: var(--text-dark); white-space: pre-wrap; font-family: var(--font-mono); padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
+    .journal-section-title { margin: var(--sp-7) 0 0; font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dark); font-weight: var(--fw-bold); font-family: var(--font-mono); }
+    .journal-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: var(--text-dark); white-space: pre-wrap; font-family: var(--font-mono); padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: rgba(255,255,255,0.5); }
     .journal-path-list { margin: var(--sp-3) 0 0; display: flex; flex-direction: column; gap: var(--sp-5); }
-    .journal-path-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
+    .journal-path-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: rgba(255,255,255,0.5); }
     .journal-path-question { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: var(--text-dark); font-family: var(--font-mono); }
     .journal-path-answer { margin: var(--sp-2) 0 0; font-size: var(--fs-body); color: var(--text-dark); font-family: var(--font-mono); }
-    .journal-entry-field { margin-top: var(--sp-2); width: 100%; flex: 1; min-height: 80px; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid #cbd5e1; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-dark); line-height: 1.6; resize: none; box-sizing: border-box; }
+    .journal-entry-field { margin-top: var(--sp-2); width: 100%; flex: 1; min-height: 80px; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-dark); line-height: 1.6; resize: none; box-sizing: border-box; background: rgba(255,255,255,0.5); }
     .journal-entry-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
     .journal-actions { margin-top: var(--sp-5); display: flex; align-items: center; gap: var(--sp-5); }
     .journal-save-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 140px; min-height: var(--control-height); padding: var(--control-pad-y) var(--control-pad-x); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-active-bg); color: var(--control-active-fg); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; box-shadow: var(--control-active-shadow); transition: background 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease; }
@@ -57,7 +57,7 @@
     .journal-item-icon svg { width: 24px; height: 24px; display: block; }
     .journal-item-copy { min-width: 0; flex: 1; }
     .journal-item-title { margin: 0; font-size: var(--fs-h3); font-weight: var(--fw-medium); color: var(--text-dark); font-family: var(--font-heading); }
-    .journal-item-subtitle { margin: var(--sp-3) 0 0; font-size: var(--fs-label); color: var(--text-muted); font-family: var(--font-mono); }
+    .journal-item-subtitle { margin: var(--sp-3) 0 0; font-size: var(--fs-label); color: var(--text-dark); font-family: var(--font-mono); }
     .journal-empty { padding: var(--sp-7); border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
 
     @media (max-width: 1180px) {
