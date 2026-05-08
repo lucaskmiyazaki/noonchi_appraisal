@@ -96,6 +96,17 @@
   --text-dark:    #1c1b1f;
   --text-muted:   #6b7280;
   --border-soft:  rgba(226, 232, 240, 0.9);
+  /* Trigger type colours — bg is the card fill, icon is the accent/circle colour */
+  --trigger-tone-difference-bg:   #FFB87A;
+  --trigger-tone-difference-icon: #E04B0A;
+  --trigger-elevation-bg:         #FFE53A;
+  --trigger-elevation-icon:       #F45520;
+  --trigger-unclear-intent-bg:    #FFF176;
+  --trigger-unclear-intent-icon:  #B8860B;
+  --trigger-excellent-tone-bg:    #86EFAC;
+  --trigger-excellent-tone-icon:  #16A34A;
+  --trigger-clarification-bg:     #93C5FD;
+  --trigger-clarification-icon:   #2563EB;
   /* Radii */
   --card-radius:  8px;
   --radius-sm:    4px;
