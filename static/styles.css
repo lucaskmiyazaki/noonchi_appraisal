@@ -88,9 +88,11 @@
   --control-active-fg: #ffffff;
   --control-active-shadow: 0 2px 10px rgba(17, 24, 39, 0.16);
   /* Colours */
-  --bg-main:      #f8fafc;
+  --app-sidebar-surface: #f8fafc;
+  --app-page-surface: var(--app-sidebar-surface);
+  --bg-main:      var(--app-page-surface);
   --panel-bg:     #ffffff;
-  --sidebar-bg:   #f8fafc;
+  --sidebar-bg:   var(--app-sidebar-surface);
   --text-dark:    #1c1b1f;
   --text-muted:   #6b7280;
   --border-soft:  rgba(226, 232, 240, 0.9);

@@ -11,10 +11,15 @@
   <style>
     /* tokens inherited from styles.css */
 
+    :root {
+      --dashboard-sidebar-surface: var(--app-sidebar-surface, #f8fafc);
+      --dashboard-page-surface: var(--app-page-surface, var(--dashboard-sidebar-surface));
+    }
+
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .dashboard-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; height: 100vh; width: 100vw; padding: 0; box-sizing: border-box; }
-    .dashboard-main { position: relative; min-width: 0; background: var(--panel-bg); border-radius: 0; box-shadow: none; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
+    .dashboard-main { position: relative; min-width: 0; background: var(--dashboard-page-surface); border-radius: 0; box-shadow: none; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
     .dashboard-main::before {
       content: '';
       position: absolute;
