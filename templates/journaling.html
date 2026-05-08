@@ -16,26 +16,28 @@
     body { font-family: var(--font-heading); background: var(--bg-main); color: var(--text-dark); }
     .journal-layout { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; height: 100vh; width: 100vw; padding: 0; }
 
-    .journal-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; background: var(--panel-bg); border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
-    .journal-main { grid-column: 3; background: transparent; padding: var(--sp-9); min-width: 0; overflow-y: auto; border-left: 1px solid var(--border-soft); }
-    .journal-sidebar { grid-column: 1 / span 2; min-width: 0; overflow: hidden; }
+    .journal-workspace { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; background: var(--panel-bg); border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
+    .journal-main { grid-column: 2; background: transparent; padding: var(--sp-9); min-width: 0; overflow-y: auto; border-left: none; display: flex; flex-direction: column; height: 100%; }
+    .journal-sidebar { grid-column: 1; min-width: 0; overflow: hidden; }
     .journal-sidebar-panel { height: 100%; background: transparent; padding: var(--sp-9) 0 var(--sp-9) var(--sp-9); overflow-x: visible; overflow-y: auto; border: 0; border-radius: 0; }
-    .journal-detail { padding: 0; border-radius: 0; background: transparent; border: 0; }
+    .journal-detail { padding: 0; border-radius: 0; background: transparent; border: 0; flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .journal-detail[hidden] { display: none; }
-    .journal-detail-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: var(--text-dark); letter-spacing: -0.02em; }
-    .journal-section-title { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: var(--fw-bold); font-family: var(--font-mono); }
-    .journal-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: var(--text-muted); white-space: pre-wrap; font-family: var(--font-mono); }
+    .journal-detail-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: #ffffff; letter-spacing: -0.02em; display: flex; align-items: flex-start; gap: var(--sp-4); }
+    .journal-detail-title-icon { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+    .journal-detail-title-icon svg { width: 36px; height: 36px; }
+    .journal-section-title { margin: var(--sp-7) 0 var(--sp-3); font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dark); font-weight: var(--fw-bold); font-family: var(--font-mono); }
+    .journal-copy { margin: var(--sp-3) 0 0; font-size: var(--fs-body); line-height: 1.65; color: var(--text-dark); white-space: pre-wrap; font-family: var(--font-mono); padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
     .journal-path-list { margin: var(--sp-3) 0 0; display: flex; flex-direction: column; gap: var(--sp-5); }
     .journal-path-item { padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid var(--border-soft); background: #f8fafc; }
-    .journal-path-question { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: var(--text-muted); font-family: var(--font-mono); }
-    .journal-path-answer { margin: var(--sp-2) 0 0; font-size: var(--fs-body); color: var(--text-muted); font-family: var(--font-mono); }
-    .journal-entry-field { margin-top: var(--sp-5); width: 100%; min-height: 220px; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid #cbd5e1; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-dark); line-height: 1.6; resize: vertical; box-sizing: border-box; }
+    .journal-path-question { margin: 0; font-size: var(--fs-label); font-weight: var(--fw-bold); color: var(--text-dark); font-family: var(--font-mono); }
+    .journal-path-answer { margin: var(--sp-2) 0 0; font-size: var(--fs-body); color: var(--text-dark); font-family: var(--font-mono); }
+    .journal-entry-field { margin-top: var(--sp-2); width: 100%; flex: 1; min-height: 80px; padding: var(--sp-5) var(--sp-6); border-radius: var(--card-radius); border: 1px solid #cbd5e1; font-family: var(--font-mono); font-size: var(--fs-body); color: var(--text-dark); line-height: 1.6; resize: none; box-sizing: border-box; }
     .journal-entry-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
     .journal-actions { margin-top: var(--sp-5); display: flex; align-items: center; gap: var(--sp-5); }
     .journal-save-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 140px; min-height: var(--control-height); padding: var(--control-pad-y) var(--control-pad-x); border: 1px solid var(--control-border-color); border-radius: var(--control-radius); background: var(--control-active-bg); color: var(--control-active-fg); font-size: var(--control-font-size); font-weight: var(--control-font-weight); font-family: var(--control-font-family); cursor: pointer; box-shadow: var(--control-active-shadow); transition: background 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease; }
     .journal-save-btn:hover { background: #2a2930; box-shadow: var(--control-active-shadow); }
     .journal-save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-    .journal-save-status { margin: 0; min-height: 18px; font-size: var(--fs-body); color: var(--text-muted); font-family: var(--font-mono); }
+    .journal-save-status { margin: 0; min-height: 18px; font-size: var(--fs-body); color: var(--text-dark); font-family: var(--font-mono); }
     .journal-detail-empty { padding: 0; border-radius: 0; background: transparent; border: 0; color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
     .journal-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-right: var(--sp-9); margin-bottom: var(--sp-7); }
     .journal-sidebar-title { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-medium); color: var(--text-dark); letter-spacing: -0.02em; }
@@ -104,7 +106,7 @@
         <section id="journalDetailEmpty" class="journal-detail-empty">Select a journaling node from the sidebar.</section>
 
         <section id="journalDetail" class="journal-detail" hidden>
-          <h2 id="journalDetailTitle" class="journal-detail-title"></h2>
+          <h2 id="journalDetailTitle" class="journal-detail-title"><span id="journalDetailTitleIcon" class="journal-detail-title-icon" aria-hidden="true"></span><span id="journalDetailTitleText"></span></h2>
 
           <p class="journal-section-title">Question And Answer Path</p>
           <div id="journalPathList" class="journal-path-list"></div>
@@ -285,11 +287,6 @@
         });
       });
 
-      if (!filtered.some((item) => item.item_id === selectedItemId)) {
-        selectItem(filtered[0]?.item_id || '');
-        return;
-      }
-
       updateSelectionUi();
     }
 
@@ -317,7 +314,17 @@
       selectedItemId = item.item_id;
       updateSelectionUi();
 
-      journalDetailTitle.textContent = formatJournalTitle(item.title, 'Journaling Node');
+      // Mirror the selected card's colour onto the right panel
+      const { theme } = getJournalTheme(item);
+      const journalMain = document.querySelector('.journal-main');
+      if (journalMain) {
+        journalMain.style.background = theme.cardBg || '';
+      }
+
+      const { triggerId, theme: _t } = getJournalTheme(item);
+      const iconMarkup = triggerIconSvgById[triggerId] || '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.35"></circle></svg>';
+      document.getElementById('journalDetailTitleIcon').innerHTML = iconMarkup;
+      document.getElementById('journalDetailTitleText').textContent = formatJournalTitle(item.title, 'Journaling Node');
       journalPrompt.textContent = String(item.journaling_prompt || 'No journaling prompt available.').trim();
       journalEntryField.value = String(item.journal_entry || '');
       journalSaveStatus.textContent = '';
@@ -376,7 +383,6 @@
         return;
       }
 
-      selectItem(journalingItemsState[0]?.item_id || '');
       renderList();
     }
 
