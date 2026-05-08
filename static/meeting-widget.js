@@ -20,6 +20,7 @@
 
   const CSS = /* css */`
     .mw-widget {
+      --mw-highlight-bg: #fef2b6;
       display: inline-flex;
       flex-direction: column;
       gap: var(--sp-3);
@@ -146,9 +147,23 @@
       box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
       flex-shrink: 0;
     }
+    .mw-watch-status-dot.is-connecting {
+      width: 10px;
+      height: 10px;
+      background: transparent;
+      border: 2px solid rgba(107, 114, 128, 0.35);
+      border-top-color: #374151;
+      box-shadow: none;
+      animation: mw-watch-spin 0.8s linear infinite;
+    }
     .mw-watch-status-dot.is-connected {
       background: #22c55e;
       box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+    }
+    @keyframes mw-watch-spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
     .mw-seg-btn.is-active {
       background: var(--control-active-bg);
@@ -190,13 +205,13 @@
       color: #6b7280;
     }
     .mw-transcript-interim.mw-q-active {
-      background: #fef2b6;
+      background: var(--mw-highlight-bg);
       color: #1c1b1f;
       border-radius: 3px;
       padding: 0 2px;
     }
     .mw-transcript-highlight {
-      background: #fef2b6;
+      background: var(--mw-highlight-bg);
       color: #1c1b1f;
       border-radius: 3px;
       padding: 0 2px;
@@ -405,6 +420,17 @@
   const SVG_WATCH    = `<svg aria-hidden="true"><use href="#icon-watch"></use></svg>`;
   const SVG_ICON     = `<svg aria-hidden="true"><use href="#icon-bell"></use></svg>`;
   const SVG_ELEVATION = `<svg viewBox="0 0 23.6522 32" fill="none" aria-hidden="true"><path d="M21.2638 2.48451C21.2638 2.48451 16.4204 1.37238 14.7459 3.32667C13.0714 5.28095 11.3519 8.97881 11.3519 8.97881C11.3519 8.97881 15.4143 8.88842 17.8698 8.13665C20.3252 7.38487 21.2638 2.48451 21.2638 2.48451Z" fill="#1F503B"/><ellipse cx="11.8261" cy="20.1741" rx="11.8261" ry="11.8259" fill="#F45520"/></svg>`;
+  const SVG_TONE_DIFFERENCE = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4.68629 27.3137C6.17203 28.7994 7.93585 29.978 9.87706 30.7821C11.8183 31.5861 13.8988 32 16 32C18.1011 32 20.1817 31.5861 22.1229 30.7821C24.0641 29.978 25.828 28.7994 27.3137 27.3137C28.7994 25.828 29.978 24.0641 30.7821 22.1229C31.5861 20.1817 32 18.1011 32 16C32 13.8988 31.5861 11.8183 30.7821 9.87706C29.978 7.93586 28.7994 6.17203 27.3137 4.68629L16 16L4.68629 27.3137Z" fill="#E34754"/><path d="M4.6863 27.3137C6.17204 28.7994 7.93586 29.978 9.87707 30.7821C11.8183 31.5861 13.8989 32 16 32C18.1012 32 20.1817 31.5861 22.1229 30.7821C24.0641 29.978 25.828 28.7994 27.3137 27.3137C28.7994 25.828 29.978 24.0641 30.7821 22.1229C31.5861 20.1817 32 18.1011 32 16C32 13.8988 31.5861 11.8183 30.7821 9.87706C29.978 7.93585 28.7994 6.17203 27.3137 4.68629L25.2316 6.76839C26.4439 7.9807 27.4056 9.41993 28.0617 11.0039C28.7178 12.5879 29.0555 14.2855 29.0555 16C29.0555 17.7145 28.7178 19.4121 28.0617 20.9961C27.4056 22.5801 26.4439 24.0193 25.2316 25.2316C24.0193 26.4439 22.5801 27.4056 20.9961 28.0617C19.4121 28.7178 17.7145 29.0555 16 29.0555C14.2855 29.0555 12.5879 28.7178 11.0039 28.0617C9.41994 27.4056 7.98071 26.4439 6.7684 25.2316L4.6863 27.3137Z" fill="#6ABB6E"/></svg>`;
+  const SVG_UNCLEAR_INTENT = `<svg viewBox="0 0 25.7051 31.9989" fill="none" aria-hidden="true"><path d="M4.41456 0.000551451C4.46091 -0.000251397 9.82002 -0.0877937 11.1577 2.35504C11.7641 3.46249 12.3002 4.94997 12.7065 6.2486C13.1129 4.94995 13.6499 3.46259 14.2564 2.35504C15.5999 -0.0984093 21.0005 0.000551451 21.0005 0.000551451C21.0012 0.0444295 21.0889 5.42822 18.6558 6.77204C17.1299 7.61462 14.8795 8.32265 13.4048 8.7359C13.467 8.98425 13.5024 9.12653 13.5024 9.12653C13.4954 9.12488 13.1931 9.05258 12.7065 8.92438C12.215 9.05388 11.9116 9.12653 11.9116 9.12653C11.9116 9.12653 11.946 8.98364 12.0083 8.73493C10.5337 8.32163 8.28455 7.61425 6.75928 6.77204C4.32586 5.42826 4.41381 0.0436992 4.41456 0.000551451Z" fill="#4C1D95"/><path d="M12.8525 23.4296C15.2185 23.4298 17.1367 25.3485 17.1367 27.7147C17.1366 30.0809 15.2184 31.9987 12.8525 31.9989C10.4865 31.9989 8.56748 30.081 8.56738 27.7147C8.56738 25.3483 10.4864 23.4296 12.8525 23.4296ZM8.56836 15.9393C10.9344 15.9394 12.8525 17.8582 12.8525 20.2245C12.8525 22.5908 10.9344 24.5086 8.56836 24.5087C6.20225 24.5087 4.28425 22.5908 4.28418 20.2245C4.28418 17.8581 6.20221 15.9393 8.56836 15.9393ZM17.1377 15.9393C19.5037 15.9395 21.4219 17.8582 21.4219 20.2245C21.4218 22.5907 19.5036 24.5085 17.1377 24.5087C14.7716 24.5087 12.8536 22.5908 12.8535 20.2245C12.8535 17.8581 14.7715 15.9393 17.1377 15.9393ZM12.8525 8.43933C15.2184 8.43956 17.1366 10.3574 17.1367 12.7235C17.1367 15.0898 15.2185 17.0084 12.8525 17.0087C10.4928 17.0087 8.57777 15.1006 8.56738 12.743C8.55699 15.1006 6.6439 17.0087 4.28418 17.0087C1.91808 17.0086 0 15.0899 0 12.7235C0.000130221 10.3573 1.91816 8.43939 4.28418 8.43933C6.64341 8.43933 8.55621 10.3462 8.56738 12.703C8.57855 10.3462 10.4933 8.43933 12.8525 8.43933ZM21.4209 8.43933C23.787 8.43933 25.7049 10.3572 25.7051 12.7235C25.7051 15.0899 23.787 17.0087 21.4209 17.0087C19.0549 17.0085 17.1367 15.0898 17.1367 12.7235C17.1368 10.3573 19.055 8.43952 21.4209 8.43933Z" fill="#6D28D9"/></svg>`;
+  const SVG_EXCELLENT_TONE = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 28 C16 28 7 22 7 14 C7 9.5 10.5 6 15 6 C15.7 6 16 6.5 16 6.5 C16 6.5 16.3 6 17 6 C21.5 6 25 9.5 25 14 C25 22 16 28 16 28Z" fill="#16a34a"/><path d="M16 6.5 C16 6.5 16 14 16 28" stroke="#bbf7d0" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+  const SVG_NEED_FOR_CLARIFICATION = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#2D6BB8"/><path d="M15.5867 11.274C15.7851 10.9824 16.2149 10.9824 16.4133 11.274L17.3414 12.6376C17.4421 12.7855 17.6141 12.8683 17.7925 12.8548L19.4372 12.7302C19.7889 12.7036 20.0569 13.0396 19.9527 13.3765L19.4652 14.9523C19.4123 15.1232 19.4548 15.3094 19.5766 15.4404L20.6995 16.6487C20.9396 16.907 20.844 17.326 20.5155 17.4546L18.9797 18.056C18.813 18.1212 18.694 18.2705 18.6675 18.4474L18.423 20.0786C18.3707 20.4274 17.9834 20.6139 17.6781 20.4373L16.2503 19.6115C16.0955 19.5219 15.9045 19.5219 15.7497 19.6115L14.3219 20.4373C14.0166 20.6139 13.6293 20.4274 13.577 20.0787L13.3325 18.4474C13.306 18.2705 13.187 18.1212 13.0203 18.056L11.4845 17.4546C11.156 17.326 11.0604 16.907 11.3005 16.6487L12.4234 15.4404C12.5452 15.3094 12.5877 15.1232 12.5348 14.9523L12.0473 13.3765C11.9431 13.0396 12.2111 12.7036 12.5628 12.7302L14.2075 12.8548C14.3859 12.8683 14.5579 12.7855 14.6586 12.6376L15.5867 11.274Z" fill="#1C1B1F"/></svg>`;
+  const TRIGGER_THEME = {
+    tone_difference: { bg: 'var(--trigger-tone-difference-bg)', fg: 'var(--trigger-tone-difference-icon)', icon: SVG_TONE_DIFFERENCE },
+    elevation: { bg: 'var(--trigger-elevation-bg)', fg: 'var(--trigger-elevation-icon)', icon: SVG_ELEVATION },
+    unclear_intent: { bg: 'var(--trigger-unclear-intent-bg)', fg: 'var(--trigger-unclear-intent-icon)', icon: SVG_UNCLEAR_INTENT },
+    excellent_tone: { bg: 'var(--trigger-excellent-tone-bg)', fg: 'var(--trigger-excellent-tone-icon)', icon: SVG_EXCELLENT_TONE },
+    need_for_clarification: { bg: 'var(--trigger-clarification-bg)', fg: 'var(--trigger-clarification-icon)', icon: SVG_NEED_FOR_CLARIFICATION },
+  };
   const SVG_DRAG     = `<svg viewBox="0 0 10 18" width="10" height="18" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/><circle cx="2.5" cy="9" r="1.5"/><circle cx="7.5" cy="9" r="1.5"/><circle cx="2.5" cy="15.5" r="1.5"/><circle cx="7.5" cy="15.5" r="1.5"/></svg>`;
 
   /* ------------------------------------------------------------------ */
@@ -425,6 +451,11 @@
       this._arousalCooldownUntil = 0;
       this._arousalReleaseTimer = null;
       this._arousalMonitor = null;
+      this._nudgeTypeLabel = 'Vibrate';
+      this._nudgeTriggerLabel = 'Elevation';
+      this._nudgeTriggerKey = 'elevation';
+      this._isWatchConnected = false;
+      this._isWatchConnecting = false;
       this._meetingName = '';
       this._recorder = null;
       this._stream = null;
@@ -544,9 +575,7 @@
             return;
           }
 
-          this._device = nextDevice;
-          this._syncSeg();
-
+          await this.setDevice(nextDevice);
           await this._persistDeviceSelection(this._device);
 
           if (this._onDeviceChange) {
@@ -608,9 +637,12 @@
 
       const elevationCard = document.createElement('div');
       elevationCard.className = 'mw-elevation-card mw-hidden';
-      elevationCard.innerHTML = `${SVG_ELEVATION}<span>Elevation</span>`;
+      elevationCard.innerHTML = `<span class="mw-trigger-icon">${SVG_ELEVATION}</span><span class="mw-trigger-label">Elevation</span>`;
       this._elevationCard = elevationCard;
+      this._elevationIcon = elevationCard.querySelector('.mw-trigger-icon');
+      this._elevationLabel = elevationCard.querySelector('.mw-trigger-label');
       pill.appendChild(elevationCard);
+      this._applyTriggerVisual();
 
       this._mount.appendChild(pill);
 
@@ -685,21 +717,113 @@
       this._watchSegBtn.classList.toggle('is-active',   this._device === 'smartwatch');
     }
 
+    async _setDeviceToDesktop() {
+      if (this._device === 'desktop') {
+        this._syncSeg();
+        return;
+      }
+
+      this._device = 'desktop';
+      this._syncSeg();
+      await this._persistDeviceSelection(this._device);
+
+      if (this._onDeviceChange) {
+        this._onDeviceChange(this._device);
+      }
+    }
+
+    async _ensureWatchConnection() {
+      let connected = typeof window.isBangleConnected === 'function' ? window.isBangleConnected() : false;
+      if (connected) {
+        return true;
+      }
+
+      try {
+        if (typeof window.tryAutoConnectBangle === 'function') {
+          await window.tryAutoConnectBangle();
+        }
+      } catch (_) {
+        /* Fall through to permission prompt below. */
+      }
+
+      connected = typeof window.isBangleConnected === 'function' ? window.isBangleConnected() : false;
+      if (connected) {
+        return true;
+      }
+
+      try {
+        if (typeof window.requestBanglePermissionAndConnect === 'function') {
+          await window.requestBanglePermissionAndConnect();
+        }
+      } catch (_) {
+        return false;
+      }
+
+      return typeof window.isBangleConnected === 'function' ? window.isBangleConnected() : false;
+    }
+
     _setWatchConnectionStatus(isConnected) {
       if (!this._watchStatusDot) return;
+      const wasConnected = this._isWatchConnected;
+      this._isWatchConnected = !!isConnected;
+      this._setWatchConnectingStatus(false);
       this._watchStatusDot.classList.toggle('is-connected', !!isConnected);
       this._watchStatusDot.setAttribute('title', isConnected ? 'Bangle connected' : 'Bangle disconnected');
       this._watchStatusDot.setAttribute('aria-label', isConnected ? 'Bangle connected' : 'Bangle disconnected');
+
+      if (wasConnected && !isConnected && this._device === 'smartwatch') {
+        this._setDeviceToDesktop();
+      }
+    }
+
+    _setWatchConnectingStatus(isConnecting) {
+      if (!this._watchStatusDot) return;
+      this._isWatchConnecting = !!isConnecting;
+      this._watchStatusDot.classList.toggle('is-connecting', this._isWatchConnecting);
+      if (this._isWatchConnecting) {
+        this._watchStatusDot.classList.remove('is-connected');
+        this._watchStatusDot.setAttribute('title', 'Connecting to Bangle');
+        this._watchStatusDot.setAttribute('aria-label', 'Connecting to Bangle');
+      }
+    }
+
+    _applyTriggerVisual() {
+      if (!this._elevationCard) return;
+      const theme = TRIGGER_THEME[this._nudgeTriggerKey] || TRIGGER_THEME.elevation;
+      if (theme) {
+        this._elevationCard.style.background = theme.bg;
+        this._elevationCard.style.color = theme.fg;
+        if (this._pill) {
+          this._pill.style.setProperty('--mw-highlight-bg', theme.bg);
+        }
+        if (this._elevationIcon) {
+          this._elevationIcon.innerHTML = theme.icon;
+        }
+      }
+      if (this._elevationLabel) {
+        this._elevationLabel.textContent = this._nudgeTriggerLabel;
+      }
     }
 
     _notifyBangleElevation() {
+      if (this._device !== 'smartwatch') {
+        return;
+      }
+
+      if (typeof window.isBangleConnected === 'function' && !window.isBangleConnected()) {
+        return;
+      }
+
       if (typeof window.sendSimpleMessageToBangle !== 'function') {
         return;
       }
 
+      const trigger = String(this._nudgeTriggerLabel || 'Elevation').trim() || 'Elevation';
+      const nudgeType = String(this._nudgeTypeLabel || 'Vibrate').trim() || 'Vibrate';
+
       window.sendSimpleMessageToBangle({
-        type: 'Elevation',
-        message: 'Elevation detected from meeting widget',
+        type: trigger,
+        message: `${trigger} (${nudgeType})`,
         speaker: '',
         force_vibrate: true
       }).catch((err) => {
@@ -707,9 +831,37 @@
       });
     }
 
-    setDevice(device) {
-      this._device = device;
-      this._syncSeg();
+    setNudgeContext(typeLabel, triggerLabel, triggerKey) {
+      this._nudgeTypeLabel = String(typeLabel || this._nudgeTypeLabel || 'Vibrate').trim() || 'Vibrate';
+      this._nudgeTriggerLabel = String(triggerLabel || this._nudgeTriggerLabel || 'Elevation').trim() || 'Elevation';
+      this._nudgeTriggerKey = String(triggerKey || this._nudgeTriggerKey || 'elevation').trim() || 'elevation';
+      this._applyTriggerVisual();
+    }
+
+    async setDevice(device) {
+      const nextDevice = device === 'desktop' ? 'desktop' : 'smartwatch';
+      if (nextDevice === 'smartwatch') {
+        this._device = 'smartwatch';
+        this._syncSeg();
+        const isAlreadyConnected = typeof window.isBangleConnected === 'function' ? window.isBangleConnected() : false;
+        if (!isAlreadyConnected) {
+          this._setWatchConnectingStatus(true);
+        }
+        let connected = false;
+        try {
+          connected = await this._ensureWatchConnection();
+        } finally {
+          this._setWatchConnectingStatus(false);
+        }
+        if (!connected) {
+          this._device = 'desktop';
+          this._syncSeg();
+        }
+      } else {
+        this._device = 'desktop';
+        this._setWatchConnectingStatus(false);
+        this._syncSeg();
+      }
     }
 
     _setView(view) {
@@ -797,7 +949,6 @@
 
       /* Desktop-only: hold Q to mark current phrase for highlight */
       this._onKeyDown = (e) => {
-        if (this._device !== 'desktop') return;
         if (e.key !== 'q' && e.key !== 'Q') return;
         this._qMarked = true;
         this._highlightPending = true;
@@ -806,7 +957,6 @@
         this._renderTranscript(this._currentInterim || '');
       };
       this._onKeyUp = (e) => {
-        if (this._device !== 'desktop') return;
         if (e.key !== 'q' && e.key !== 'Q') return;
         this._highlightPending = false;
         this._renderTranscript(this._currentInterim || '');

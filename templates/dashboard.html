@@ -258,16 +258,12 @@
     const nudgeTypeEl = document.getElementById('nudgeType');
     const nudgeTriggerEl = document.getElementById('nudgeTrigger');
 
-    if (typeof window.tryAutoConnectBangle === 'function') {
-      window.tryAutoConnectBangle();
-    }
-
     async function saveDevice(value) {
       if (!currentUser) return;
 
       const currentType = nudgeTypeEl?.classList.contains('is-empty') ? '' : valueOfNudgeDisplay(nudgeTypeEl.textContent, TYPE_LABELS);
       const currentTrigger = nudgeTriggerEl?.classList.contains('is-empty') ? '' : valueOfNudgeDisplay(nudgeTriggerEl.textContent, TRIGGER_LABELS);
-      setNudgeDisplay(value, currentType, currentTrigger);
+      await setNudgeDisplay(value, currentType, currentTrigger);
 
       try {
         await fetch(`/api/users/${encodeURIComponent(currentUser)}`, {
@@ -285,14 +281,14 @@
       excellent_tone: 'Excellent Tone',
       need_for_clarification: 'Need for Clarification',
     };
-    const TYPE_LABELS = { vibration: 'vibrate', sound: 'make a sound', banner: 'show a banner' };
-    const DEVICE_LABELS = { smartwatch: 'smartwatch', desktop: 'desktop' };
+    const TYPE_LABELS = { vibration: 'Vibrate', sound: 'Make a Sound', banner: 'Show a Banner' };
+    const DEVICE_LABELS = { smartwatch: 'Watch', desktop: 'Desktop' };
 
     function valueOfNudgeDisplay(displayValue, labels) {
       return Object.entries(labels).find(([, label]) => label === String(displayValue || '').trim())?.[0] || '';
     }
 
-    function setNudgeDisplay(device, type, trigger) {
+    async function setNudgeDisplay(device, type, trigger) {
       function applyValue(el, label) {
         if (label) {
           el.textContent = label;
@@ -305,7 +301,10 @@
       applyValue(nudgeDeviceEl, DEVICE_LABELS[device] || '');
       applyValue(nudgeTypeEl, TYPE_LABELS[type] || '');
       applyValue(nudgeTriggerEl, TRIGGER_LABELS[trigger] || '');
-      if (meetingWidget) meetingWidget.setDevice(device || 'smartwatch');
+      if (meetingWidget) {
+        await meetingWidget.setDevice(device || 'desktop');
+        meetingWidget.setNudgeContext(TYPE_LABELS[type] || 'Vibrate', TRIGGER_LABELS[trigger] || 'Elevation', trigger || 'elevation');
+      }
     }
 
     function formatDashboardDate() {
@@ -332,7 +331,7 @@
         const res = await fetch(`/api/users/${encodeURIComponent(user)}`);
         if (res.ok) {
           const data = await res.json();
-          setNudgeDisplay(data.nudge_device, data.nudge_type, data.nudge_trigger);
+          await setNudgeDisplay(data.nudge_device, data.nudge_type, data.nudge_trigger);
         }
       } catch (err) {
         console.error(err);

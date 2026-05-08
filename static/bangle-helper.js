@@ -159,19 +159,15 @@
     await ensureConnected(true);
   }
 
-  async function autoConnectBangleOnLoad() {
+  async function autoConnectBangle() {
     try {
       await ensureConnected(false);
     } catch (_) {
-      try {
-        await ensureConnected(true);
-      } catch (_) {
-        /* User may dismiss chooser; keep status as disconnected. */
-      }
+      /* Keep disconnected; caller may explicitly request permission. */
     }
   }
 
-  window.tryAutoConnectBangle = autoConnectBangleOnLoad;
+  window.tryAutoConnectBangle = autoConnectBangle;
   window.requestBanglePermissionAndConnect = requestBanglePermissionAndConnect;
   window.sendSimpleMessageToBangle = sendSimpleMessageToBangle;
   window.isBangleConnected = function isBangleConnected() {
@@ -179,10 +175,4 @@
   };
 
   emitConnectionStatus(false);
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', autoConnectBangleOnLoad, { once: true });
-  } else {
-    autoConnectBangleOnLoad();
-  }
 })();
