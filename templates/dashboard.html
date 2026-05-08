@@ -47,6 +47,19 @@
     .dash-seg-btn.is-active { background: var(--control-active-bg); color: var(--control-active-fg); box-shadow: var(--control-active-shadow); }
     .dashboard-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 22px; align-items: stretch; }
     .dashboard-card { border-radius: var(--card-radius); background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: var(--sp-9); display: flex; flex-direction: column; }
+    #meetingAnalysisCard { background: linear-gradient(to top right, #6c58e6 0%, #4F36D7 100%); color: #ffffff; }
+    #meetingAnalysisCard .card-header svg,
+    #meetingAnalysisCard .dashboard-metric-copy,
+    #meetingAnalysisCard .dashboard-secondary-copy { color: rgba(255, 255, 255, 0.86); stroke: currentColor; }
+    #meetingAnalysisCard .card-header h2,
+    #meetingAnalysisCard .dashboard-metric,
+    #meetingAnalysisCard .dashboard-secondary-metric { color: #ffffff; }
+    #nudgeCard { background: linear-gradient(to top right, #fff08a 0%, #FFE53A 100%); color: #1c1b1f; }
+    #nudgeCard .card-header svg { color: #1c1b1f; stroke: currentColor; }
+    #nudgeCard .card-header h2 { color: #1c1b1f; }
+    #nudgeCard .nudge-sentence-label { color: #1c1b1f; }
+    #nudgeCard .nudge-value { border-color: #1c1b1f; color: #1c1b1f; }
+    #nudgeCard .nudge-value.is-empty { border-color: #1c1b1f; color: #1c1b1f; }
     .dashboard-card.is-link { cursor: pointer; transition: transform 0.14s ease, box-shadow 0.14s ease; }
     .dashboard-card.is-link:hover,
     .dashboard-card.is-hoverable:hover { transform: translateY(-2px); box-shadow: 0 22px 48px rgba(148, 163, 184, 0.2); }

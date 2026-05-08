@@ -23,11 +23,13 @@
       display: inline-flex;
       flex-direction: column;
       gap: var(--sp-3);
-      background: rgba(226, 232, 240, 0.94);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.45) 100%),
+        linear-gradient(135deg, rgba(255,229,58,0.22) 0%, rgba(79,54,215,0.14) 100%);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border-radius: 8px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
       padding: var(--sp-4) var(--sp-6) var(--sp-4) var(--sp-4);
       user-select: none;
     }
@@ -94,7 +96,7 @@
     /* ── Segmented toggles (shared) ──────────────────────────────── */
     .mw-seg-wrap {
       display: flex;
-      background: rgba(0,0,0,0.07);
+      background: rgba(255,255,255,0.26);
       border-radius: 4px;
       padding: var(--sp-1);
       gap: 2px;
@@ -108,7 +110,7 @@
       gap: var(--sp-2);
       width: 68px;
       height: 72px;
-      background: var(--control-bg);
+      background: rgba(255,255,255,0.55);
       color: var(--control-fg);
       border: 1px solid var(--control-border-color);
       border-radius: var(--control-radius);
@@ -157,7 +159,8 @@
       min-height: 90px;
       max-height: 200px;
       overflow-y: auto;
-      background: #fff;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(148, 163, 184, 0.45);
       border-radius: 8px;
       padding: var(--sp-4) var(--sp-5);
       font-size: 13px;
@@ -192,7 +195,7 @@
       display: inline-flex;
       align-items: center;
       gap: var(--sp-3);
-      background: #ffe53a;
+      background: rgba(255, 229, 58, 0.48);
       border-radius: 8px;
       padding: var(--sp-4) var(--sp-6);
       font-size: 13px;
@@ -217,7 +220,7 @@
     .mw-modal-backdrop.mw-hidden { display: none; }
     .mw-modal {
       width: min(400px, 100%);
-      background: #fff;
+      background: rgba(255,255,255,0.88);
       border-radius: 8px;
       padding: var(--sp-9);
       box-shadow: 0 20px 60px rgba(15,23,42,0.22);
@@ -313,7 +316,7 @@
       justify-content: center;
     }
     .mw-confirm-box {
-      background: #fff;
+      background: rgba(255,255,255,0.9);
       border-radius: 8px;
       padding: 28px 32px;
       max-width: 340px;
