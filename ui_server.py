@@ -67,8 +67,7 @@ from server_helpers import (
 app = Flask(__name__)
 CORS(app)
 
-from models.triggers import TRIGGERS  # noqa: E402
-app.jinja_env.globals["TRIGGERS"] = TRIGGERS
+
 
 ensure_data_layout()
 
