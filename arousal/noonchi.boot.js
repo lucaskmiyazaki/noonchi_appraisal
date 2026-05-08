@@ -57,6 +57,14 @@
     const type = normalizeType(obj.type);
     const message = obj.message || "";
     const speaker = obj.speaker || "";
+    const forceVibrate = !!obj.force_vibrate;
+
+    if (forceVibrate) {
+      try { Bangle.buzz(160); } catch (_) {}
+      saveEvent(type, message, speaker);
+      load("noonchinudge.app.js");
+      return;
+    }
 
     const state = loadState();
 

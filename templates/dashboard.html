@@ -238,6 +238,7 @@
       </div>
     </main>
   </div>
+  <script src="/static/bangle-helper.js"></script>
   <script src="/static/meeting-widget-arousal.js"></script>
   <script src="/static/meeting-widget.js"></script>
   <script>
@@ -256,6 +257,10 @@
     const nudgeDeviceEl = document.getElementById('nudgeDevice');
     const nudgeTypeEl = document.getElementById('nudgeType');
     const nudgeTriggerEl = document.getElementById('nudgeTrigger');
+
+    if (typeof window.tryAutoConnectBangle === 'function') {
+      window.tryAutoConnectBangle();
+    }
 
     async function saveDevice(value) {
       if (!currentUser) return;

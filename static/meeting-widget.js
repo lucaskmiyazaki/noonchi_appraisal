@@ -133,6 +133,23 @@
       stroke: currentColor; fill: none;
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
+    .mw-watch-icon-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mw-watch-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #ef4444;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
+    }
+    .mw-watch-status-dot.is-connected {
+      background: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+    }
     .mw-seg-btn.is-active {
       background: var(--control-active-bg);
       color: var(--control-active-fg);
@@ -507,8 +524,18 @@
       watchBtn.className = 'mw-seg-btn';
       watchBtn.type = 'button';
       watchBtn.dataset.mwDevice = 'smartwatch';
-      watchBtn.innerHTML = SVG_WATCH + '<span>Watch</span>';
+      watchBtn.innerHTML = '<span class="mw-watch-icon-wrap"><span class="mw-watch-status-dot" aria-hidden="true"></span>' + SVG_WATCH + '</span><span>Watch</span>';
       this._watchSegBtn = watchBtn;
+      this._watchStatusDot = watchBtn.querySelector('.mw-watch-status-dot');
+
+      if (!this._onBangleConnectionStatus) {
+        this._onBangleConnectionStatus = (event) => {
+          this._setWatchConnectionStatus(Boolean(event?.detail?.connected));
+        };
+        window.addEventListener('bangle:connection', this._onBangleConnectionStatus);
+      }
+      const isConnected = typeof window.isBangleConnected === 'function' ? window.isBangleConnected() : false;
+      this._setWatchConnectionStatus(isConnected);
 
       [desktopBtn, watchBtn].forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -658,6 +685,28 @@
       this._watchSegBtn.classList.toggle('is-active',   this._device === 'smartwatch');
     }
 
+    _setWatchConnectionStatus(isConnected) {
+      if (!this._watchStatusDot) return;
+      this._watchStatusDot.classList.toggle('is-connected', !!isConnected);
+      this._watchStatusDot.setAttribute('title', isConnected ? 'Bangle connected' : 'Bangle disconnected');
+      this._watchStatusDot.setAttribute('aria-label', isConnected ? 'Bangle connected' : 'Bangle disconnected');
+    }
+
+    _notifyBangleElevation() {
+      if (typeof window.sendSimpleMessageToBangle !== 'function') {
+        return;
+      }
+
+      window.sendSimpleMessageToBangle({
+        type: 'Elevation',
+        message: 'Elevation detected from meeting widget',
+        speaker: '',
+        force_vibrate: true
+      }).catch((err) => {
+        console.warn('Failed to send message to Bangle:', err);
+      });
+    }
+
     setDevice(device) {
       this._device = device;
       this._syncSeg();
@@ -680,6 +729,7 @@
       this._arousalMarked = true;
       this._highlightPending = true;
       this._elevationCard.classList.remove('mw-hidden');
+      this._notifyBangleElevation();
       this._renderTranscript(this._currentInterim || '');
 
       if (this._arousalReleaseTimer) {
@@ -752,6 +802,7 @@
         this._qMarked = true;
         this._highlightPending = true;
         this._elevationCard.classList.remove('mw-hidden');
+        this._notifyBangleElevation();
         this._renderTranscript(this._currentInterim || '');
       };
       this._onKeyUp = (e) => {
