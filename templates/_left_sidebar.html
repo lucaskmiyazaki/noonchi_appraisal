@@ -119,9 +119,72 @@
       <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       <span>Light Mode</span>
     </button>
+    <button class="app-nav-bottom-item" type="button" id="navVoiceAssistToggle" aria-label="Toggle voice assist" aria-pressed="false">
+      <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 10v2a7 7 0 11-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span id="navVoiceAssistLabel">Voice Assist</span>
+    </button>
     <a class="app-nav-bottom-item" href="#" aria-label="Account">
       <svg fill="none" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
       <span>Account</span>
     </a>
   </div>
 </nav>
+
+<script>
+  (function initVoiceAssistToggle() {
+    if (window.__voiceAssistToggleInit) {
+      return;
+    }
+    window.__voiceAssistToggleInit = true;
+
+    const STORAGE_KEY = 'voiceAssistEnabled';
+    const toggle = document.getElementById('navVoiceAssistToggle');
+    const label = document.getElementById('navVoiceAssistLabel');
+    if (!toggle || !label) {
+      return;
+    }
+
+    const supportsSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+
+    function readEnabled() {
+      if (!supportsSpeech) {
+        return false;
+      }
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === null) {
+        return false;
+      }
+      return stored === '1';
+    }
+
+    function applyUi(enabled) {
+      toggle.setAttribute('aria-pressed', String(enabled));
+      label.textContent = enabled ? 'Voice Assist On' : 'Voice Assist Off';
+    }
+
+    function broadcast(enabled) {
+      window.dispatchEvent(new CustomEvent('voice-assist-change', { detail: { enabled } }));
+    }
+
+    if (!supportsSpeech) {
+      toggle.disabled = true;
+      toggle.setAttribute('aria-disabled', 'true');
+      label.textContent = 'Voice Assist Unsupported';
+      localStorage.setItem(STORAGE_KEY, '0');
+      broadcast(false);
+      return;
+    }
+
+    let enabled = readEnabled();
+    applyUi(enabled);
+    localStorage.setItem(STORAGE_KEY, enabled ? '1' : '0');
+    broadcast(enabled);
+
+    toggle.addEventListener('click', () => {
+      enabled = !enabled;
+      localStorage.setItem(STORAGE_KEY, enabled ? '1' : '0');
+      applyUi(enabled);
+      broadcast(enabled);
+    });
+  })();
+</script>

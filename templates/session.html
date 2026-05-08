@@ -296,6 +296,28 @@
     let activeSegmentScrub = null;
     let sessionTranscriptSegments = [];
     const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+    const VOICE_ASSIST_STORAGE_KEY = 'voiceAssistEnabled';
+
+    function isVoiceAssistEnabled() {
+      if (!speechSupported) {
+        return false;
+      }
+      const stored = localStorage.getItem(VOICE_ASSIST_STORAGE_KEY);
+      if (stored === null) {
+        return false;
+      }
+      return stored === '1';
+    }
+
+    let voiceAssistEnabled = isVoiceAssistEnabled();
+
+    window.addEventListener('voice-assist-change', (event) => {
+      voiceAssistEnabled = Boolean(event?.detail?.enabled);
+      if (!voiceAssistEnabled && speechSupported) {
+        window.speechSynthesis.cancel();
+        activeUtterance = null;
+      }
+    });
 
     function setSegmentPlaybackUi(progressBar, progressHandle, progress = 0) {
       const safeProgress = Math.max(0, Math.min(progress, 100));
@@ -618,7 +640,7 @@
     function speakNodeText(text, container = activeReflectionState?.currentEntryElement || activeReflectionState?.bodyElement, options = {}) {
       const { onEnd = null } = options;
 
-      if (!speechSupported || !text || !container) {
+      if (!speechSupported || !voiceAssistEnabled || !text || !container) {
         if (typeof onEnd === 'function') {
           onEnd();
         }
