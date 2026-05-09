@@ -1289,7 +1289,7 @@ def play_graph():
             "startms": reflection_tree.get("startMs", ""),
             "endms": reflection_tree.get("endMs", ""),
             "practice": "null",
-            "audio_filename": latest_audio_record.get("audioFilename", "") if latest_audio_record else "",
+            "meeting_id": latest_audio_record.get("id", "") if latest_audio_record else "",
             "tree_type": str(reflection_tree.get("type", "") or ""),
             "has_journaling": "true" if _tree_has_journaling(reflection_tree) else "false",
         })

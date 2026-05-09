@@ -193,7 +193,13 @@ function applyData(node, type, data, badge) {
 
   if (type === 'reflection') {
     const textEl = node.querySelector('.reflection-text');
-    if (textEl) textEl.textContent = data.text || '';
+    if (textEl) {
+      const rawText = data.text || '';
+      textEl.dataset.rawText = rawText;
+      import('./nodes/reflection.js').then(({ renderReflectionText }) => {
+        renderReflectionText(textEl, rawText);
+      });
+    }
   }
 }
 

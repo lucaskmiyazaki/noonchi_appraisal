@@ -105,7 +105,12 @@
     .reflection-modal-subtitle { margin: 4px 0 0; font-size: var(--fs-label); color: var(--text-muted); font-family: var(--font-mono); }
     .reflection-modal-actions { display: flex; gap: var(--sp-3); }
     .reflection-modal-close, .reflection-modal-voice { border: 0; border-radius: 10px; background: #f3f4f6; padding: var(--sp-3) var(--sp-4); cursor: pointer; }
-    .reflection-node-text { margin: 0 0 var(--sp-7); font-size: var(--fs-body); line-height: 1.6; color: var(--text-dark); white-space: pre-wrap; font-family: var(--font-mono); }
+    .reflection-node-text { margin: 0 0 var(--sp-7); font-size: var(--fs-body); line-height: 1.6; color: var(--text-dark); font-family: var(--font-mono); }
+    .reflection-node-text p { margin: 0 0 0.5em; }
+    .reflection-node-text p:last-child { margin-bottom: 0; }
+    .reflection-node-text ul { margin: 0.25em 0 0.5em; padding-left: 1.2em; list-style-type: disc; }
+    .reflection-node-text ul:last-child { margin-bottom: 0; }
+    .reflection-node-text li { margin-bottom: 0.2em; }
     .reflection-transcript-quote { margin: 0 0 var(--sp-7); padding: var(--sp-4) var(--sp-6); border-left: 3px solid #cbd5e1; border-radius: 0 8px 8px 0; background: #f8fafc; font-size: var(--fs-body-sm); line-height: 1.6; color: var(--text-muted); font-style: italic; font-family: var(--font-mono); }
     .reflection-audio-controls { display: flex; align-items: center; gap: var(--sp-5); margin-top: var(--sp-1); }
     .reflection-audio-play, .reflection-audio-skip { width: 40px; height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; background: #111827; color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 18px rgba(17, 24, 39, 0.14); }
@@ -615,17 +620,59 @@
     }
 
     function renderReadAlongText(text) {
-      const tokens = String(text || '').match(/\S+|\s+/g) || [];
+      const rawText = String(text || '');
       let charIndex = 0;
 
-      return tokens.map(token => {
-        const start = charIndex;
-        charIndex += token.length;
-        if (/^\s+$/.test(token)) {
-          return escapeHtml(token);
+      function spanify(str) {
+        const tokens = str.match(/\S+|\s+/g) || [];
+        return tokens.map(token => {
+          const start = charIndex;
+          charIndex += token.length;
+          if (/^\s+$/.test(token)) return escapeHtml(token);
+          return `<span class="reflection-node-word" data-start="${start}" data-end="${charIndex}">${escapeHtml(token)}</span>`;
+        }).join('');
+      }
+
+      function processInline(str) {
+        const parts = str.split(/(\*\*[^*]+\*\*)/g);
+        return parts.map(part => {
+          if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            charIndex += 2; // skip opening **
+            const inner = part.slice(2, -2);
+            const html = `<strong>${spanify(inner)}</strong>`;
+            charIndex += 2; // skip closing **
+            return html;
+          }
+          return spanify(part);
+        }).join('');
+      }
+
+      const lines = rawText.split('\n');
+      const parts = [];
+      let inList = false;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const isBullet = line.startsWith('- ');
+        if (isBullet && !inList) { parts.push('<ul>'); inList = true; }
+        else if (!isBullet && inList) { parts.push('</ul>'); inList = false; }
+        if (isBullet) {
+          charIndex += 2; // skip '- '
+          parts.push(`<li>${processInline(line.slice(2))}</li>`);
+        } else if (line.trim() === '') {
+          // skip empty lines
+        } else {
+          parts.push(`<p>${processInline(line)}</p>`);
         }
-        return `<span class="reflection-node-word" data-start="${start}" data-end="${charIndex}">${escapeHtml(token)}</span>`;
-      }).join('');
+        charIndex += 1; // newline
+      }
+      if (inList) parts.push('</ul>');
+      return parts.join('');
+    }
+
+    function stripMarkdown(text) {
+      return String(text || '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/^- /gm, '');
     }
 
     function updateReadAlong(container, charIndex, markComplete = false) {
@@ -718,7 +765,7 @@
       entryElement.className = 'reflection-node-entry';
       entryElement.dataset.nodeId = currentNodeId;
       entryElement.innerHTML = `
-        <p class="reflection-node-text">${renderReadAlongText(nodeText)}</p>
+        <div class="reflection-node-text">${renderReadAlongText(nodeText)}</div>
         ${isAudioNode ? `
           ${transcriptQuote}
           <div class="reflection-audio-controls">
@@ -945,7 +992,7 @@
       }
 
       updateReadAlong(entryElement, 0, false);
-      speakNodeText(nodeText, entryElement, {
+      speakNodeText(stripMarkdown(nodeText), entryElement, {
         onEnd: isAudioNode && playButton && progressBar && progressHandle
           ? () => playReflectionSegment(reflection, nextNodeId, playButton, progressBar, progressHandle)
           : null,

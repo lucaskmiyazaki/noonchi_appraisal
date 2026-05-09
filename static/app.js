@@ -117,7 +117,8 @@ playBtn.onclick = async () => {
   if (!isGraphBoardActive() || playBtn.hidden) return;
   const graph = serializeGraph();
   const timeRange = getSelectedTimeRange();
-  const payload = timeRange ? { ...graph, ...timeRange } : graph;
+  const sessionName = getSessionName();
+  const payload = { ...graph, sessionName, ...(timeRange || {}) };
 
   try {
     const response = await fetch('/play_graph', {
