@@ -233,8 +233,11 @@
       `var I={width:${img.w},height:${img.h},bpp:2,buffer:atob("${img.b64}"),palette:new Uint16Array([${img.pal}])};`,
       `g.drawImage(I,cx-16,cy-${img.dy});`,
       'g.setColor(s.fg);g.setFontAlign(0,0);g.setFont("6x8",2);',
-      // For need_for_clarification always show "Clarification" regardless of typeLabel
-      `g.drawString(${JSON.stringify(triggerKey === 'need_for_clarification' ? 'Clarification' : typeLabel)}||s.title,cx,98);`,
+      // tone_difference: two-line label ("Tone" / "Difference")
+      // need_for_clarification: always show "Clarification"
+      ...(triggerKey === 'tone_difference'
+        ? ['g.drawString("Tone",cx,91);', 'g.drawString("Difference",cx,107);']
+        : [`g.drawString(${JSON.stringify(triggerKey === 'need_for_clarification' ? 'Clarification' : typeLabel)}||s.title,cx,98);`]),
       'g.setFont("6x8",1);',
       'var lines=wrap(message||"",24);',
       'for(var i=0;i<Math.min(lines.length,3);i++)g.drawString(lines[i],cx,124+i*10);',
