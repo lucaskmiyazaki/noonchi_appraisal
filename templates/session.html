@@ -78,6 +78,7 @@
     .session-chunk.is-read { color: var(--session-read-text); }
     .session-chunk.is-active { color: var(--session-accent); font-weight: var(--fw-bold); }
     .session-chunk.has-reflection { background: var(--reflection-bg, transparent); color: var(--text-dark); }
+    .session-chunk.has-reflection.is-dimmed { opacity: 0.25; }
 
     .session-summary { font-size: var(--fs-body); margin: 0 0 var(--sp-7); line-height: 1.55; color: var(--session-summary-text); font-family: var(--font-mono); }
     .session-sidebar-empty { font-size: var(--fs-body-sm); color: var(--text-muted); font-family: var(--font-mono); }
@@ -616,6 +617,11 @@
       reflectionModalBody.innerHTML = '';
       activeReflectionState = null;
       activeUtterance = null;
+
+      // Remove dimming from all chunks and redraw arrows
+      document.querySelectorAll('span.session-chunk.is-dimmed').forEach(chunk => {
+        chunk.classList.remove('is-dimmed');
+      });
       scheduleReflectionLinkDraw();
     }
 
@@ -1026,6 +1032,18 @@
       activeReflectionState = { reflection, tree, currentNodeId: startNodeId, detailsElement, bodyElement, cardButton };
       renderActiveReflectionNode();
 
+      // Hide arrows: cancel any pending redraw and clear the SVG now
+      if (pendingLinkFrame !== null) {
+        cancelAnimationFrame(pendingLinkFrame);
+        pendingLinkFrame = null;
+      }
+      if (reflectionLinks) reflectionLinks.innerHTML = '';
+
+      // Dim all reflection chunks except the active one
+      document.querySelectorAll('span.session-chunk.has-reflection').forEach(chunk => {
+        chunk.classList.toggle('is-dimmed', chunk.dataset.reflectionKey !== reflection.reflectionKey);
+      });
+
       // Scroll transcript to the highlighted chunk if it's out of view
       if (transcriptVisible) {
         const transcriptScroll = document.getElementById('sessionTranscriptScroll');
@@ -1210,6 +1228,7 @@
       }
 
       scheduleReflectionLinkDraw = function scheduleReflectionLinkDrawImpl() {
+        if (activeReflectionState) return; // arrows hidden while a reflection is open
         if (pendingLinkFrame !== null) {
           cancelAnimationFrame(pendingLinkFrame);
         }
@@ -1504,6 +1523,9 @@
           if (reflection?.reflectionKey) span.dataset.reflectionKey = reflection.reflectionKey;
           if (isRead) span.classList.add('is-read');
           if (isActive) span.classList.add('is-active');
+          if (reflectionTheme && activeReflectionState && reflection?.reflectionKey !== activeReflectionState.reflection?.reflectionKey) {
+            span.classList.add('is-dimmed');
+          }
           span.textContent = `${chunk.text || ''} `;
 
           span.addEventListener('click', () => {
