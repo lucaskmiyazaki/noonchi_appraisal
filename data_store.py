@@ -1015,6 +1015,15 @@ def write_reflection_db_rows(rows, fieldnames=None) -> None:
     db.execute("PRAGMA foreign_keys=ON")
 
 
+def lookup_reflection_id_by_file(reflection_tree_file: str) -> str:
+    """Return the UUID id of a reflection row given its reflection_tree_file filename, or '' if not found."""
+    rtf = str(reflection_tree_file or "").strip()
+    if not rtf:
+        return ""
+    row = _db_execute("SELECT id FROM reflections WHERE reflection_tree_file=?", (rtf,)).fetchone()
+    return row["id"] if row else ""
+
+
 def list_reflection_rows_for_session(session_name: str) -> list[dict]:
     meeting_id = lookup_meeting_id_by_session_name(session_name)
     if not meeting_id:
@@ -1224,6 +1233,16 @@ def append_training_row(
          str(startms or "").strip(), str(endms or "").strip()),
     )
     _db_commit()
+
+
+def delete_training_row(training_id: str) -> bool:
+    """Delete a training row by ID. Returns True if a row was deleted."""
+    safe_id = str(training_id or "").strip()
+    if not safe_id:
+        return False
+    cur = _db_execute("DELETE FROM training WHERE training_id=?", (safe_id,))
+    _db_commit()
+    return (cur.rowcount or 0) > 0
 
 
 def update_training_row_files(training_id: str, training_files: list[str], suggestions: list[str]) -> None:

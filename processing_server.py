@@ -1081,9 +1081,17 @@ def voice_generate():
         append_training_row,
         is_json_filename,
         lookup_meeting_id_by_session_name,
+        lookup_reflection_id_by_file,
         read_data_json_file,
     )
     meeting_id = lookup_meeting_id_by_session_name(session_name)
+
+    # reflection_id from the frontend is a filename (reflection_tree_file);
+    # resolve it to the actual UUID so the FK constraint is satisfied.
+    if reflection_id and is_json_filename(reflection_id):
+        resolved_reflection_id = lookup_reflection_id_by_file(reflection_id)
+    else:
+        resolved_reflection_id = reflection_id
 
     # Pre-save the training row immediately (empty audio files) so the
     # practice item appears in the list right away while generation runs.
@@ -1101,7 +1109,7 @@ def voice_generate():
     append_training_row(
         training_id=training_id,
         meeting_id=meeting_id,
-        reflection_id=reflection_id,
+        reflection_id=resolved_reflection_id,
         user_id=user_id,
         training_type=training_type,
         valence=valence,

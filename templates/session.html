@@ -927,6 +927,21 @@
                 } : null;
                 const reflectionType = String(reflection?.reflectionType || '').trim().toLowerCase();
                 const isArousalPractice = reflectionType === 'incoherent intensity';
+                // For incoherent-tone reflections the tree_id encodes the actual detected
+                // voice polarity. Use it as the source emotion instead of per-segment
+                // emotion_label, which may disagree with the conversation-level analysis
+                // that triggered the reflection.
+                const treeId = String(reflection?.tree_id || '').toLowerCase();
+                let resolvedEmotion = dominantEmotion;
+                if (reflectionType === 'incoherent tone') {
+                  if (treeId.includes('negative_outcome')) {
+                    // voice was too positive (joyful) for a negative topic
+                    resolvedEmotion = 'hap';
+                  } else if (treeId.includes('positive_outcome')) {
+                    // voice was too negative (sad) for a positive topic
+                    resolvedEmotion = 'sad';
+                  }
+                }
                 const summaryNode = Object.values(tree?.nodes || {}).find(
                   n => Array.isArray(n.options) && n.options.some(opt => opt.next === currentNodeId)
                 );
@@ -934,7 +949,7 @@
                 const summary = isArousalPractice
                   ? String(firstNode?.text || '')
                   : String(summaryNode?.text || '');
-                if (transcription && (dominantEmotion || avgVad)) {
+                if (transcription && (resolvedEmotion || avgVad)) {
                   try {
                     const voiceResp = await fetch('/api/voice/generate', {
                       method: 'POST',
@@ -946,7 +961,7 @@
                         type: isArousalPractice ? 'arousal' : 'valence',
                         transcription,
                         summary,
-                        emotion: dominantEmotion,
+                        emotion: resolvedEmotion,
                         ...(avgVad || {}),
                       }),
                     });

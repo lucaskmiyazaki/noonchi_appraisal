@@ -41,11 +41,16 @@ UNIFIED_TAGS_BY_CATEGORY = {
         "calm and pleased",
     ],
     NEGATIVE_CATEGORY: [
-        "angry and explosive",
         "sobbing and depressed",
-        "concerned and anxious",
+        "concerned and firm",
+        "regret and sad",
     ],
 }
+#NEGATIVE_CATEGORY: [
+#        "angry and explosive",
+#        "firm and calm",
+#        "concerned and anxious",
+#    ],
 
 SUGGESTIONS_BY_CATEGORY = {
     POSITIVE_CATEGORY: [
@@ -54,11 +59,16 @@ SUGGESTIONS_BY_CATEGORY = {
         "You could make your encouragement more explicit and energetic to increase impact.",
     ],
     NEGATIVE_CATEGORY: [
-        "Try expressing this concern more calmly and directly so it is easier to receive.",
-        "Consider softening your tone to keep the conversation constructive.",
-        "You could frame this as an observation rather than a criticism to reduce defensiveness.",
+        "Expressing a sad tone might show how deeply this situation is affecting you.",
+        "Expressing a concerned voice tone might help show seriousness and genuine worry.",
+        "Expressing a regretful voice tone might help communicate reflection and accountability.",
     ],
 }
+#NEGATIVE_CATEGORY: [
+#        "Expressing an angry voice tone might make your message sound stronger, but stay controlled so it does not come across as too aggressive.",
+#        "Expressing a firm voice tone might make your message sound confident and clear.",
+#        "Expressing a concerned voice tone might help show seriousness and care, but avoid sounding overly anxious or unsure.",
+#    ],
 
 OPPOSITE_CATEGORY = {
     POSITIVE_CATEGORY: NEGATIVE_CATEGORY,

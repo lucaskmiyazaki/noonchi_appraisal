@@ -40,6 +40,7 @@ from data_store import (
     mark_meeting_opened,
     normalize_done_str,
     normalize_practice_value,
+    delete_training_row,
     load_training_rows,
     read_data_json_file,
     update_user as ds_update_user,
@@ -395,6 +396,17 @@ def list_journaling_items(user_name):
 def list_practice_items(user_name):
     items = build_practice_items_for_user(user_name)
     return jsonify({"user": user_name, "items": items})
+
+
+@app.delete("/api/practice/<training_id>")
+def delete_practice_item(training_id):
+    safe_id = str(training_id or "").strip()
+    if not safe_id:
+        return jsonify({"error": "Invalid training id."}), 400
+    deleted = delete_training_row(safe_id)
+    if not deleted:
+        return jsonify({"error": "Training row not found."}), 404
+    return jsonify({"training_id": safe_id, "deleted": True})
 
 
 @app.patch("/api/practice/<training_id>/done")

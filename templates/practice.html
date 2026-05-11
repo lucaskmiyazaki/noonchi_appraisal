@@ -68,6 +68,9 @@
     .practice-item-checkbox { width: 22px; height: 22px; flex: 0 0 auto; border-radius: var(--radius-full); border: 1px solid #94a3b8; background: rgba(255,255,255,0.8); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-label); font-weight: var(--fw-bold); line-height: 1; color: transparent; font-family: var(--font-mono); }
     .practice-item-checkbox.is-done { border-color: #059669; background: #d1fae5; color: var(--text-dark); }
     .practice-empty { padding: var(--sp-7); border-radius: 12px; background: #fff; border: 1px dashed rgba(148, 163, 184, 0.5); color: var(--text-muted); font-size: var(--fs-body); font-family: var(--font-mono); }
+    .practice-item-delete { width: 22px; height: 22px; flex: 0 0 auto; border-radius: var(--radius-full); display: inline-flex; align-items: center; justify-content: center; color: var(--text-dark); opacity: 0; transition: opacity 0.12s ease, color 0.12s ease; cursor: pointer; }
+    .practice-item:hover .practice-item-delete { opacity: 1; }
+    .practice-item-delete:hover { color: #dc2626; }
 
     .voice-gen-notice {
       display: flex; align-items: center; gap: var(--sp-4);
@@ -355,6 +358,7 @@
               <span class="practice-item-icon" aria-hidden="true">${iconMarkup}</span>
               <span class="practice-item-title">${escapeHtml(formatPracticeTitle(reflection.title, 'Practice Item'))}</span>
               <span class="practice-item-checkbox ${isDone ? 'is-done' : ''}" role="checkbox" aria-checked="${isDone ? 'true' : 'false'}" tabindex="0" data-toggle-done="true">${isDone ? '&#10003;' : ''}</span>
+              <span class="practice-item-delete" role="button" aria-label="Delete" tabindex="0" data-delete-practice="true"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
             </div>
           </button>
         `;
@@ -362,6 +366,16 @@
 
       practiceList.querySelectorAll('.practice-item').forEach((item) => {
         item.addEventListener('click', (event) => {
+          const delBtn = event.target instanceof Element ? event.target.closest('[data-delete-practice]') : null;
+          if (delBtn) {
+            event.preventDefault();
+            const reflectionKey = item.dataset.practiceKey || '';
+            deletePracticeItem(reflectionKey).catch((error) => {
+              console.error('Failed to delete practice item', error);
+            });
+            return;
+          }
+
           const toggle = event.target instanceof Element ? event.target.closest('[data-toggle-done]') : null;
           if (toggle) {
             event.preventDefault();
@@ -380,6 +394,20 @@
           const reflectionKey = item.dataset.practiceKey || '';
           selectPracticeReflection(reflectionKey).catch((error) => {
             console.error('Failed to select practice reflection', error);
+          });
+        });
+      });
+
+      practiceList.querySelectorAll('[data-delete-practice="true"]').forEach((delBtn) => {
+        delBtn.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+          }
+          event.preventDefault();
+          const item = event.target instanceof Element ? event.target.closest('.practice-item') : null;
+          const reflectionKey = item?.dataset.practiceKey || '';
+          deletePracticeItem(reflectionKey).catch((error) => {
+            console.error('Failed to delete practice item', error);
           });
         });
       });
@@ -404,6 +432,33 @@
       });
 
       updatePracticeSelectionUi();
+    }
+
+    async function deletePracticeItem(reflectionKey) {
+      const reflection = practiceReflectionsState.find((entry) => entry.reflectionKey === reflectionKey);
+      if (!reflection?.training_id) {
+        return;
+      }
+
+      if (!confirm('Delete this practice item?')) {
+        return;
+      }
+
+      const response = await fetch(`/api/practice/${encodeURIComponent(reflection.training_id)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || 'Failed to delete practice item.');
+      }
+
+      practiceReflectionsState = practiceReflectionsState.filter((entry) => entry.reflectionKey !== reflectionKey);
+      if (selectedPracticeKey === reflectionKey) {
+        selectedPracticeKey = '';
+        practiceDetail.hidden = true;
+        practiceDetailEmpty.hidden = false;
+      }
+      renderPracticeList();
     }
 
     function pauseRecordedClips() {
